@@ -1,9 +1,10 @@
 # Nomarchy
 
 A kingdom of your favorite restaurants, one cuisine at a time. Crown a
-restaurant as the ruling spot for a cuisine, keep a "Next in Line" bench of
-challengers, and stage a coup whenever something better comes along - every
-past ruler is archived automatically.
+restaurant as the ruling spot for a cuisine, keep a "Next in Line" shortlist
+of challengers, and stage a coup whenever something better comes along -
+every past ruler is archived automatically. Follow friends, endorse their
+picks, and see who's earned the most taste credibility in your Court.
 
 ## Setup
 
@@ -53,26 +54,43 @@ URL Configuration and add the live URL to Redirect URLs.
 
 ## How it's put together
 
-- `schema.sql` - the Supabase/Postgres schema: `profiles`, `cuisines`,
-  `thrones` (the current ruler per cuisine), `throne_history` (past reigns,
-  archived automatically by a trigger on `thrones` UPDATE - a "coup"),
-  `next_in_line` (candidates waiting for a throne), and `ai_calls` (used to
-  rate-limit the AI route). Row level security restricts every table to its
-  owning user.
-- `lib/supabaseClient.js` - the browser Supabase client.
-- `lib/data.js` - all reads/writes against Supabase: `loadKingdom`,
-  `loadNextInLine`, `loadCuisines`, `loadStanding`, `crownSpot`,
-  `promoteToThrone`, `addToNextInLine`, etc.
+- `schema.sql` - the Supabase/Postgres schema: `profiles` (auto-created on
+  signup, username always gets a random 4-character suffix), `cuisines`
+  (shared defaults plus per-user customs), `thrones` (the current ruler per
+  cuisine - one per `user_id` + `cuisine_id`), `fallen` (past reigns,
+  archived automatically by a trigger that fires only when the *restaurant*
+  changes, not on every decree edit), `next_in_line` (a private shortlist),
+  `endorsements` and `follows` (the social layer behind Court), `ai_calls`
+  (rate-limits the AI route), and a `standings` view that computes taste
+  credibility on read so it can never drift out of sync. Row level security
+  is on every table - thrones, fallen, cuisines, endorsements and follows
+  are public-read (that's what makes Court and endorsing work), next_in_line
+  is private to its owner.
+- `lib/data.js` - the Supabase client plus every read/write: auth
+  (`signIn`/`signOut`/`onAuthChange`), the kingdom (`loadKingdom`,
+  `crownSpot`, `promoteToThrone`, `abdicate`), the shortlist
+  (`loadNextInLine`, `addToNextInLine`, `importToNextInLine`), cuisines
+  (`loadCuisines`, `addCuisine`), and the social layer (`loadCourt`,
+  `toggleEndorsement`, `followByUsername`, `loadStanding`,
+  `loadPublicKingdom`).
 - `app/api/ai/route.js` - a server route that verifies the caller's Supabase
-  session, rate-limits to 30 calls/hour/user, and proxies two AI modes to
-  Claude: `lookup` (web-search-backed restaurant lookup, standing in for
-  Google Places) and `import` (parses a pasted block of text into
-  structured restaurant entries via structured outputs). Never call
-  Anthropic directly from the browser - the API key must stay server-side.
-- `app/page.js` - the whole UI: sign-in screen, kingdom grid, next-in-line
-  list, crowning/coup modal (with a 30-character minimum "decree" - a
-  database constraint, validated client-side too), add-cuisine and
-  add-candidate modals, and the text-import flow.
+  session, rate-limits to 30 calls/hour/user (enforced against the `ai_calls`
+  table, not an in-memory counter - those don't survive a restart or share
+  state across serverless instances), and proxies two AI modes to Claude:
+  `lookup` (web-search-backed restaurant lookup, standing in for Google
+  Places) and `import` (parses a pasted block of text into structured
+  restaurant entries via structured outputs, so the client never has to
+  strip markdown fences or hunt for JSON brackets). Never call Anthropic
+  directly from the browser - the API key must stay server-side.
+- `app/page.js` - the whole UI: sign-in screen, the Kingdom grid, Next in
+  Line, Court (follow friends by username, see their reigning picks,
+  endorse them, pull one onto your own shortlist), Standing (a credibility
+  score and rank title from Peckish Peasant up to Monarch of Taste), the
+  crown/coup modal (30-character minimum decree, validated client-side and
+  by a database constraint), and the text-import flow.
+
+Styling is Tailwind CSS v4 (`@import "tailwindcss"` in `app/globals.css` +
+`@tailwindcss/postcss`), plus Fraunces and Archivo from Google Fonts.
 
 ## Things to know before you scale this up
 
@@ -87,7 +105,13 @@ URL Configuration and add the live URL to Redirect URLs.
 - **Username collisions** get a random 4-character suffix
   (`steve` -> `steve-a4f2`) rather than failing signup. There's currently no
   UI to change it.
-- **Social features (follows, a public court, public profiles at
-  `/username`, share cards, a PWA manifest)** are deliberately not built
-  yet. Get sign-in, crowning, coups, next-in-line, and import in front of a
-  handful of real users first.
+- **Court, endorsements, and follows are already live**, ahead of the
+  original build order (which suggested holding social features until sign
+  in, crowning, and next-in-line had a couple of weeks of real use). It was
+  already fully designed and wired up, so it shipped rather than sitting
+  half-built - but it's worth watching how it lands with actual friend
+  groups before investing further here.
+- **Public profile pages (`/username`), share-card images, and a PWA
+  manifest are still deferred.** `loadPublicKingdom` in `lib/data.js` is
+  ready for a public profile route whenever that's next - it isn't wired to
+  a page yet.
