@@ -181,7 +181,10 @@ async function handleImport(raw, cuisines) {
           `Extract every restaurant into structured data. Infer the cuisine from the name or context. ` +
           `Use one of these where it fits: ${cuisineNames.join(", ")}. If none fit, use a short label of your own. ` +
           `Keep any personal comment as the note. Use an empty string for area or note when there isn't one. ` +
-          `Ignore headers, blank lines, numbering and junk.\n\n` +
+          `Ignore headers, blank lines, numbering, checkboxes and other list-formatting junk. ` +
+          `The name field must be just the restaurant's name: trim whitespace, drop trailing punctuation like a ` +
+          `stray hyphen, and if the line has a trailing " - <neighbourhood>" or ", <neighbourhood>" suffix, move ` +
+          `that into area instead of leaving it stuck in the name.\n\n` +
           `THE LIST:\n${capped}`,
       },
     ],

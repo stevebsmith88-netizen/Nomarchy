@@ -31,6 +31,17 @@ const RANKS = [
 
 const MIN_DECREE_LENGTH = 30;
 
+// Import-extracted names can carry stray formatting a canonical, looked-up
+// name won't ("Writers room -" vs "Writers room"), so an exact string match
+// misses obvious duplicates. Strip trailing separator punctuation and
+// collapse whitespace before comparing.
+const normalizeName = (name) =>
+  name
+    .toLowerCase()
+    .trim()
+    .replace(/[\s\-–—:,.]+$/, "")
+    .replace(/\s+/g, " ");
+
 export default function Nomarchy() {
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -105,7 +116,7 @@ export default function Nomarchy() {
   };
 
   const addToPretenders = async (cuisineId, entry) => {
-    if (pretenders.some((p) => p.name.toLowerCase() === entry.name.toLowerCase())) {
+    if (pretenders.some((p) => normalizeName(p.name) === normalizeName(entry.name))) {
       flash("Already on your shortlist");
       return;
     }
@@ -125,11 +136,11 @@ export default function Nomarchy() {
   // new cuisine must not both try to create it.
   const importMany = async (rows) => {
     let added = 0, skipped = 0;
-    const existingNames = new Set(pretenders.map((p) => p.name.toLowerCase().trim()));
+    const existingNames = new Set(pretenders.map((p) => normalizeName(p.name)));
     let localCuisines = cuisineList;
     const resolved = [];
     for (const r of rows) {
-      const key = r.name.toLowerCase().trim();
+      const key = normalizeName(r.name);
       if (existingNames.has(key)) { skipped++; continue; }
       existingNames.add(key);
       let match = localCuisines.find((c) => c.name.toLowerCase() === (r.cuisine || "").toLowerCase().trim());
