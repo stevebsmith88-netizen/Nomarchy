@@ -95,9 +95,10 @@ export async function POST(request) {
 
   try {
     let result;
+    let cached = false;
     if (mode === "lookup") {
       if (!query?.trim()) return NextResponse.json({ error: "No query" }, { status: 400 });
-      result = await handleLookup(query, city);
+      ({ result, cached } = await handleLookup(supabase, query, city));
     } else if (mode === "import") {
       if (!raw?.trim()) return NextResponse.json({ error: "Nothing to import" }, { status: 400 });
       result = await handleImport(raw, cuisines);
@@ -105,14 +106,36 @@ export async function POST(request) {
       return NextResponse.json({ error: "Unknown mode" }, { status: 400 });
     }
 
-    await supabase.from("ai_calls").insert({ user_id: user.id });
+    // A cache hit didn't cost an actual AI call, so it shouldn't eat into
+    // the user's hourly budget.
+    if (!cached) {
+      await supabase.from("ai_calls").insert({ user_id: user.id });
+    }
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json({ error: err.message ?? "Something went wrong" }, { status: 502 });
   }
 }
 
-async function handleLookup(query, city) {
+function lookupCacheKey(query, city) {
+  return `${query.trim().toLowerCase()}|${(city || "").trim().toLowerCase()}`;
+}
+
+async function handleLookup(supabase, query, city) {
+  const queryKey = lookupCacheKey(query, city);
+
+  // The first person to search for a place pays the ~10-20s web-search
+  // cost; everyone after that (any user, since restaurant existence isn't
+  // sensitive) gets an instant cached answer.
+  const { data: cachedRow } = await supabase
+    .from("place_lookup_cache")
+    .select("results")
+    .eq("query_key", queryKey)
+    .maybeSingle();
+  if (cachedRow) {
+    return { result: { results: cachedRow.results }, cached: true };
+  }
+
   const response = await anthropic.messages.create({
     model: MODEL,
     max_tokens: MAX_OUTPUT_TOKENS,
@@ -140,7 +163,18 @@ async function handleLookup(query, city) {
     .map((b) => b.text)
     .join("\n");
 
-  return { results: extractJsonArray(text).slice(0, 3) };
+  const results = extractJsonArray(text).slice(0, 3);
+
+  // Only cache real matches - an empty/failed search shouldn't get stuck
+  // permanently returning nothing for everyone who searches it later.
+  if (results.length > 0) {
+    await supabase.from("place_lookup_cache").upsert(
+      { query_key: queryKey, results },
+      { onConflict: "query_key" }
+    );
+  }
+
+  return { result: { results }, cached: false };
 }
 
 async function handleImport(raw, cuisines) {

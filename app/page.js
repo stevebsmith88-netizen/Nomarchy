@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 import {
   Crown, Plus, ScrollText, Swords, X, Users, Award, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
-  ClipboardPaste, Wand2, LogOut, UserPlus,
+  ClipboardPaste, Wand2, LogOut, UserPlus, Pencil,
 } from "lucide-react";
 import {
-  supabase, getUser, onAuthChange, signIn, signOut, getProfile,
+  supabase, getUser, onAuthChange, signIn, signOut, getProfile, updateProfile,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine,
   loadCourt, toggleEndorsement, followByUsername, loadStanding,
@@ -68,6 +68,8 @@ export default function Nomarchy() {
   const [followInput, setFollowInput] = useState("");
   const [followBusy, setFollowBusy] = useState(false);
   const [followError, setFollowError] = useState("");
+
+  const [editingProfile, setEditingProfile] = useState(false);
 
   useEffect(() => {
     getUser().then((u) => { setUser(u); setAuthChecked(true); });
@@ -210,6 +212,11 @@ export default function Nomarchy() {
     setFollowBusy(false);
   };
 
+  const handleUpdateProfile = async (fields) => {
+    const updated = await updateProfile(user.id, fields);
+    setProfile(updated);
+  };
+
   const addFriendPickToPretenders = (friendName, pick) =>
     addToPretenders(pick.cuisineId, {
       name: pick.name,
@@ -244,9 +251,13 @@ export default function Nomarchy() {
         </div>
         <p className="mt-1 text-sm italic" style={{ ...display, color: C.muted }}>Long live your favourites.</p>
         <div className="mt-2 flex items-center justify-center gap-2">
-          <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
-            @{profile?.username}
-          </span>
+          <button
+            onClick={() => setEditingProfile(true)}
+            className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold"
+            style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}
+          >
+            @{profile?.username} <Pencil size={11} />
+          </button>
           <button onClick={signOut} className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <LogOut size={12} /> Sign out
           </button>
@@ -486,6 +497,14 @@ export default function Nomarchy() {
           onSubmit={(cid, entry) => addToPretenders(cid, entry)}
         />
       )}
+
+      {editingProfile && (
+        <ProfileModal
+          profile={profile}
+          onClose={() => setEditingProfile(false)}
+          onSubmit={handleUpdateProfile}
+        />
+      )}
     </FontShell>
   );
 }
@@ -551,6 +570,78 @@ function SignInScreen() {
         </div>
       </div>
     </FontShell>
+  );
+}
+
+function ProfileModal({ profile, onClose, onSubmit }) {
+  const [username, setUsername] = useState(profile?.username || "");
+  const [city, setCity] = useState(profile?.city || "");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const usernameValid = /^[a-z0-9-]{3,30}$/.test(username.trim().toLowerCase());
+
+  const save = async () => {
+    if (!usernameValid || busy) return;
+    setBusy(true); setErr("");
+    try {
+      await onSubmit({ username: username.trim().toLowerCase(), city: city.trim() || null });
+      onClose();
+    } catch (e) {
+      setErr(e.message || "Couldn't save. Try again.");
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+      <div className="max-h-screen w-full max-w-md overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>Your profile</h3>
+          <button onClick={onClose} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
+        </div>
+
+        <div className="mt-3">
+          <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Username</label>
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="lowercase, letters/numbers/hyphens"
+            className="mt-1 w-full rounded-lg px-3 py-2.5 text-sm outline-none"
+            style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+          />
+          <div className="mt-1 text-xs" style={{ color: usernameValid || !username ? C.muted : C.coup }}>
+            This is what friends use to follow you (@{username.trim().toLowerCase() || "username"}) - 3+ characters, lowercase letters, numbers and hyphens only.
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Your city</label>
+          <input
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="e.g. Toronto, Austin, Manchester"
+            className="mt-1 w-full rounded-lg px-3 py-2.5 text-sm outline-none"
+            style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+          />
+          <div className="mt-1 text-xs" style={{ color: C.muted }}>
+            Used as the default city when looking up a place - set this if you&apos;re not in Toronto.
+          </div>
+        </div>
+
+        {err && <p className="mt-3 text-xs" style={{ color: C.coup }}>{err}</p>}
+
+        <button
+          disabled={!usernameValid || busy}
+          onClick={save}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold"
+          style={usernameValid ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}
+        >
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+          Save
+        </button>
+      </div>
+    </div>
   );
 }
 

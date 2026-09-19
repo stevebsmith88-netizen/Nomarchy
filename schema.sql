@@ -188,6 +188,30 @@ create table if not exists ai_calls (
 create index if not exists ai_calls_user_id_called_at_idx on ai_calls (user_id, called_at);
 
 -- ------------------------------------------------------------
+-- 7b. PLACE_LOOKUP_CACHE
+-- The first person to search for a restaurant triggers the real (slow)
+-- AI web search; the result is cached here by a normalized query+city key
+-- so every search after that - by anyone - is instant. Not user-specific
+-- data, so it's shared and writable by any signed-in user.
+-- ------------------------------------------------------------
+create table if not exists place_lookup_cache (
+  query_key  text primary key,
+  results    jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+alter table place_lookup_cache enable row level security;
+
+drop policy if exists "lookup cache readable" on place_lookup_cache;
+create policy "lookup cache readable" on place_lookup_cache for select using (true);
+drop policy if exists "signed-in users populate the cache" on place_lookup_cache;
+create policy "signed-in users populate the cache" on place_lookup_cache for insert
+  with check (auth.uid() is not null);
+drop policy if exists "signed-in users refresh the cache" on place_lookup_cache;
+create policy "signed-in users refresh the cache" on place_lookup_cache for update
+  using (auth.uid() is not null) with check (auth.uid() is not null);
+
+-- ------------------------------------------------------------
 -- 8. ROW LEVEL SECURITY
 -- Do NOT skip this. Without it every table is wide open and anyone
 -- can overwrite anyone else's kingdom.
