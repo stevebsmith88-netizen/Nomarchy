@@ -70,6 +70,14 @@ select unnest(array[
 ]), true
 on conflict (name, coalesce(created_by, '00000000-0000-0000-0000-000000000000'::uuid)) do nothing;
 
+-- A reserved, shared cuisine every user gets exactly one throne on (via the
+-- normal unique(user_id, cuisine_id) constraint below) - the app treats it
+-- as "Overall Favourite" rather than a real cuisine, and hides it from the
+-- ordinary cuisine picker/grid.
+insert into cuisines (name, is_default)
+values ('Overall Favourite', true)
+on conflict (name, coalesce(created_by, '00000000-0000-0000-0000-000000000000'::uuid)) do nothing;
+
 -- ------------------------------------------------------------
 -- 3. THRONES
 -- The heart of it. The unique constraint is what makes Nomarchy work:

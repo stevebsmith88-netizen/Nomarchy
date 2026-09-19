@@ -31,6 +31,12 @@ const RANKS = [
 
 const MIN_DECREE_LENGTH = 30;
 
+// A reserved, shared cuisine row (seeded in schema.sql) that every user gets
+// their own throne on via the normal unique(user_id, cuisine_id) constraint.
+// Reusing the cuisine/throne machinery for this means the overall favourite
+// gets crowning, coups and history for free, with no separate table.
+const OVERALL_FAVOURITE_NAME = "Overall Favourite";
+
 // Import-extracted names can carry stray formatting a canonical, looked-up
 // name won't ("Writers room -" vs "Writers room"), so an exact string match
 // misses obvious duplicates. Strip trailing separator punctuation and
@@ -105,7 +111,9 @@ export default function Nomarchy() {
   const refreshStanding = async () => setStanding(await loadStanding(user.id));
   const refreshCourt = async () => setCourt(await loadCourt(user.id));
 
-  const cuisineNames = cuisineList.map((c) => c.name);
+  const overallCuisine = cuisineList.find((c) => c.is_default && c.name === OVERALL_FAVOURITE_NAME);
+  const selectableCuisines = cuisineList.filter((c) => c !== overallCuisine);
+  const cuisineNames = selectableCuisines.map((c) => c.name);
 
   const crown = async (cuisineId, entry, fromPretenderId) => {
     const cuisineName = cuisineList.find((c) => c.id === cuisineId)?.name || "";
@@ -145,7 +153,10 @@ export default function Nomarchy() {
       const key = normalizeName(r.name);
       if (existingNames.has(key)) { skipped++; continue; }
       existingNames.add(key);
-      let match = localCuisines.find((c) => c.name.toLowerCase() === (r.cuisine || "").toLowerCase().trim());
+      let match = localCuisines.find(
+        (c) => !(c.is_default && c.name === OVERALL_FAVOURITE_NAME) &&
+          c.name.toLowerCase() === (r.cuisine || "").toLowerCase().trim()
+      );
       if (!match && r.cuisine?.trim()) {
         try {
           match = await addCuisine(user.id, r.cuisine.trim());
@@ -178,6 +189,11 @@ export default function Nomarchy() {
   const handleAddCuisine = async () => {
     const v = newCuisine.trim();
     if (!v) return;
+    if (v.toLowerCase() === OVERALL_FAVOURITE_NAME.toLowerCase()) {
+      flash("That name is reserved");
+      setNewCuisine(""); setAddingCuisine(false);
+      return;
+    }
     if (cuisineNames.some((n) => n.toLowerCase() === v.toLowerCase())) {
       flash("Already have that one");
       setNewCuisine(""); setAddingCuisine(false);
@@ -286,6 +302,22 @@ export default function Nomarchy() {
         ) : (<>
         {/* KINGDOM */}
         {tab === "kingdom" && (<div>
+          {overallCuisine && (
+            <div className="mb-4">
+              <ThroneCard
+                featured
+                cuisineName={OVERALL_FAVOURITE_NAME}
+                cuisineId={overallCuisine.id}
+                slot={slots[OVERALL_FAVOURITE_NAME]}
+                historyOpen={historyOpen}
+                setHistoryOpen={setHistoryOpen}
+                setModal={setModal}
+                sharePick={sharePick}
+                fmt={fmt}
+              />
+            </div>
+          )}
+
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm" style={{ color: C.muted }}>One throne per cuisine. Choose like it matters.</p>
             <button onClick={() => setOnlyCrowned(!onlyCrowned)} className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold" style={{ background: onlyCrowned ? C.gold : C.card, color: onlyCrowned ? C.bg : C.muted, border: `1px solid ${C.cardEdge}` }}>
@@ -294,43 +326,19 @@ export default function Nomarchy() {
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {shown.map((cuisineName) => {
-              const cuisineId = cuisineList.find((c) => c.name === cuisineName)?.id;
-              const slot = slots[cuisineName]; const r = slot?.current; const fallenList = slot?.fallen || [];
-              const open = historyOpen[cuisineName];
-              return (
-                <div key={cuisineName} className="rounded-xl p-4" style={{ background: C.card, border: `1px solid ${r ? C.gold + "55" : C.cardEdge}` }}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>{cuisineName}</span>
-                    {r && <Crown size={16} style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />}
-                  </div>
-                  {r ? (<div className="mt-2">
-                    <h3 className="text-xl" style={{ ...display, fontWeight: 700 }}>{r.name}</h3>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
-                      {(r.area || r.address) && (<><MapPin size={11} /> {r.area || r.address}<span className="mx-1">·</span></>)}
-                      {r.rating && (<><Star size={11} style={{ color: C.gold }} fill={C.gold} /> {r.rating}<span className="mx-1">·</span></>)}
-                      crowned {fmt(r.crownedAt)}
-                      {r.mapsUrl && <a href={r.mapsUrl} target="_blank" rel="noreferrer" className="ml-1 flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
-                    </div>
-                    <p className="mt-2 text-sm leading-relaxed" style={{ color: C.cream + "E6" }}>
-                      <ScrollText size={13} className="mr-1 inline" style={{ color: C.gold }} />{r.decree}
-                    </p>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
-                      <button onClick={() => sharePick(cuisineName, r)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Share2 size={13} /> Share</button>
-                      {fallenList.length > 0 && <button onClick={() => setHistoryOpen((p) => ({ ...p, [cuisineName]: !p[cuisineName] }))} className="flex items-center gap-1 px-1 text-xs font-semibold" style={{ color: C.muted }}>{fallenList.length} fallen {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</button>}
-                    </div>
-                    {open && fallenList.map((f, i) => (
-                      <div key={i} className="mt-2 rounded-lg p-3 text-xs" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
-                        <div className="font-bold" style={{ color: C.muted }}>{f.name} <span className="font-normal">· reigned until {fmt(f.dethronedAt)}</span></div>
-                        <p className="mt-1 italic" style={{ color: C.muted }}>&ldquo;{f.decree}&rdquo;</p>
-                      </div>))}
-                  </div>) : (<div className="mt-2">
-                    <p className="text-sm italic" style={{ color: C.muted }}>This throne sits empty.</p>
-                    <button onClick={() => setModal({ cuisineId, cuisineName, mode: "claim" })} className="mt-3 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}><Crown size={13} /> Crown a spot</button>
-                  </div>)}
-                </div>);
-            })}
+            {shown.map((cuisineName) => (
+              <ThroneCard
+                key={cuisineName}
+                cuisineName={cuisineName}
+                cuisineId={selectableCuisines.find((c) => c.name === cuisineName)?.id}
+                slot={slots[cuisineName]}
+                historyOpen={historyOpen}
+                setHistoryOpen={setHistoryOpen}
+                setModal={setModal}
+                sharePick={sharePick}
+                fmt={fmt}
+              />
+            ))}
 
             {!onlyCrowned && (<div className="flex min-h-28 flex-col items-center justify-center rounded-xl p-4" style={{ border: `1px dashed ${C.cardEdge}` }}>
               {addingCuisine ? (<div className="flex w-full gap-2">
@@ -372,8 +380,8 @@ export default function Nomarchy() {
               {p.note && <p className="mt-2 text-sm italic leading-relaxed" style={{ color: C.cream + "CC" }}>{p.note}</p>}
               <button
                 onClick={() => setModal({
-                  cuisineId: p.cuisineId || cuisineList[0]?.id,
-                  cuisineName: p.cuisine || cuisineList[0]?.name,
+                  cuisineId: p.cuisineId || selectableCuisines[0]?.id,
+                  cuisineName: p.cuisine || selectableCuisines[0]?.name,
                   mode: p.cuisine && slots[p.cuisine]?.current ? "coup" : "claim",
                   prefill: p,
                   pretenderId: p.id,
@@ -469,7 +477,7 @@ export default function Nomarchy() {
           mode={modal.mode}
           cuisineId={modal.cuisineId}
           cuisineName={modal.cuisineName}
-          cuisines={cuisineList}
+          cuisines={selectableCuisines}
           prefill={modal.prefill}
           reigning={slots[modal.cuisineName]?.current}
           defaultCity={profile?.city || "Toronto"}
@@ -486,12 +494,12 @@ export default function Nomarchy() {
         />
       )}
 
-      {addPretender && cuisineList.length > 0 && (
+      {addPretender && selectableCuisines.length > 0 && (
         <PlaceModal
           mode="pretender"
-          cuisineId={cuisineList[0]?.id}
-          cuisineName={cuisineList[0]?.name}
-          cuisines={cuisineList}
+          cuisineId={selectableCuisines[0]?.id}
+          cuisineName={selectableCuisines[0]?.name}
+          cuisines={selectableCuisines}
           defaultCity={profile?.city || "Toronto"}
           onClose={() => setAddPretender(false)}
           onSubmit={(cid, entry) => addToPretenders(cid, entry)}
@@ -506,6 +514,53 @@ export default function Nomarchy() {
         />
       )}
     </FontShell>
+  );
+}
+
+function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt }) {
+  const r = slot?.current;
+  const fallenList = slot?.fallen || [];
+  const open = historyOpen[cuisineName];
+
+  return (
+    <div
+      className="rounded-xl p-4"
+      style={{
+        background: C.card,
+        border: `${featured ? 2 : 1}px solid ${r ? C.gold + "55" : C.cardEdge}`,
+        boxShadow: featured ? `0 0 0 1px ${C.gold}33` : undefined,
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>{cuisineName}</span>
+        {r && <Crown size={16} style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />}
+      </div>
+      {r ? (<div className="mt-2">
+        <h3 className={featured ? "text-2xl" : "text-xl"} style={{ ...display, fontWeight: 700 }}>{r.name}</h3>
+        <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
+          {(r.area || r.address) && (<><MapPin size={11} /> {r.area || r.address}<span className="mx-1">·</span></>)}
+          {r.rating && (<><Star size={11} style={{ color: C.gold }} fill={C.gold} /> {r.rating}<span className="mx-1">·</span></>)}
+          crowned {fmt(r.crownedAt)}
+          {r.mapsUrl && <a href={r.mapsUrl} target="_blank" rel="noreferrer" className="ml-1 flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
+        </div>
+        <p className="mt-2 text-sm leading-relaxed" style={{ color: C.cream + "E6" }}>
+          <ScrollText size={13} className="mr-1 inline" style={{ color: C.gold }} />{r.decree}
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
+          <button onClick={() => sharePick(cuisineName, r)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Share2 size={13} /> Share</button>
+          {fallenList.length > 0 && <button onClick={() => setHistoryOpen((p) => ({ ...p, [cuisineName]: !p[cuisineName] }))} className="flex items-center gap-1 px-1 text-xs font-semibold" style={{ color: C.muted }}>{fallenList.length} fallen {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</button>}
+        </div>
+        {open && fallenList.map((f, i) => (
+          <div key={i} className="mt-2 rounded-lg p-3 text-xs" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+            <div className="font-bold" style={{ color: C.muted }}>{f.name} <span className="font-normal">· reigned until {fmt(f.dethronedAt)}</span></div>
+            <p className="mt-1 italic" style={{ color: C.muted }}>&ldquo;{f.decree}&rdquo;</p>
+          </div>))}
+      </div>) : (<div className="mt-2">
+        <p className="text-sm italic" style={{ color: C.muted }}>{featured ? "No overall favourite crowned yet." : "This throne sits empty."}</p>
+        <button onClick={() => setModal({ cuisineId, cuisineName, mode: "claim" })} className="mt-3 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}><Crown size={13} /> {featured ? "Crown your favourite" : "Crown a spot"}</button>
+      </div>)}
+    </div>
   );
 }
 
