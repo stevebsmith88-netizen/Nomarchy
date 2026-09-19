@@ -24,6 +24,17 @@ const MODEL = "claude-opus-5";
 const MAX_IMPORT_CHARS = 8000;
 const HOURLY_CALL_LIMIT = 30;
 
+// Claude Opus 5 thinks by default, and those thinking tokens count against
+// max_tokens - a low cap here doesn't just clip the answer, it can eat the
+// whole budget during thinking and leave nothing but an empty response.
+// Give it real headroom; billing is by tokens actually used, not this cap.
+const MAX_OUTPUT_TOKENS = 16000;
+
+// Give slow web-search-backed lookups room to finish instead of Vercel
+// killing the function mid-request (which produces a truncated/empty
+// response the client can't parse).
+export const maxDuration = 60;
+
 const anthropic = new Anthropic();
 
 function supabaseForToken(token) {
@@ -104,7 +115,7 @@ export async function POST(request) {
 async function handleLookup(query, city) {
   const response = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 1200,
+    max_tokens: MAX_OUTPUT_TOKENS,
     tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 3 }],
     messages: [
       {
@@ -119,6 +130,10 @@ async function handleLookup(query, city) {
       },
     ],
   });
+
+  if (response.stop_reason === "max_tokens") {
+    throw new Error("That search took too long to answer. Try again.");
+  }
 
   const text = response.content
     .filter((b) => b.type === "text")
@@ -156,7 +171,7 @@ async function handleImport(raw, cuisines) {
 
   const response = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 4000,
+    max_tokens: MAX_OUTPUT_TOKENS,
     output_config: { format: { type: "json_schema", schema } },
     messages: [
       {
@@ -172,7 +187,16 @@ async function handleImport(raw, cuisines) {
     ],
   });
 
+  if (response.stop_reason === "max_tokens") {
+    throw new Error("That list took too long to sort out. Try a shorter paste, or try again.");
+  }
+
   const textBlock = response.content.find((b) => b.type === "text");
-  const parsed = JSON.parse(textBlock?.text ?? "{}");
+  let parsed;
+  try {
+    parsed = JSON.parse(textBlock?.text ?? "{}");
+  } catch {
+    throw new Error("Couldn't read the AI's response. Try again.");
+  }
   return { results: Array.isArray(parsed.entries) ? parsed.entries : [] };
 }

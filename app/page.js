@@ -569,7 +569,12 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({ mode: "lookup", query: query.trim(), city: city.trim() || "Toronto" }),
       });
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("The lookup didn't finish properly. Try again.");
+      }
       if (!res.ok) throw new Error(data.error || "Lookup failed");
       if (Array.isArray(data.results) && data.results.length) setResults(data.results.slice(0, 3));
       else setErr("No matches found. Fill in the details manually below.");
@@ -661,7 +666,12 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({ mode: "import", raw: raw.trim().slice(0, 8000), cuisines: cuisineNames }),
       });
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("The import didn't finish properly. Try again.");
+      }
       if (!res.ok) throw new Error(data.error || "Import failed");
       if (!Array.isArray(data.results) || !data.results.length) {
         setErr("Couldn't find any restaurants in that. Try pasting one per line.");
