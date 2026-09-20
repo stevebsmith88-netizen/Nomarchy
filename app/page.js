@@ -7,7 +7,7 @@ import {
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock, Info,
 } from "lucide-react";
 import {
-  supabase, getUser, onAuthChange, signIn, verifyCode, signOut, getProfile, updateProfile,
+  supabase, getUser, onAuthChange, signIn, verifyCode, signOut, getProfile, updateProfile, deleteAccount,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited,
   moveThroneCuisine, unCrown,
@@ -245,6 +245,11 @@ export default function Nomarchy() {
   const handleUpdateProfile = async (fields) => {
     const updated = await updateProfile(user.id, fields);
     setProfile(updated);
+  };
+
+  const handleDeleteAccount = async () => {
+    await deleteAccount();
+    await signOut();
   };
 
   const addFriendPickToPretenders = (friendName, pick) =>
@@ -613,6 +618,7 @@ export default function Nomarchy() {
           profile={profile}
           onClose={() => setEditingProfile(false)}
           onSubmit={handleUpdateProfile}
+          onDeleteAccount={handleDeleteAccount}
         />
       )}
     </FontShell>
@@ -840,14 +846,20 @@ function SignInScreen() {
   );
 }
 
-function ProfileModal({ profile, onClose, onSubmit }) {
+function ProfileModal({ profile, onClose, onSubmit, onDeleteAccount }) {
   const [username, setUsername] = useState(profile?.username || "");
   const [city, setCity] = useState(profile?.city || "");
   const [isPublic, setIsPublic] = useState(profile?.is_public ?? true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteText, setDeleteText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteErr, setDeleteErr] = useState("");
+
   const usernameValid = /^[a-z0-9-]{3,30}$/.test(username.trim().toLowerCase());
+  const deleteConfirmed = deleteText.trim().toLowerCase() === profile?.username?.toLowerCase();
 
   const save = async () => {
     if (!usernameValid || busy) return;
@@ -859,6 +871,17 @@ function ProfileModal({ profile, onClose, onSubmit }) {
       setErr(e.message || "Couldn't save. Try again.");
     }
     setBusy(false);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmed || deleting) return;
+    setDeleting(true); setDeleteErr("");
+    try {
+      await onDeleteAccount();
+    } catch (e) {
+      setDeleteErr(e.message || "Couldn't delete your account. Try again.");
+      setDeleting(false);
+    }
   };
 
   return (
@@ -935,6 +958,52 @@ function ProfileModal({ profile, onClose, onSubmit }) {
           {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
           Save
         </button>
+
+        <div className="mt-6 rounded-lg p-3" style={{ border: `1px solid ${C.coup}55` }}>
+          {!confirmingDelete ? (
+            <button
+              onClick={() => setConfirmingDelete(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-lg py-2 text-xs font-bold"
+              style={{ color: C.coup }}
+            >
+              <Trash2 size={13} /> Delete my account
+            </button>
+          ) : (
+            <div>
+              <p className="text-xs leading-relaxed" style={{ color: C.coup }}>
+                This permanently deletes your account and everything in it - every throne, your history, next in line, and follows. This cannot be undone.
+              </p>
+              <p className="mt-2 text-xs" style={{ color: C.muted }}>
+                Type <span style={{ color: C.cream, fontWeight: 700 }}>{profile?.username}</span> to confirm.
+              </p>
+              <input
+                value={deleteText}
+                onChange={(e) => setDeleteText(e.target.value)}
+                className="mt-1.5 w-full rounded-lg px-3 py-2 text-sm outline-none"
+                style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+              />
+              {deleteErr && <p className="mt-1.5 text-xs" style={{ color: C.coup }}>{deleteErr}</p>}
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={() => { setConfirmingDelete(false); setDeleteText(""); setDeleteErr(""); }}
+                  className="flex-1 rounded-lg py-2 text-xs font-bold"
+                  style={{ border: `1px solid ${C.cardEdge}`, color: C.muted }}
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={!deleteConfirmed || deleting}
+                  onClick={confirmDelete}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold"
+                  style={deleteConfirmed ? { background: C.coup, color: C.cream } : { background: C.cardEdge, color: C.muted }}
+                >
+                  {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                  Delete everything
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
