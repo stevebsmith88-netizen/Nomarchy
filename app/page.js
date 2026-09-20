@@ -513,11 +513,37 @@ export default function Nomarchy() {
             <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>Taste credibility</div>
             {nextRank && (<div className="mt-4">
               <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: C.bg }}>
-                <div className="h-full rounded-full" style={{ background: C.gold, width: `${Math.min(100, (score / nextRank.min) * 100)}%` }} />
+                <div className="h-full rounded-full" style={{ background: C.gold, width: `${Math.min(100, ((score - rank.min) / (nextRank.min - rank.min)) * 100)}%` }} />
               </div>
               <p className="mt-1.5 text-xs" style={{ color: C.muted }}>{nextRank.min - score} to {nextRank.title}</p>
             </div>)}
           </div>
+
+          <div className="mx-auto mt-4 max-w-md rounded-xl p-4 text-left" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+            <div className="mb-1 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>The ladder</div>
+            {[...RANKS].reverse().map((r, i) => {
+              const reached = score >= r.min;
+              const isCurrent = r.title === rank.title;
+              return (
+                <div key={r.title} className="flex items-center justify-between py-1.5"
+                  style={{ borderTop: i > 0 ? `1px solid ${C.cardEdge}` : "none" }}>
+                  <div className="flex items-center gap-2">
+                    <Crown size={13} style={{ color: reached ? C.gold : C.muted }} fill={reached ? C.gold : "none"} strokeWidth={reached ? 0 : 2} />
+                    <span className="text-sm" style={{ color: isCurrent ? C.gold : reached ? C.cream : C.muted, fontWeight: isCurrent ? 700 : 500 }}>
+                      {r.title}
+                    </span>
+                    {isCurrent && (
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: C.gold, color: C.bg, letterSpacing: "0.06em" }}>
+                        You are here
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs" style={{ color: C.muted }}>{r.min}</span>
+                </div>
+              );
+            })}
+          </div>
+
           <div className="mx-auto mt-4 grid max-w-md grid-cols-2 gap-3 text-left">
             {[{ n: thrones, label: "Thrones claimed", hint: "Crown more cuisines" },
               { n: coups, label: "Coups staged", hint: "Better spots dethrone old ones" },

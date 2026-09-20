@@ -95,7 +95,7 @@ export default function PublicProfilePage({ params }) {
 
         <div className="mt-3 flex items-center justify-center gap-2">
           <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: C.card, color: C.gold, border: `1px solid ${C.cardEdge}` }}>
-            {rank.title} · {score}
+            {rank.title}
           </span>
           {authChecked && viewer && !isSelf && (
             <button
