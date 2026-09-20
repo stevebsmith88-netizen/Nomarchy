@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
   Crown, Plus, ScrollText, Swords, X, Users, Award, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
-  ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw,
+  ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock,
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, signOut, getProfile, updateProfile,
@@ -756,6 +756,7 @@ function SignInScreen() {
 function ProfileModal({ profile, onClose, onSubmit }) {
   const [username, setUsername] = useState(profile?.username || "");
   const [city, setCity] = useState(profile?.city || "");
+  const [isPublic, setIsPublic] = useState(profile?.is_public ?? true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -765,7 +766,7 @@ function ProfileModal({ profile, onClose, onSubmit }) {
     if (!usernameValid || busy) return;
     setBusy(true); setErr("");
     try {
-      await onSubmit({ username: username.trim().toLowerCase(), city: city.trim() || null });
+      await onSubmit({ username: username.trim().toLowerCase(), city: city.trim() || null, is_public: isPublic });
       onClose();
     } catch (e) {
       setErr(e.message || "Couldn't save. Try again.");
@@ -807,6 +808,33 @@ function ProfileModal({ profile, onClose, onSubmit }) {
           <div className="mt-1 text-xs" style={{ color: C.muted }}>
             Used as the default city when looking up a place - set this if you&apos;re not in Toronto.
           </div>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+          <div className="flex items-start gap-2">
+            {isPublic ? <Globe size={16} className="mt-0.5 shrink-0" style={{ color: C.gold }} /> : <Lock size={16} className="mt-0.5 shrink-0" style={{ color: C.muted }} />}
+            <div>
+              <div className="text-sm font-semibold">{isPublic ? "Public profile" : "Private profile"}</div>
+              <div className="mt-0.5 text-xs" style={{ color: C.muted }}>
+                {isPublic
+                  ? "Anyone with your link can see your kingdom."
+                  : "Only you can see your kingdom - this hides it from your link and from friends' Court view too, until you go public again."}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isPublic}
+            onClick={() => setIsPublic((v) => !v)}
+            className="relative h-6 w-11 shrink-0 rounded-full transition-colors"
+            style={{ background: isPublic ? C.gold : C.cardEdge }}
+          >
+            <span
+              className="absolute top-0.5 h-5 w-5 rounded-full transition-transform"
+              style={{ background: C.bg, transform: isPublic ? "translateX(22px)" : "translateX(2px)" }}
+            />
+          </button>
         </div>
 
         {err && <p className="mt-3 text-xs" style={{ color: C.coup }}>{err}</p>}

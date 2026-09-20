@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { Crown, MapPin, ExternalLink, Star, ScrollText, UserPlus, Loader2, Check } from "lucide-react";
+import { Crown, MapPin, ExternalLink, Star, ScrollText, UserPlus, Loader2, Check, Lock } from "lucide-react";
 import { getUser, loadPublicKingdom, followByUsername } from "@/lib/data";
 import { C, display, getRank, RankBadge, OwnerBadge, LogoMark, FontShell } from "../theme";
 
@@ -59,7 +59,7 @@ export default function PublicProfilePage({ params }) {
     );
   }
 
-  if (!data) {
+  if (!data || !authChecked) {
     return (
       <FontShell>
         <div className="flex min-h-screen items-center justify-center">
@@ -70,6 +70,24 @@ export default function PublicProfilePage({ params }) {
   }
 
   const { profile, slots, standing } = data;
+  const isSelf = viewer && viewer.id === profile.id;
+  const isPrivate = !profile.is_public && !isSelf;
+
+  if (isPrivate) {
+    return (
+      <FontShell>
+        <div className="flex min-h-screen flex-col items-center justify-center px-5 text-center">
+          <Lock size={28} style={{ color: C.muted }} />
+          <h1 className="mt-3 text-xl" style={{ ...display, fontWeight: 700 }}>
+            {(profile.display_name || profile.username)}&apos;s Kingdom is private
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: C.muted }}>@{profile.username} isn&apos;t sharing this publicly.</p>
+          <Link href="/" className="mt-4 text-sm font-semibold" style={{ color: C.gold }}>Back to Nomarchy</Link>
+        </div>
+      </FontShell>
+    );
+  }
+
   const overall = slots[OVERALL_FAVOURITE_NAME]?.current;
   const cuisineNames = Object.keys(slots)
     .filter((name) => name !== OVERALL_FAVOURITE_NAME && slots[name].current)
@@ -77,7 +95,6 @@ export default function PublicProfilePage({ params }) {
 
   const score = standing?.score ?? 0;
   const rank = getRank(score);
-  const isSelf = viewer && viewer.id === profile.id;
 
   return (
     <FontShell>

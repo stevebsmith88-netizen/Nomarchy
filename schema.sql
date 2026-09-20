@@ -16,13 +16,17 @@ create table if not exists profiles (
   display_name text,
   city        text default 'Toronto',
   created_at  timestamptz default now(),
-  is_owner    boolean not null default false
+  is_owner    boolean not null default false,
+  is_public   boolean not null default true
 );
 
--- Re-running this file against a database from before is_owner existed
+-- Re-running this file against a database from before these columns existed
 -- needs this - `create table if not exists` above is a no-op once the
 -- table is already there, so it never adds new columns on its own.
+-- Defaulting is_public to true keeps existing users' pages working exactly
+-- as before until they choose to go private.
 alter table profiles add column if not exists is_owner boolean not null default false;
+alter table profiles add column if not exists is_public boolean not null default true;
 
 -- Auto-create a profile whenever someone signs up.
 -- Username is always the email prefix plus a random suffix, so it can never collide.
@@ -279,16 +283,29 @@ create policy "cuisines readable" on cuisines for select using (true);
 drop policy if exists "cuisines insertable" on cuisines;
 create policy "cuisines insertable" on cuisines for insert with check (auth.uid() = created_by);
 
--- Thrones: public to read (that's the whole point), private to write
+-- Thrones: readable by the owner, or by anyone if the profile is public.
+-- NOT gated by "am I followed by them" - following here needs no approval
+-- from the person being followed (anyone who knows a username can follow
+-- it), so treating a follow as consent to share would let anyone unlock a
+-- private profile just by following it. Going private means only you can
+-- see your picks, including in a friend's Court, until you go public again.
 drop policy if exists "thrones readable" on thrones;
-create policy "thrones readable" on thrones for select using (true);
+create policy "thrones readable" on thrones for select
+  using (
+    auth.uid() = thrones.user_id
+    or exists (select 1 from profiles p where p.id = thrones.user_id and p.is_public)
+  );
 drop policy if exists "own thrones writable" on thrones;
 create policy "own thrones writable" on thrones for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
--- Fallen: same as thrones
+-- Fallen: same visibility rule as thrones
 drop policy if exists "fallen readable" on fallen;
-create policy "fallen readable" on fallen for select using (true);
+create policy "fallen readable" on fallen for select
+  using (
+    auth.uid() = fallen.user_id
+    or exists (select 1 from profiles p where p.id = fallen.user_id and p.is_public)
+  );
 drop policy if exists "own fallen writable" on fallen;
 create policy "own fallen writable" on fallen for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -328,8 +345,16 @@ create policy "users read their own ai calls" on ai_calls for select
 -- 9. CREDIBILITY SCORE
 -- Computed on read so it can never drift out of sync with reality.
 -- Endorsements received are weighted heaviest: trust from others beats volume.
+--
+-- security_invoker matters here: without it, a view created from the SQL
+-- Editor runs as the postgres role, which bypasses row-level security
+-- entirely - so a private profile's real thrones/coups counts would leak
+-- into everyone's score regardless of the is_public policies above. With
+-- it, the view's subqueries obey RLS for whoever is actually asking.
 -- ------------------------------------------------------------
-create or replace view standings as
+create or replace view standings
+with (security_invoker = true)
+as
 select
   p.id,
   p.username,
