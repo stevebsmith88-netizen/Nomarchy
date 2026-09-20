@@ -7,7 +7,7 @@ import {
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock,
 } from "lucide-react";
 import {
-  supabase, getUser, onAuthChange, signIn, signOut, getProfile, updateProfile,
+  supabase, getUser, onAuthChange, signIn, verifyCode, signOut, getProfile, updateProfile,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited,
   moveThroneCuisine, unCrown,
@@ -710,8 +710,10 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
 function SignInScreen() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -725,6 +727,19 @@ function SignInScreen() {
     setSubmitting(false);
   };
 
+  // Typing the code in keeps you inside this same window the whole time -
+  // no hop out to Safari and back, which is what breaks a home-screen PWA.
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    setError(""); setVerifying(true);
+    try {
+      await verifyCode(email, code.trim());
+    } catch (err) {
+      setError(err.message);
+    }
+    setVerifying(false);
+  };
+
   return (
     <FontShell>
       <div className="flex min-h-screen items-center justify-center px-5">
@@ -736,7 +751,36 @@ function SignInScreen() {
           <p className="mt-1 mb-6 text-sm italic" style={{ ...display, color: C.muted }}>Long live your favourites.</p>
 
           {sent ? (
-            <p className="text-sm" style={{ color: C.muted }}>Check your email for a sign-in link.</p>
+            <form onSubmit={handleVerify} className="flex flex-col gap-3">
+              <p className="text-sm" style={{ color: C.muted }}>
+                Check your email for a 6-digit code and type it in below. (There&apos;s also a link in that email if you&apos;d rather tap that on a computer.)
+              </p>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                required
+                autoFocus
+                placeholder="123456"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="w-full rounded-lg px-3 py-2.5 text-center text-lg tracking-[0.3em] outline-none"
+                style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+              />
+              {error && <p className="text-xs" style={{ color: C.coup }}>{error}</p>}
+              <button type="submit" disabled={verifying} className="flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>
+                {verifying ? <Loader2 size={15} className="animate-spin" /> : <Crown size={15} />}
+                {verifying ? "Verifying..." : "Verify and sign in"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setSent(false); setCode(""); setError(""); }}
+                className="text-xs font-semibold"
+                style={{ color: C.muted }}
+              >
+                Use a different email
+              </button>
+            </form>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
               <input
@@ -752,7 +796,7 @@ function SignInScreen() {
               {error && <p className="text-xs" style={{ color: C.coup }}>{error}</p>}
               <button type="submit" disabled={submitting} className="flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>
                 {submitting ? <Loader2 size={15} className="animate-spin" /> : <Crown size={15} />}
-                {submitting ? "Sending..." : "Send sign-in link"}
+                {submitting ? "Sending..." : "Send sign-in code"}
               </button>
             </form>
           )}
