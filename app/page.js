@@ -298,7 +298,7 @@ export default function Nomarchy() {
       <header className="px-5 pt-7 pb-3 text-center">
         <div className="flex items-center justify-center gap-2">
           <LogoMark size={32} />
-          <h1 className="text-3xl tracking-wide" style={{ ...display, fontWeight: 900 }}>NOMARCHY</h1>
+          <h1 className="text-3xl tracking-[0.12em]" style={{ ...display, fontWeight: 900 }}>NOMARCHY</h1>
         </div>
         <p className="mt-1 text-sm italic" style={{ ...display, color: C.muted }}>Long live your favourites.</p>
         <div className="mt-2 flex items-center justify-center gap-2">
@@ -780,7 +780,7 @@ function SignInScreen() {
         <div className="w-full max-w-sm rounded-2xl p-7 text-center" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
           <div className="flex items-center justify-center gap-2">
             <LogoMark size={28} />
-            <h1 className="text-2xl tracking-wide" style={{ ...display, fontWeight: 900 }}>NOMARCHY</h1>
+            <h1 className="text-2xl tracking-[0.12em]" style={{ ...display, fontWeight: 900 }}>NOMARCHY</h1>
           </div>
           <p className={`mt-1 text-sm italic ${sent ? "mb-6" : ""}`} style={{ ...display, color: C.muted }}>Long live your favourites.</p>
 
