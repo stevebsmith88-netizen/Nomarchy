@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
   Crown, Plus, ScrollText, Swords, X, Users, Award, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
-  ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock,
+  ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock, Info,
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signOut, getProfile, updateProfile,
@@ -64,6 +64,7 @@ export default function Nomarchy() {
   const [followError, setFollowError] = useState("");
 
   const [editingProfile, setEditingProfile] = useState(false);
+  const [showLadder, setShowLadder] = useState(false);
 
   useEffect(() => {
     getUser().then((u) => { setUser(u); setAuthChecked(true); });
@@ -296,13 +297,31 @@ export default function Nomarchy() {
         </div>
         <p className="mt-1 text-sm italic" style={{ ...display, color: C.muted }}>Long live your favourites.</p>
         <div className="mt-2 flex items-center justify-center gap-2">
-          <button
-            onClick={() => setEditingProfile(true)}
+          <div
             className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold"
             style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}
           >
-            @{profile?.username} <RankBadge score={score} /> {profile?.is_owner && <OwnerBadge />} <Pencil size={11} />
-          </button>
+            <button onClick={() => setEditingProfile(true)} className="flex items-center gap-1">
+              @{profile?.username} · {title} <RankBadge score={score} /> {profile?.is_owner && <OwnerBadge />} <Pencil size={11} />
+            </button>
+            <span className="relative">
+              <button onClick={() => setShowLadder((v) => !v)} aria-label="Show rank ladder" className="flex items-center">
+                <Info size={12} />
+              </button>
+              {showLadder && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowLadder(false)} />
+                  <div
+                    className="absolute left-1/2 top-full z-50 mt-2 w-72 -translate-x-1/2"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ filter: "drop-shadow(0 8px 20px rgba(0,0,0,0.45))" }}
+                  >
+                    <RankLadder score={score} />
+                  </div>
+                </>
+              )}
+            </span>
+          </div>
           <button onClick={signOut} className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <LogOut size={12} /> Sign out
           </button>
@@ -528,29 +547,8 @@ export default function Nomarchy() {
             </div>)}
           </div>
 
-          <div className="mx-auto mt-4 max-w-md rounded-xl p-4 text-left" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
-            <div className="mb-1 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>The ladder</div>
-            {[...RANKS].reverse().map((r, i) => {
-              const reached = score >= r.min;
-              const isCurrent = r.title === rank.title;
-              return (
-                <div key={r.title} className="flex items-center justify-between py-1.5"
-                  style={{ borderTop: i > 0 ? `1px solid ${C.cardEdge}` : "none" }}>
-                  <div className="flex items-center gap-2">
-                    <Crown size={13} style={{ color: reached ? C.gold : C.muted }} fill={reached ? C.gold : "none"} strokeWidth={reached ? 0 : 2} />
-                    <span className="text-sm" style={{ color: isCurrent ? C.gold : reached ? C.cream : C.muted, fontWeight: isCurrent ? 700 : 500 }}>
-                      {r.title}
-                    </span>
-                    {isCurrent && (
-                      <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: C.gold, color: C.bg, letterSpacing: "0.06em" }}>
-                        You are here
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-xs" style={{ color: C.muted }}>{r.min}</span>
-                </div>
-              );
-            })}
+          <div className="mx-auto mt-4 max-w-md">
+            <RankLadder score={score} />
           </div>
 
           <div className="mx-auto mt-4 grid max-w-md grid-cols-2 gap-3 text-left">
@@ -618,6 +616,36 @@ export default function Nomarchy() {
         />
       )}
     </FontShell>
+  );
+}
+
+function RankLadder({ score }) {
+  const rank = getRank(score);
+  return (
+    <div className="rounded-xl p-4 text-left" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+      <div className="mb-1 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>The ladder</div>
+      {[...RANKS].reverse().map((r, i) => {
+        const reached = score >= r.min;
+        const isCurrent = r.title === rank.title;
+        return (
+          <div key={r.title} className="flex items-center justify-between py-1.5"
+            style={{ borderTop: i > 0 ? `1px solid ${C.cardEdge}` : "none" }}>
+            <div className="flex items-center gap-2">
+              <Crown size={13} style={{ color: reached ? C.gold : C.muted }} fill={reached ? C.gold : "none"} strokeWidth={reached ? 0 : 2} />
+              <span className="text-sm" style={{ color: isCurrent ? C.gold : reached ? C.cream : C.muted, fontWeight: isCurrent ? 700 : 500 }}>
+                {r.title}
+              </span>
+              {isCurrent && (
+                <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: C.gold, color: C.bg, letterSpacing: "0.06em" }}>
+                  You are here
+                </span>
+              )}
+            </div>
+            <span className="text-xs" style={{ color: C.muted }}>{r.min}</span>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -748,7 +776,13 @@ function SignInScreen() {
             <LogoMark size={28} />
             <h1 className="text-2xl tracking-wide" style={{ ...display, fontWeight: 900 }}>NOMARCHY</h1>
           </div>
-          <p className="mt-1 mb-6 text-sm italic" style={{ ...display, color: C.muted }}>Long live your favourites.</p>
+          <p className={`mt-1 text-sm italic ${sent ? "mb-6" : ""}`} style={{ ...display, color: C.muted }}>Long live your favourites.</p>
+
+          {!sent && (
+            <p className="mb-6 mt-3 text-xs leading-relaxed" style={{ color: C.muted }}>
+              Crown your favourite spot in every cuisine. When something better comes along, stage a coup. Compare your kingdom with friends, and climb the ranks as your picks earn trust.
+            </p>
+          )}
 
           {sent ? (
             <form onSubmit={handleVerify} className="flex flex-col gap-3">
