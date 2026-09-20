@@ -10,8 +10,12 @@ export const C = {
   gold: "#E3B341", cream: "#F4ECDD", muted: "#A795BD",
   coup: "#E85D4A", green: "#7FB069",
 };
-export const display = { fontFamily: "'Fraunces', serif" };
-export const body = { fontFamily: "'Archivo', sans-serif" };
+// One typeface throughout - Raleway, matching the logo's wordmark - rather
+// than the earlier serif/sans pairing (Fraunces/Archivo). `display` and
+// `body` stay as separate exports since components already destructure
+// them independently everywhere; only the underlying family changed.
+export const display = { fontFamily: "'Raleway', sans-serif" };
+export const body = { fontFamily: "'Raleway', sans-serif" };
 
 // The gap to the next tier widens as you climb - the first promotion is
 // quick (you just need to try the app), the last one is a real reign.
@@ -95,7 +99,7 @@ export function LogoMark({ size = 32 }) {
 export function FontShell({ children }) {
   return (
     <div className="min-h-screen w-full" style={{ background: C.bg, color: C.cream, ...body }}>
-      <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
       {children}
     </div>
   );
