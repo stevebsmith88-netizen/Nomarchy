@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import {
   Crown, Plus, ScrollText, Swords, X, Users, Award, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
@@ -261,9 +262,8 @@ export default function Nomarchy() {
     <FontShell>
       <header className="px-5 pt-7 pb-3 text-center">
         <div className="flex items-center justify-center gap-2">
-          <Crown size={24} style={{ color: C.gold }} strokeWidth={1.6} />
+          <Image src="/icon-512.png" alt="" width={32} height={32} className="rounded" priority />
           <h1 className="text-3xl tracking-wide" style={{ ...display, fontWeight: 900 }}>NOMARCHY</h1>
-          <Crown size={24} style={{ color: C.gold, transform: "scaleX(-1)" }} strokeWidth={1.6} />
         </div>
         <p className="mt-1 text-sm italic" style={{ ...display, color: C.muted }}>Long live your favourites.</p>
         <div className="mt-2 flex items-center justify-center gap-2">
@@ -596,7 +596,7 @@ function SignInScreen() {
       <div className="flex min-h-screen items-center justify-center px-5">
         <div className="w-full max-w-sm rounded-2xl p-7 text-center" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
           <div className="flex items-center justify-center gap-2">
-            <Crown size={24} style={{ color: C.gold }} strokeWidth={1.6} />
+            <Image src="/icon-512.png" alt="" width={28} height={28} className="rounded" priority />
             <h1 className="text-2xl tracking-wide" style={{ ...display, fontWeight: 900 }}>NOMARCHY</h1>
           </div>
           <p className="mt-1 mb-6 text-sm italic" style={{ ...display, color: C.muted }}>Long live your favourites.</p>
