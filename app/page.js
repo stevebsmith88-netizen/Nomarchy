@@ -753,7 +753,7 @@ function SignInScreen() {
           {sent ? (
             <form onSubmit={handleVerify} className="flex flex-col gap-3">
               <p className="text-sm" style={{ color: C.muted }}>
-                Check your email for a 6-digit code and type it in below. (There&apos;s also a link in that email if you&apos;d rather tap that on a computer.)
+                Check your email for a sign-in code and type it in below. (There&apos;s also a link in that email if you&apos;d rather tap that on a computer.)
               </p>
               <input
                 type="text"
