@@ -10,12 +10,13 @@ export const C = {
   gold: "#E3B341", cream: "#F4ECDD", muted: "#A795BD",
   coup: "#E85D4A", green: "#7FB069",
 };
-// One typeface throughout - Raleway, matching the logo's wordmark - rather
-// than the earlier serif/sans pairing (Fraunces/Archivo). `display` and
-// `body` stay as separate exports since components already destructure
-// them independently everywhere; only the underlying family changed.
+// Matches the real brand pairing: Raleway for the wordmark/headings, and
+// Work Sans standing in for Proxima Nova (the logo's actual sub-font,
+// which is a paid Adobe Fonts typeface, not available to load for free) -
+// picked for reading cleanly at the small sizes used throughout decrees
+// and notes, while still pairing well with Raleway's geometric headlines.
 export const display = { fontFamily: "'Raleway', sans-serif" };
-export const body = { fontFamily: "'Raleway', sans-serif" };
+export const body = { fontFamily: "'Work Sans', sans-serif" };
 
 // The gap to the next tier widens as you climb - the first promotion is
 // quick (you just need to try the app), the last one is a real reign.
@@ -99,7 +100,7 @@ export function LogoMark({ size = 32 }) {
 export function FontShell({ children }) {
   return (
     <div className="min-h-screen w-full" style={{ background: C.bg, color: C.cream, ...body }}>
-      <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
       {children}
     </div>
   );
