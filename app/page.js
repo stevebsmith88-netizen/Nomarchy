@@ -1115,24 +1115,41 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
             Everything lands in Next in Line. Thrones still have to be earned one decree at a time.
           </p>
         </>) : (<>
-          <p className="mt-2 text-sm" style={{ color: C.muted }}>Found {rows.length}. Check the cuisines, untick anything you don&apos;t want.</p>
+          <p className="mt-2 text-sm" style={{ color: C.muted }}>Found {rows.length}. Fix anything it got wrong, untick anything you don&apos;t want.</p>
           <div className="mt-3">
             {rows.map((r) => (
               <div key={r._id} className="mb-2 rounded-lg p-2.5" style={{ background: C.bg, border: `1px solid ${r._keep ? C.cardEdge : C.cardEdge + "55"}`, opacity: r._keep ? 1 : 0.45 }}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-bold">{r.name}</span>
+                  <input
+                    value={r.name}
+                    onChange={(e) => update(r._id, "name", e.target.value)}
+                    className="flex-1 rounded bg-transparent px-1 py-0.5 text-sm font-bold outline-none"
+                    style={{ color: C.cream }}
+                  />
                   <button onClick={() => update(r._id, "_keep", !r._keep)} className="flex h-5 w-5 shrink-0 items-center justify-center rounded"
                     style={r._keep ? { background: C.gold, color: C.bg } : { border: `1px solid ${C.cardEdge}` }}>
                     {r._keep && <Check size={12} strokeWidth={3} />}
                   </button>
                 </div>
                 <div className="mt-1.5 flex items-center gap-2">
-                  <select value={r.cuisine} onChange={(e) => update(r._id, "cuisine", e.target.value)} className="rounded px-2 py-1 text-xs outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}>
+                  <select value={r.cuisine} onChange={(e) => update(r._id, "cuisine", e.target.value)} className="shrink-0 rounded px-2 py-1 text-xs outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}>
                     {[...new Set([r.cuisine, ...cuisineNames].filter(Boolean))].map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
-                  {r.area && <span className="text-xs" style={{ color: C.muted }}>{r.area}</span>}
+                  <input
+                    value={r.area || ""}
+                    onChange={(e) => update(r._id, "area", e.target.value)}
+                    placeholder="area"
+                    className="flex-1 rounded px-2 py-1 text-xs outline-none"
+                    style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+                  />
                 </div>
-                {r.note && <p className="mt-1 text-xs italic" style={{ color: C.muted }}>{r.note}</p>}
+                <input
+                  value={r.note || ""}
+                  onChange={(e) => update(r._id, "note", e.target.value)}
+                  placeholder="note (optional)"
+                  className="mt-1.5 w-full rounded bg-transparent px-1 py-0.5 text-xs italic outline-none"
+                  style={{ color: C.muted }}
+                />
               </div>))}
           </div>
           <div className="flex gap-2">
