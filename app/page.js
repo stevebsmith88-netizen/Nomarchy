@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
-  loadRecentMembers,
+  loadRecentMembers, loadFollowers, followUser,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited,
   moveThroneCuisine, unCrown,
@@ -48,6 +48,8 @@ export default function Nomarchy() {
   const [cuisineList, setCuisineList] = useState([]);
   const [standing, setStanding] = useState(null);
   const [court, setCourt] = useState([]);
+  const [followers, setFollowers] = useState([]);
+  const [followBackBusy, setFollowBackBusy] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState("");
 
@@ -79,16 +81,17 @@ export default function Nomarchy() {
     if (!user) return;
     (async () => {
       try {
-        const [k, n, c, s, crt, p] = await Promise.all([
+        const [k, n, c, s, crt, flw, p] = await Promise.all([
           loadKingdom(user.id),
           loadNextInLine(user.id),
           loadCuisines(user.id),
           loadStanding(user.id),
           loadCourt(user.id),
+          loadFollowers(user.id),
           getProfile(user.id),
         ]);
         setSlots(k); setPretenders(n); setCuisineList(c);
-        setStanding(s); setCourt(crt); setProfile(p);
+        setStanding(s); setCourt(crt); setFollowers(flw); setProfile(p);
       } catch (err) {
         setLoadError(err.message);
       }
@@ -103,6 +106,18 @@ export default function Nomarchy() {
   const refreshCuisines = async () => setCuisineList(await loadCuisines(user.id));
   const refreshStanding = async () => setStanding(await loadStanding(user.id));
   const refreshCourt = async () => setCourt(await loadCourt(user.id));
+  const refreshFollowers = async () => setFollowers(await loadFollowers(user.id));
+
+  const handleFollowBack = async (targetId) => {
+    setFollowBackBusy(targetId);
+    try {
+      await followUser(user.id, targetId);
+      await Promise.all([refreshFollowers(), refreshCourt()]);
+    } catch (e) {
+      flash(e.message || "Couldn't follow back");
+    }
+    setFollowBackBusy(null);
+  };
 
   const overallCuisine = cuisineList.find((c) => c.is_default && c.name === OVERALL_FAVOURITE_NAME);
   const selectableCuisines = cuisineList.filter((c) => c !== overallCuisine);
@@ -512,6 +527,28 @@ export default function Nomarchy() {
             </button>
           </form>
           {followError && <p className="mb-3 text-xs" style={{ color: C.coup }}>{followError}</p>}
+
+          {followers.some((f) => !f.alreadyFollowing) && (
+            <div className="mb-4 rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+              <div className="mb-2 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Following you</div>
+              {followers.filter((f) => !f.alreadyFollowing).map((f) => (
+                <div key={f.id} className="flex items-center justify-between py-1.5">
+                  <span className="flex items-center gap-1.5 text-sm font-semibold">
+                    {f.name} {f.isOwner && <OwnerBadge size={12} />}
+                  </span>
+                  <button
+                    onClick={() => handleFollowBack(f.id)}
+                    disabled={followBackBusy === f.id}
+                    className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
+                    style={{ background: C.gold, color: C.bg }}
+                  >
+                    {followBackBusy === f.id ? <Loader2 size={11} className="animate-spin" /> : <UserPlus size={11} />}
+                    Follow back
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           {court.length === 0 ? (
             <div className="rounded-xl p-6 text-center" style={{ background: C.card, border: `1px dashed ${C.cardEdge}` }}>
