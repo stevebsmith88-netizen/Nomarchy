@@ -20,8 +20,15 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
 
-const MODEL = "claude-opus-5";
-const MAX_IMPORT_CHARS = 8000;
+// Import is a batch, wait-a-moment task where getting cuisines right
+// matters most, so it stays on Opus. Lookup happens mid-flow while
+// someone's filling out a crown/next-in-line form and needs to feel fast -
+// it's also a narrower task (search + extract up to 3 matches), so a
+// lighter model at lower effort is the right trade there, not a downgrade
+// for its own sake.
+const IMPORT_MODEL = "claude-opus-5";
+const LOOKUP_MODEL = "claude-sonnet-5";
+const MAX_IMPORT_CHARS = 20000;
 const HOURLY_CALL_LIMIT = 30;
 
 // Claude Opus 5 thinks by default, and those thinking tokens count against
@@ -137,8 +144,9 @@ async function handleLookup(supabase, query, city) {
   }
 
   const response = await anthropic.messages.create({
-    model: MODEL,
+    model: LOOKUP_MODEL,
     max_tokens: MAX_OUTPUT_TOKENS,
+    output_config: { effort: "low" },
     tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 3 }],
     messages: [
       {
@@ -204,7 +212,7 @@ async function handleImport(raw, cuisines) {
   };
 
   const response = await anthropic.messages.create({
-    model: MODEL,
+    model: IMPORT_MODEL,
     max_tokens: MAX_OUTPUT_TOKENS,
     output_config: { format: { type: "json_schema", schema } },
     messages: [

@@ -16,6 +16,7 @@ import {
 import { C, display, body, RANKS, LogoMark, FontShell } from "./theme";
 
 const MIN_DECREE_LENGTH = 30;
+const MAX_IMPORT_CHARS = 20000;
 
 // A reserved, shared cuisine row (seeded in schema.sql) that every user gets
 // their own throne on via the normal unique(user_id, cuisine_id) constraint.
@@ -917,7 +918,7 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ mode: "import", raw: raw.trim().slice(0, 8000), cuisines: cuisineNames }),
+        body: JSON.stringify({ mode: "import", raw: raw.trim().slice(0, MAX_IMPORT_CHARS), cuisines: cuisineNames }),
       });
       let data;
       try {
@@ -952,10 +953,15 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
           <p className="mt-2 text-sm" style={{ color: C.muted }}>
             Paste it in however it comes. Notes, a CSV, a screenshot&apos;s worth of text, a rambling list from the group chat. It&apos;ll sort out the mess.
           </p>
-          <textarea value={raw} onChange={(e) => setRaw(e.target.value)} rows={8} maxLength={8000}
+          <textarea value={raw} onChange={(e) => setRaw(e.target.value)} rows={8} maxLength={MAX_IMPORT_CHARS}
             placeholder={"Bar Prima - pizza, Little Italy, best margherita\nPai (thai) khao soi!!\nKinton Ramen, Annex\nsunny's chinese - kensington, cumin lamb"}
             className="mt-3 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
-          <div className="mt-1 text-right text-xs" style={{ color: C.muted }}>{raw.length}/8000</div>
+          <div className="mt-1 text-right text-xs" style={{ color: C.muted }}>{raw.length}/{MAX_IMPORT_CHARS}</div>
+          {raw.length >= MAX_IMPORT_CHARS && (
+            <p className="mt-1 text-xs" style={{ color: C.coup }}>
+              That&apos;s the most we can process in one go - paste the rest as a second import after this one.
+            </p>
+          )}
           {err && <p className="mt-1 text-xs" style={{ color: C.coup }}>{err}</p>}
           <button onClick={parse} disabled={working || !raw.trim()} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold"
             style={working || !raw.trim() ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.bg }}>
