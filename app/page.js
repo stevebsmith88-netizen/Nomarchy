@@ -13,42 +13,7 @@ import {
   moveThroneCuisine, unCrown,
   loadCourt, toggleEndorsement, followByUsername, loadStanding,
 } from "@/lib/data";
-
-const C = {
-  bg: "#1C1326", card: "#2A1D38", cardEdge: "#41305A",
-  gold: "#E3B341", cream: "#F4ECDD", muted: "#A795BD",
-  coup: "#E85D4A", green: "#7FB069",
-};
-const display = { fontFamily: "'Fraunces', serif" };
-const body = { fontFamily: "'Archivo', sans-serif" };
-
-// The header crown mark, drawn inline so it always matches C.gold exactly
-// (no separate image asset to keep in sync with the button color).
-function LogoMark({ size = 32 }) {
-  return (
-    <svg
-      viewBox="0 -8 100 116"
-      width={size}
-      height={size * (116 / 100)}
-      fill="none"
-      stroke={C.gold}
-      strokeWidth={6}
-      strokeLinecap="round"
-    >
-      <circle cx={50} cy={-2} r={4} fill={C.gold} stroke="none" />
-      <path d="M6 100V30L28 72L50 10L72 72L94 30V100Z" />
-      <path d="M50 100V72M43 56v10a7 7 0 0 0 14 0V56M50 56v12" strokeWidth={4} />
-    </svg>
-  );
-}
-
-const RANKS = [
-  { min: 0, title: "Peckish Peasant", note: "Everyone starts hungry." },
-  { min: 40, title: "Court Taster", note: "Your palate is earning trust." },
-  { min: 100, title: "Noble of Nibbles", note: "People are starting to listen." },
-  { min: 180, title: "Duke of Dinner", note: "Your word carries weight at the table." },
-  { min: 280, title: "Monarch of Taste", note: "Long may you reign." },
-];
+import { C, display, body, RANKS, LogoMark, FontShell } from "./theme";
 
 const MIN_DECREE_LENGTH = 30;
 
@@ -700,15 +665,6 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
         <p className="text-sm italic" style={{ color: C.muted }}>{featured ? "No overall favourite crowned yet." : "This throne sits empty."}</p>
         <button onClick={() => setModal({ cuisineId, cuisineName, mode: "claim" })} className="mt-3 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}><Crown size={13} /> {featured ? "Crown your favourite" : "Crown a spot"}</button>
       </div>)}
-    </div>
-  );
-}
-
-function FontShell({ children }) {
-  return (
-    <div className="min-h-screen w-full" style={{ background: C.bg, color: C.cream, ...body }}>
-      <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      {children}
     </div>
   );
 }
