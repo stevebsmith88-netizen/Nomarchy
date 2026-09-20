@@ -156,8 +156,14 @@ create table if not exists next_in_line (
   rating          numeric,
   maps_url        text,
   note            text,
-  added_at        timestamptz default now()
+  added_at        timestamptz default now(),
+  visited_at      timestamptz
 );
+
+-- Re-running this file against a database from before visited_at existed
+-- needs this - `create table if not exists` above is a no-op once the
+-- table is already there, so it never adds new columns on its own.
+alter table next_in_line add column if not exists visited_at timestamptz;
 
 create index if not exists nil_user_idx on next_in_line(user_id);
 

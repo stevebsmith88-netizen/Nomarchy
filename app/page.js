@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import {
   Crown, Plus, ScrollText, Swords, X, Users, Award, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
-  ClipboardPaste, Wand2, LogOut, UserPlus, Pencil,
+  ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw,
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, signOut, getProfile, updateProfile,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
-  crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine,
+  crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited,
+  moveThroneCuisine, unCrown,
   loadCourt, toggleEndorsement, followByUsername, loadStanding,
 } from "@/lib/data";
 
@@ -89,6 +90,7 @@ export default function Nomarchy() {
   const [newCuisine, setNewCuisine] = useState("");
   const [addingCuisine, setAddingCuisine] = useState(false);
   const [onlyCrowned, setOnlyCrowned] = useState(false);
+  const [pretenderSearch, setPretenderSearch] = useState("");
   const [toast, setToast] = useState("");
 
   const [followInput, setFollowInput] = useState("");
@@ -145,6 +147,26 @@ export default function Nomarchy() {
     flash(fromPretenderId ? `${entry.name} promoted to the ${cuisineName} throne` : `${entry.name} crowned`);
   };
 
+  const handleMoveCuisine = async (throneId, newCuisineId) => {
+    await moveThroneCuisine(throneId, newCuisineId);
+    await refreshKingdom();
+  };
+
+  const handleUnCrown = async (cuisineId, throne) => {
+    await unCrown(user.id, throne.id, {
+      name: throne.name,
+      area: throne.area,
+      address: throne.address,
+      rating: throne.rating,
+      mapsUrl: throne.mapsUrl,
+      cuisineId,
+    });
+    await refreshKingdom();
+    await refreshPretenders();
+    await refreshStanding();
+    flash(`${throne.name} un-crowned, back in Next in Line`);
+  };
+
   const addToPretenders = async (cuisineId, entry) => {
     if (pretenders.some((p) => normalizeName(p.name) === normalizeName(entry.name))) {
       flash("Already on your shortlist");
@@ -158,6 +180,11 @@ export default function Nomarchy() {
 
   const handleRemovePretender = async (id) => {
     await removeFromNextInLine(id);
+    await refreshPretenders();
+  };
+
+  const handleToggleVisited = async (id, currentlyVisited) => {
+    await markVisited(id, !currentlyVisited);
     await refreshPretenders();
   };
 
@@ -277,6 +304,22 @@ export default function Nomarchy() {
   const fmt = (t) => new Date(t).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
   const shown = onlyCrowned ? cuisineNames.filter((c) => slots[c]?.current) : cuisineNames;
 
+  const pretenderQuery = pretenderSearch.trim().toLowerCase();
+  const filteredPretenders = pretenderQuery
+    ? pretenders.filter((p) =>
+        [p.name, p.cuisine, p.area, p.note].some((f) => f && f.toLowerCase().includes(pretenderQuery))
+      )
+    : pretenders;
+  const pretenderGroups = Object.entries(
+    filteredPretenders.reduce((groups, p) => {
+      const key = p.cuisine || "Uncategorized";
+      (groups[key] = groups[key] || []).push(p);
+      return groups;
+    }, {})
+  )
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([cuisine, items]) => ({ cuisine, items: [...items].sort((a, b) => a.name.localeCompare(b.name)) }));
+
   return (
     <FontShell>
       <header className="px-5 pt-7 pb-3 text-center">
@@ -333,6 +376,7 @@ export default function Nomarchy() {
                 setModal={setModal}
                 sharePick={sharePick}
                 fmt={fmt}
+                onUnCrown={() => handleUnCrown(overallCuisine.id, slots[OVERALL_FAVOURITE_NAME]?.current)}
               />
             </div>
           )}
@@ -345,19 +389,25 @@ export default function Nomarchy() {
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {shown.map((cuisineName) => (
-              <ThroneCard
-                key={cuisineName}
-                cuisineName={cuisineName}
-                cuisineId={selectableCuisines.find((c) => c.name === cuisineName)?.id}
-                slot={slots[cuisineName]}
-                historyOpen={historyOpen}
-                setHistoryOpen={setHistoryOpen}
-                setModal={setModal}
-                sharePick={sharePick}
-                fmt={fmt}
-              />
-            ))}
+            {shown.map((cuisineName) => {
+              const thisId = selectableCuisines.find((c) => c.name === cuisineName)?.id;
+              return (
+                <ThroneCard
+                  key={cuisineName}
+                  cuisineName={cuisineName}
+                  cuisineId={thisId}
+                  slot={slots[cuisineName]}
+                  historyOpen={historyOpen}
+                  setHistoryOpen={setHistoryOpen}
+                  setModal={setModal}
+                  sharePick={sharePick}
+                  fmt={fmt}
+                  emptyCuisines={selectableCuisines.filter((c) => c.id !== thisId && !slots[c.name]?.current)}
+                  onMoveCuisine={(newCuisineId) => handleMoveCuisine(slots[cuisineName]?.current?.id, newCuisineId)}
+                  onUnCrown={() => handleUnCrown(thisId, slots[cuisineName]?.current)}
+                />
+              );
+            })}
 
             {!onlyCrowned && (<div className="flex min-h-28 flex-col items-center justify-center rounded-xl p-4" style={{ border: `1px dashed ${C.cardEdge}` }}>
               {addingCuisine ? (<div className="flex w-full gap-2">
@@ -371,10 +421,23 @@ export default function Nomarchy() {
         {/* PRETENDERS */}
         {tab === "pretenders" && (<div>
           <p className="mb-3 text-sm" style={{ color: C.muted }}>The places waiting for their shot at a throne. Go, eat, then decide.</p>
-          <div className="mb-4 flex gap-2">
+          <div className="mb-3 flex gap-2">
             <button onClick={() => setAddPretender(true)} className="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold" style={{ background: C.gold, color: C.bg }}><Plus size={16} /> Add a place</button>
             <button onClick={() => setImporting(true)} className="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold" style={{ border: `1px solid ${C.gold}66`, color: C.gold }}><ClipboardPaste size={16} /> Import a list</button>
           </div>
+
+          {pretenders.length > 0 && (
+            <div className="relative mb-4">
+              <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" style={{ color: C.muted }} />
+              <input
+                value={pretenderSearch}
+                onChange={(e) => setPretenderSearch(e.target.value)}
+                placeholder="Search your list..."
+                className="w-full rounded-lg py-2.5 pl-9 pr-3 text-sm outline-none"
+                style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+              />
+            </div>
+          )}
 
           {pretenders.length === 0 ? (
             <div className="rounded-xl p-6 text-center" style={{ background: C.card, border: `1px dashed ${C.cardEdge}` }}>
@@ -382,32 +445,51 @@ export default function Nomarchy() {
               <p className="mt-2 text-sm" style={{ color: C.muted }}>Nothing waiting in throne just yet. Add the places you keep meaning to try, then promote the good ones.</p>
               <p className="mt-2 text-sm" style={{ color: C.muted }}>Already got a list in Notes or a spreadsheet? Paste the whole thing into Import and it&apos;ll sort it out.</p>
             </div>
-          ) : pretenders.map((p) => (
-            <div key={p.id} className="mb-3 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>{p.name}</h3>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
-                    {p.cuisine && <span className="rounded px-1.5 py-0.5 font-bold uppercase" style={{ background: C.bg, letterSpacing: "0.1em" }}>{p.cuisine}</span>}
-                    {(p.area || p.address) && <><MapPin size={11} /> {p.area || p.address}</>}
-                    {p.rating && <><Star size={11} style={{ color: C.gold }} fill={C.gold} /> {p.rating}</>}
-                    {p.mapsUrl && <a href={p.mapsUrl} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
+          ) : pretenderGroups.length === 0 ? (
+            <div className="rounded-xl p-6 text-center" style={{ background: C.card, border: `1px dashed ${C.cardEdge}` }}>
+              <p className="text-sm" style={{ color: C.muted }}>Nothing matches &ldquo;{pretenderSearch}&rdquo;.</p>
+            </div>
+          ) : pretenderGroups.map(({ cuisine, items }) => (
+            <div key={cuisine} className="mb-4">
+              <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>{cuisine}</h3>
+              {items.map((p) => (
+                <div key={p.id} className="mb-3 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, opacity: p.visitedAt ? 0.7 : 1 }}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="flex items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
+                        {p.name}
+                        {p.visitedAt && <Check size={14} style={{ color: C.green }} />}
+                      </h3>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
+                        {(p.area || p.address) && <><MapPin size={11} /> {p.area || p.address}</>}
+                        {p.rating && <><Star size={11} style={{ color: C.gold }} fill={C.gold} /> {p.rating}</>}
+                        {p.mapsUrl && <a href={p.mapsUrl} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
+                      </div>
+                    </div>
+                    <button onClick={() => handleRemovePretender(p.id)} aria-label="Remove" style={{ color: C.muted }}><Trash2 size={15} /></button>
+                  </div>
+                  {p.note && <p className="mt-2 text-sm italic leading-relaxed" style={{ color: C.cream + "CC" }}>{p.note}</p>}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => setModal({
+                        cuisineId: p.cuisineId || selectableCuisines[0]?.id,
+                        cuisineName: p.cuisine || selectableCuisines[0]?.name,
+                        mode: p.cuisine && slots[p.cuisine]?.current ? "coup" : "claim",
+                        prefill: p,
+                        pretenderId: p.id,
+                      })}
+                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>
+                      <Crown size={13} /> Crown it
+                    </button>
+                    <button
+                      onClick={() => handleToggleVisited(p.id, !!p.visitedAt)}
+                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
+                      style={p.visitedAt ? { background: C.green + "22", color: C.green, border: `1px solid ${C.green}66` } : { color: C.muted, border: `1px solid ${C.cardEdge}` }}>
+                      <Check size={13} /> {p.visitedAt ? "Been here" : "Mark as been"}
+                    </button>
                   </div>
                 </div>
-                <button onClick={() => handleRemovePretender(p.id)} aria-label="Remove" style={{ color: C.muted }}><Trash2 size={15} /></button>
-              </div>
-              {p.note && <p className="mt-2 text-sm italic leading-relaxed" style={{ color: C.cream + "CC" }}>{p.note}</p>}
-              <button
-                onClick={() => setModal({
-                  cuisineId: p.cuisineId || selectableCuisines[0]?.id,
-                  cuisineName: p.cuisine || selectableCuisines[0]?.name,
-                  mode: p.cuisine && slots[p.cuisine]?.current ? "coup" : "claim",
-                  prefill: p,
-                  pretenderId: p.id,
-                })}
-                className="mt-3 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>
-                <Crown size={13} /> I&apos;ve been. Crown it
-              </button>
+              ))}
             </div>
           ))}
         </div>)}
@@ -536,10 +618,28 @@ export default function Nomarchy() {
   );
 }
 
-function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt }) {
+function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown }) {
   const r = slot?.current;
   const fallenList = slot?.fallen || [];
   const open = historyOpen[cuisineName];
+
+  const [changingCuisine, setChangingCuisine] = useState(false);
+  const [targetCuisineId, setTargetCuisineId] = useState("");
+  const [moving, setMoving] = useState(false);
+  const [moveErr, setMoveErr] = useState("");
+
+  const confirmMove = async () => {
+    if (!targetCuisineId || moving) return;
+    setMoving(true); setMoveErr("");
+    try {
+      await onMoveCuisine(targetCuisineId);
+      setChangingCuisine(false);
+      setTargetCuisineId("");
+    } catch (e) {
+      setMoveErr(e.message || "Couldn't move it.");
+    }
+    setMoving(false);
+  };
 
   return (
     <div
@@ -568,8 +668,29 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
           <button onClick={() => sharePick(cuisineName, r)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Share2 size={13} /> Share</button>
+          {onMoveCuisine && (
+            <button onClick={() => setChangingCuisine((v) => !v)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Pencil size={13} /> Wrong category?</button>
+          )}
+          {onUnCrown && (
+            <button onClick={onUnCrown} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><RotateCcw size={13} /> Un-crown</button>
+          )}
           {fallenList.length > 0 && <button onClick={() => setHistoryOpen((p) => ({ ...p, [cuisineName]: !p[cuisineName] }))} className="flex items-center gap-1 px-1 text-xs font-semibold" style={{ color: C.muted }}>{fallenList.length} fallen {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</button>}
         </div>
+        {changingCuisine && (
+          <div className="mt-2 rounded-lg p-2.5" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+            <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Move to</label>
+            <select value={targetCuisineId} onChange={(e) => setTargetCuisineId(e.target.value)} className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}>
+              <option value="">Choose a cuisine...</option>
+              {(emptyCuisines || []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            {(emptyCuisines || []).length === 0 && <p className="mt-1 text-xs" style={{ color: C.muted }}>Every other cuisine already has a ruler.</p>}
+            {moveErr && <p className="mt-1 text-xs" style={{ color: C.coup }}>{moveErr}</p>}
+            <div className="mt-2 flex gap-2">
+              <button onClick={() => setChangingCuisine(false)} className="rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>Cancel</button>
+              <button disabled={!targetCuisineId || moving} onClick={confirmMove} className="rounded-lg px-3 py-1.5 text-xs font-bold" style={targetCuisineId ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}>Move</button>
+            </div>
+          </div>
+        )}
         {open && fallenList.map((f, i) => (
           <div key={i} className="mt-2 rounded-lg p-3 text-xs" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
             <div className="font-bold" style={{ color: C.muted }}>{f.name} <span className="font-normal">· reigned until {fmt(f.dethronedAt)}</span></div>
