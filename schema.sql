@@ -15,8 +15,14 @@ create table if not exists profiles (
   username    text unique not null,
   display_name text,
   city        text default 'Toronto',
-  created_at  timestamptz default now()
+  created_at  timestamptz default now(),
+  is_owner    boolean not null default false
 );
+
+-- Re-running this file against a database from before is_owner existed
+-- needs this - `create table if not exists` above is a no-op once the
+-- table is already there, so it never adds new columns on its own.
+alter table profiles add column if not exists is_owner boolean not null default false;
 
 -- Auto-create a profile whenever someone signs up.
 -- Username is always the email prefix plus a random suffix, so it can never collide.
@@ -41,6 +47,28 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function handle_new_user();
+
+-- The "Founder" badge flag. RLS's "own profile writable" policy below only
+-- restricts which ROW you can touch, not which columns - without this, any
+-- signed-in user could set their own is_owner to true via a raw API call.
+-- The Supabase SQL Editor runs as the `postgres` role, so this only blocks
+-- the app's own update path, not you setting it by hand.
+create or replace function protect_is_owner()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.is_owner is distinct from old.is_owner and current_user <> 'postgres' then
+    new.is_owner := old.is_owner;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_is_owner_trigger on profiles;
+create trigger protect_is_owner_trigger
+  before update on profiles
+  for each row execute function protect_is_owner();
 
 -- ------------------------------------------------------------
 -- 2. CUISINES

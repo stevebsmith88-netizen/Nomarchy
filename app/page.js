@@ -13,7 +13,7 @@ import {
   moveThroneCuisine, unCrown,
   loadCourt, toggleEndorsement, followByUsername, loadStanding,
 } from "@/lib/data";
-import { C, display, body, RANKS, LogoMark, FontShell } from "./theme";
+import { C, display, body, RANKS, getRank, RankBadge, OwnerBadge, LogoMark, FontShell } from "./theme";
 
 const MIN_DECREE_LENGTH = 30;
 const MAX_IMPORT_CHARS = 20000;
@@ -265,7 +265,7 @@ export default function Nomarchy() {
   const coups = standing?.coups ?? 0;
   const endorseCount = court.reduce((n, f) => n + f.picks.filter((p) => p.endorsedByMe).length, 0);
   const score = standing?.score ?? 0;
-  const rank = [...RANKS].reverse().find((r) => score >= r.min) || RANKS[0];
+  const rank = getRank(score);
   const nextRank = RANKS.find((r) => r.min > score);
   const fmt = (t) => new Date(t).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
   const shown = onlyCrowned ? cuisineNames.filter((c) => slots[c]?.current) : cuisineNames;
@@ -300,7 +300,7 @@ export default function Nomarchy() {
             className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold"
             style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}
           >
-            @{profile?.username} <Pencil size={11} />
+            @{profile?.username} <RankBadge score={score} /> {profile?.is_owner && <OwnerBadge />} <Pencil size={11} />
           </button>
           <button onClick={signOut} className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <LogOut size={12} /> Sign out
@@ -480,7 +480,9 @@ export default function Nomarchy() {
           ) : court.map((f) => (
             <div key={f.id} className="mb-4 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
               <div className="flex items-baseline justify-between">
-                <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>{f.name}</h3>
+                <h3 className="flex items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
+                  {f.name} <RankBadge score={f.score} /> {f.isOwner && <OwnerBadge />}
+                </h3>
                 <span className="text-xs font-semibold" style={{ color: C.gold }}>{f.score}</span>
               </div>
               {f.picks.length === 0 && <p className="mt-2 text-xs" style={{ color: C.muted }}>No thrones claimed yet.</p>}

@@ -3,6 +3,8 @@
 // profile page (app/[username]/page.js) so a signed-out visitor's kingdom
 // view looks identical to the owner's, with no duplicated palette to drift.
 
+import { Crown, Sparkles } from "lucide-react";
+
 export const C = {
   bg: "#1C1326", card: "#2A1D38", cardEdge: "#41305A",
   gold: "#E3B341", cream: "#F4ECDD", muted: "#A795BD",
@@ -11,13 +13,54 @@ export const C = {
 export const display = { fontFamily: "'Fraunces', serif" };
 export const body = { fontFamily: "'Archivo', sans-serif" };
 
+// The gap to the next tier widens as you climb - the first promotion is
+// quick (you just need to try the app), the last one is a real reign.
 export const RANKS = [
   { min: 0, title: "Peckish Peasant", note: "Everyone starts hungry." },
-  { min: 40, title: "Court Taster", note: "Your palate is earning trust." },
-  { min: 100, title: "Noble of Nibbles", note: "People are starting to listen." },
-  { min: 180, title: "Duke of Dinner", note: "Your word carries weight at the table." },
-  { min: 280, title: "Monarch of Taste", note: "Long may you reign." },
+  { min: 30, title: "Court Taster", note: "Your palate is earning trust." },
+  { min: 70, title: "Kitchen Knight", note: "You've earned your spurs at the table." },
+  { min: 120, title: "Baron of the Bites", note: "A modest but real domain of taste." },
+  { min: 180, title: "Viscount of Victuals", note: "Your picks are getting harder to ignore." },
+  { min: 250, title: "Earl of Eats", note: "A serious reputation at the table." },
+  { min: 330, title: "Duke of Dinner", note: "Your word carries weight at the table." },
+  { min: 420, title: "Prince/Princess of the Palate", note: "One reign away from the throne." },
+  { min: 520, title: "Monarch of Taste", note: "Long may you reign." },
 ];
+
+export function getRank(score) {
+  return [...RANKS].reverse().find((r) => score >= r.min) || RANKS[0];
+}
+
+// Small Reddit-flair-style badge next to a name. The crown fills in and
+// brightens tier by tier so the ladder is visible at a glance, not just
+// readable in a tooltip.
+export function RankBadge({ score, size = 14 }) {
+  const tier = RANKS.indexOf(getRank(score));
+  const lit = RANKS.length <= 1 ? 1 : tier / (RANKS.length - 1);
+  const color = `color-mix(in srgb, ${C.muted} ${Math.round((1 - lit) * 70)}%, ${C.gold})`;
+  return (
+    <Crown
+      size={size}
+      style={{ color }}
+      fill={tier >= RANKS.length - 1 ? color : "none"}
+      strokeWidth={tier >= RANKS.length - 1 ? 0 : 2}
+      title={`${getRank(score).title} (${score} pts)`}
+    />
+  );
+}
+
+// The app founder's badge - not earned by score, just who built the place.
+export function OwnerBadge({ size = 14 }) {
+  return (
+    <Sparkles
+      size={size}
+      style={{ color: C.gold }}
+      fill={C.gold}
+      strokeWidth={0}
+      title="Founder"
+    />
+  );
+}
 
 // The crown mark, drawn inline so it always matches C.gold exactly - no
 // separate image asset to keep in sync with the button color.

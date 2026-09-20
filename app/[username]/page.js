@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { Crown, MapPin, ExternalLink, Star, ScrollText, UserPlus, Loader2, Check } from "lucide-react";
 import { getUser, loadPublicKingdom, followByUsername } from "@/lib/data";
-import { C, display, RANKS, LogoMark, FontShell } from "../theme";
+import { C, display, getRank, RankBadge, OwnerBadge, LogoMark, FontShell } from "../theme";
 
 // Matches the reserved cuisine name seeded in schema.sql - see app/page.js
 // for the fuller explanation of why the overall favourite piggybacks on
@@ -76,7 +76,7 @@ export default function PublicProfilePage({ params }) {
     .sort((a, b) => a.localeCompare(b));
 
   const score = standing?.score ?? 0;
-  const rank = [...RANKS].reverse().find((r) => score >= r.min) || RANKS[0];
+  const rank = getRank(score);
   const isSelf = viewer && viewer.id === profile.id;
 
   return (
@@ -84,8 +84,9 @@ export default function PublicProfilePage({ params }) {
       <header className="px-5 pt-7 pb-3 text-center">
         <div className="flex items-center justify-center gap-2">
           <LogoMark size={28} />
-          <h1 className="text-2xl tracking-wide" style={{ ...display, fontWeight: 900 }}>
+          <h1 className="flex items-center gap-1.5 text-2xl tracking-wide" style={{ ...display, fontWeight: 900 }}>
             {(profile.display_name || profile.username)}&apos;s Kingdom
+            <RankBadge score={score} size={16} /> {profile.is_owner && <OwnerBadge size={16} />}
           </h1>
         </div>
         <p className="mt-1 text-sm italic" style={{ ...display, color: C.muted }}>
