@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { Crown, MapPin, ExternalLink, Star, ScrollText, UserPlus, Loader2, Check, Lock } from "lucide-react";
 import { getUser, loadPublicKingdom, followByUsername } from "@/lib/data";
-import { C, display, getRank, RankBadge, OwnerBadge, LogoMark, FontShell } from "../theme";
+import { C, display, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell } from "../theme";
 
 // Matches the reserved cuisine name seeded in schema.sql - see app/page.js
 // for the fuller explanation of why the overall favourite piggybacks on
@@ -94,7 +94,7 @@ export default function PublicProfilePage({ params }) {
     .sort((a, b) => a.localeCompare(b));
 
   const score = standing?.score ?? 0;
-  const rank = getRank(score);
+  const title = getTitle(profile.is_owner, score);
 
   return (
     <FontShell>
@@ -112,7 +112,7 @@ export default function PublicProfilePage({ params }) {
 
         <div className="mt-3 flex items-center justify-center gap-2">
           <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: C.card, color: C.gold, border: `1px solid ${C.cardEdge}` }}>
-            {rank.title}
+            {title}
           </span>
           {authChecked && viewer && !isSelf && (
             <button

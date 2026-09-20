@@ -31,6 +31,16 @@ export function getRank(score) {
   return [...RANKS].reverse().find((r) => score >= r.min) || RANKS[0];
 }
 
+// The owner doesn't climb the same ladder as everyone else - "Founding
+// Monarch" is a fixed title, not a score threshold, and it deliberately
+// isn't the same string as the top of RANKS ("Monarch of Taste") so that
+// title stays something everyone else can still earn.
+const OWNER_TITLE = "Founding Monarch";
+
+export function getTitle(isOwner, score) {
+  return isOwner ? OWNER_TITLE : getRank(score).title;
+}
+
 // Small Reddit-flair-style badge next to a name. The crown fills in and
 // brightens tier by tier so the ladder is visible at a glance, not just
 // readable in a tooltip.

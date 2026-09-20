@@ -13,7 +13,7 @@ import {
   moveThroneCuisine, unCrown,
   loadCourt, toggleEndorsement, followByUsername, loadStanding,
 } from "@/lib/data";
-import { C, display, body, RANKS, getRank, RankBadge, OwnerBadge, LogoMark, FontShell } from "./theme";
+import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell } from "./theme";
 
 const MIN_DECREE_LENGTH = 30;
 const MAX_IMPORT_CHARS = 20000;
@@ -266,6 +266,7 @@ export default function Nomarchy() {
   const endorseCount = court.reduce((n, f) => n + f.picks.filter((p) => p.endorsedByMe).length, 0);
   const score = standing?.score ?? 0;
   const rank = getRank(score);
+  const title = getTitle(profile?.is_owner, score);
   const nextRank = RANKS.find((r) => r.min > score);
   const fmt = (t) => new Date(t).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
   const shown = onlyCrowned ? cuisineNames.filter((c) => slots[c]?.current) : cuisineNames;
@@ -485,6 +486,12 @@ export default function Nomarchy() {
                 </h3>
                 <span className="text-xs font-semibold" style={{ color: C.gold }}>{f.score}</span>
               </div>
+              <span
+                className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+                style={{ background: C.bg, color: C.gold, letterSpacing: "0.06em" }}
+              >
+                {getTitle(f.isOwner, f.score)}
+              </span>
               {f.picks.length === 0 && <p className="mt-2 text-xs" style={{ color: C.muted }}>No thrones claimed yet.</p>}
               {f.picks.map((p) => (
                 <div key={p.id} className="mt-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
@@ -507,8 +514,10 @@ export default function Nomarchy() {
         {tab === "standing" && (<div className="text-center">
           <div className="mx-auto max-w-md rounded-xl p-6" style={{ background: C.card, border: `1px solid ${C.gold}55` }}>
             <Crown size={34} className="mx-auto" style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
-            <h2 className="mt-2 text-2xl" style={{ ...display, fontWeight: 900 }}>{rank.title}</h2>
-            <p className="mt-1 text-sm italic" style={{ color: C.muted }}>{rank.note}</p>
+            <h2 className="mt-2 text-2xl" style={{ ...display, fontWeight: 900 }}>{title}</h2>
+            <p className="mt-1 text-sm italic" style={{ color: C.muted }}>
+              {profile?.is_owner ? "Nomarchy exists because you built it." : rank.note}
+            </p>
             <div className="mt-4 text-5xl" style={{ ...display, fontWeight: 900, color: C.gold }}>{score}</div>
             <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>Taste credibility</div>
             {nextRank && (<div className="mt-4">
