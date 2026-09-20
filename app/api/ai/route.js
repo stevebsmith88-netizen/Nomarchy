@@ -220,8 +220,11 @@ async function handleImport(raw, cuisines) {
         role: "user",
         content:
           `Below is a messy personal list of restaurants pasted from notes, a spreadsheet or a CSV. ` +
-          `Extract every restaurant into structured data. Infer the cuisine from the name or context. ` +
-          `Use one of these where it fits: ${cuisineNames.join(", ")}. If none fit, use a short label of your own. ` +
+          `Extract every restaurant into structured data. Only set a cuisine when the text itself states or ` +
+          `clearly tags it (e.g. "- pizza", "(thai)", "sunny's chinese"). Do not guess a cuisine purely from a ` +
+          `restaurant's name or brand association - if it isn't stated, leave the cuisine field as an empty ` +
+          `string and let a person categorize it later. When a cuisine is stated, use one of these where it ` +
+          `fits: ${cuisineNames.join(", ")}; otherwise use the short label as written. ` +
           `Keep any personal comment as the note. Use an empty string for area or note when there isn't one. ` +
           `Ignore headers, blank lines, numbering, checkboxes and other list-formatting junk. ` +
           `The name field must be just the restaurant's name: trim whitespace, drop trailing punctuation like a ` +

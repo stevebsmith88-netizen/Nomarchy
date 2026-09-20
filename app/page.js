@@ -1115,7 +1115,7 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
             Everything lands in Next in Line. Thrones still have to be earned one decree at a time.
           </p>
         </>) : (<>
-          <p className="mt-2 text-sm" style={{ color: C.muted }}>Found {rows.length}. Fix anything it got wrong, untick anything you don&apos;t want.</p>
+          <p className="mt-2 text-sm" style={{ color: C.muted }}>Found {rows.length}. Fix anything it got wrong, untick anything you don&apos;t want. Cuisine&apos;s left blank where it wasn&apos;t stated - pick one or leave it for later.</p>
           <div className="mt-3">
             {rows.map((r) => (
               <div key={r._id} className="mb-2 rounded-lg p-2.5" style={{ background: C.bg, border: `1px solid ${r._keep ? C.cardEdge : C.cardEdge + "55"}`, opacity: r._keep ? 1 : 0.45 }}>
@@ -1132,7 +1132,8 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
                   </button>
                 </div>
                 <div className="mt-1.5 flex items-center gap-2">
-                  <select value={r.cuisine} onChange={(e) => update(r._id, "cuisine", e.target.value)} className="shrink-0 rounded px-2 py-1 text-xs outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}>
+                  <select value={r.cuisine} onChange={(e) => update(r._id, "cuisine", e.target.value)} className="shrink-0 rounded px-2 py-1 text-xs outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: r.cuisine ? C.cream : C.muted }}>
+                    {!r.cuisine && <option value="">Choose a cuisine...</option>}
                     {[...new Set([r.cuisine, ...cuisineNames].filter(Boolean))].map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <input
