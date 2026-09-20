@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import {
   Crown, Plus, ScrollText, Swords, X, Users, Award, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
@@ -21,6 +20,26 @@ const C = {
 };
 const display = { fontFamily: "'Fraunces', serif" };
 const body = { fontFamily: "'Archivo', sans-serif" };
+
+// The header crown mark, drawn inline so it always matches C.gold exactly
+// (no separate image asset to keep in sync with the button color).
+function LogoMark({ size = 32 }) {
+  return (
+    <svg
+      viewBox="0 -8 100 116"
+      width={size}
+      height={size * (116 / 100)}
+      fill="none"
+      stroke={C.gold}
+      strokeWidth={6}
+      strokeLinecap="round"
+    >
+      <circle cx={50} cy={-2} r={4} fill={C.gold} stroke="none" />
+      <path d="M6 100V30L28 72L50 10L72 72L94 30V100Z" />
+      <path d="M50 100V72M43 56v10a7 7 0 0 0 14 0V56M50 56v12" strokeWidth={4} />
+    </svg>
+  );
+}
 
 const RANKS = [
   { min: 0, title: "Peckish Peasant", note: "Everyone starts hungry." },
@@ -262,7 +281,7 @@ export default function Nomarchy() {
     <FontShell>
       <header className="px-5 pt-7 pb-3 text-center">
         <div className="flex items-center justify-center gap-2">
-          <Image src="/icon-512.png" alt="" width={32} height={32} className="rounded" priority />
+          <LogoMark size={32} />
           <h1 className="text-3xl tracking-wide" style={{ ...display, fontWeight: 900 }}>NOMARCHY</h1>
         </div>
         <p className="mt-1 text-sm italic" style={{ ...display, color: C.muted }}>Long live your favourites.</p>
@@ -596,7 +615,7 @@ function SignInScreen() {
       <div className="flex min-h-screen items-center justify-center px-5">
         <div className="w-full max-w-sm rounded-2xl p-7 text-center" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
           <div className="flex items-center justify-center gap-2">
-            <Image src="/icon-512.png" alt="" width={28} height={28} className="rounded" priority />
+            <LogoMark size={28} />
             <h1 className="text-2xl tracking-wide" style={{ ...display, fontWeight: 900 }}>NOMARCHY</h1>
           </div>
           <p className="mt-1 mb-6 text-sm italic" style={{ ...display, color: C.muted }}>Long live your favourites.</p>
