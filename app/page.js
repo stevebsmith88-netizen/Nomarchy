@@ -11,7 +11,7 @@ import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
   loadRecentMembers, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
-  crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited,
+  crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine,
   moveThroneCuisine, unCrown,
   loadCourt, toggleEndorsement, followByUsername, loadStanding,
 } from "@/lib/data";
@@ -176,6 +176,11 @@ export default function Nomarchy() {
     await refreshPretenders();
   };
 
+  const handleChangePretenderCuisine = async (id, cuisineId) => {
+    await updatePretenderCuisine(id, cuisineId || null);
+    await refreshPretenders();
+  };
+
   const handleToggleVisited = async (id, currentlyVisited) => {
     await markVisited(id, !currentlyVisited);
     await refreshPretenders();
@@ -290,11 +295,15 @@ export default function Nomarchy() {
     }
   };
 
+  // Worded as where the idea came from, not an ongoing claim about their
+  // opinion - this note has no live link back to the friend's throne, so
+  // "swears by this one" would age into a false statement the moment they
+  // change their mind.
   const addFriendPickToPretenders = (friendName, pick) =>
     addToPretenders(pick.cuisineId, {
       name: pick.name,
       area: pick.area,
-      note: `${friendName} swears by this one.`,
+      note: `Added from ${friendName}'s picks.`,
     });
 
   if (!authChecked) {
@@ -540,6 +549,15 @@ export default function Nomarchy() {
                     <button onClick={() => handleRemovePretender(p.id)} aria-label="Remove" style={{ color: C.muted }}><Trash2 size={15} /></button>
                   </div>
                   {p.note && <p className="mt-2 text-sm italic leading-relaxed" style={{ color: C.cream + "CC" }}>{p.note}</p>}
+                  <select
+                    value={p.cuisineId || ""}
+                    onChange={(e) => handleChangePretenderCuisine(p.id, e.target.value)}
+                    className="mt-2 rounded px-2 py-1 text-xs outline-none"
+                    style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: p.cuisineId ? C.cream : C.muted }}
+                  >
+                    <option value="">Uncategorized</option>
+                    {selectableCuisines.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <button
                       onClick={() => setModal({
