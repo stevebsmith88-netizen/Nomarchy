@@ -5,9 +5,10 @@ import {
   Crown, Plus, ScrollText, Swords, X, Users, Award, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock, Info,
+  MessageSquare,
 } from "lucide-react";
 import {
-  supabase, getUser, onAuthChange, signIn, verifyCode, signOut, getProfile, updateProfile, deleteAccount,
+  supabase, getUser, onAuthChange, signIn, verifyCode, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited,
   moveThroneCuisine, unCrown,
@@ -65,6 +66,7 @@ export default function Nomarchy() {
 
   const [editingProfile, setEditingProfile] = useState(false);
   const [showLadder, setShowLadder] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   useEffect(() => {
     getUser().then((u) => { setUser(u); setAuthChecked(true); });
@@ -252,6 +254,10 @@ export default function Nomarchy() {
     await signOut();
   };
 
+  const handleSubmitFeedback = async (message) => {
+    await submitFeedback(user.id, message, tab);
+  };
+
   const addFriendPickToPretenders = (friendName, pick) =>
     addToPretenders(pick.cuisineId, {
       name: pick.name,
@@ -327,6 +333,9 @@ export default function Nomarchy() {
               )}
             </span>
           </div>
+          <button onClick={() => setShowFeedback(true)} className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
+            <MessageSquare size={12} /> Feedback
+          </button>
           <button onClick={signOut} className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <LogOut size={12} /> Sign out
           </button>
@@ -619,6 +628,13 @@ export default function Nomarchy() {
           onClose={() => setEditingProfile(false)}
           onSubmit={handleUpdateProfile}
           onDeleteAccount={handleDeleteAccount}
+        />
+      )}
+
+      {showFeedback && (
+        <FeedbackModal
+          onClose={() => setShowFeedback(false)}
+          onSubmit={handleSubmitFeedback}
         />
       )}
     </FontShell>
@@ -1004,6 +1020,69 @@ function ProfileModal({ profile, onClose, onSubmit, onDeleteAccount }) {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function FeedbackModal({ onClose, onSubmit }) {
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const send = async () => {
+    if (!message.trim() || busy) return;
+    setBusy(true); setErr("");
+    try {
+      await onSubmit(message.trim());
+      setSent(true);
+    } catch (e) {
+      setErr(e.message || "Couldn't send that. Try again.");
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+      <div className="w-full max-w-sm rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>Feedback</h3>
+          <button onClick={onClose} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
+        </div>
+
+        {sent ? (
+          <div className="mt-4 text-center">
+            <Check size={22} className="mx-auto" style={{ color: C.green }} />
+            <p className="mt-2 text-sm" style={{ color: C.muted }}>Got it, thank you.</p>
+            <button onClick={onClose} className="mt-4 w-full rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>Close</button>
+          </div>
+        ) : (
+          <>
+            <p className="mt-2 text-sm" style={{ color: C.muted }}>
+              Found a bug, something confusing, or an idea? Say as much or as little as you like.
+            </p>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={5}
+              autoFocus
+              placeholder="What happened, or what would help?"
+              className="mt-3 w-full rounded-lg px-3 py-2.5 text-sm outline-none"
+              style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+            />
+            {err && <p className="mt-2 text-xs" style={{ color: C.coup }}>{err}</p>}
+            <button
+              disabled={!message.trim() || busy}
+              onClick={send}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold"
+              style={message.trim() ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}
+            >
+              {busy ? <Loader2 size={15} className="animate-spin" /> : <MessageSquare size={15} />}
+              Send
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

@@ -258,6 +258,35 @@ create policy "signed-in users refresh the cache" on place_lookup_cache for upda
   using (auth.uid() is not null) with check (auth.uid() is not null);
 
 -- ------------------------------------------------------------
+-- 7c. FEEDBACK
+-- One shared channel for beta testers instead of scattered DMs/texts.
+-- user_agent/page are captured automatically client-side so a report
+-- already carries "what device/screen was this on" without asking.
+-- ------------------------------------------------------------
+create table if not exists feedback (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid references profiles(id) on delete set null,
+  message    text not null,
+  user_agent text,
+  page       text,
+  created_at timestamptz not null default now()
+);
+
+alter table feedback enable row level security;
+
+-- Private by default: you can see your own submissions, and the owner
+-- can see everyone's (to actually triage them) - nobody else's business.
+drop policy if exists "feedback insert own" on feedback;
+create policy "feedback insert own" on feedback for insert
+  with check (auth.uid() = user_id);
+drop policy if exists "feedback read own or owner" on feedback;
+create policy "feedback read own or owner" on feedback for select
+  using (
+    auth.uid() = user_id
+    or exists (select 1 from profiles p where p.id = auth.uid() and p.is_owner)
+  );
+
+-- ------------------------------------------------------------
 -- 8. ROW LEVEL SECURITY
 -- Do NOT skip this. Without it every table is wide open and anyone
 -- can overwrite anyone else's kingdom.
