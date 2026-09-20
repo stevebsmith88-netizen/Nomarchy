@@ -5,11 +5,11 @@ import {
   Crown, Plus, ScrollText, Swords, X, Users, Award, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock, Info,
-  MessageSquare,
+  MessageSquare, Bell,
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
-  loadRecentMembers, loadFollowers, followUser,
+  loadRecentMembers, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited,
   moveThroneCuisine, unCrown,
@@ -50,6 +50,9 @@ export default function Nomarchy() {
   const [court, setCourt] = useState([]);
   const [followers, setFollowers] = useState([]);
   const [followBackBusy, setFollowBackBusy] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [hasUnseenNotifications, setHasUnseenNotifications] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState("");
 
@@ -93,6 +96,9 @@ export default function Nomarchy() {
         ]);
         setSlots(k); setPretenders(n); setCuisineList(c);
         setStanding(s); setCourt(crt); setFollowers(flw); setProfile(p);
+        const notifs = await loadNotifications(user.id, p.notifications_seen_at);
+        setNotifications(notifs);
+        setHasUnseenNotifications(notifs.length > 0);
       } catch (err) {
         setLoadError(err.message);
       }
@@ -276,6 +282,14 @@ export default function Nomarchy() {
     await submitFeedback(user.id, message, tab);
   };
 
+  const handleOpenNotifications = () => {
+    setShowNotifications((v) => !v);
+    if (hasUnseenNotifications) {
+      setHasUnseenNotifications(false);
+      markNotificationsSeen(user.id).catch(() => {});
+    }
+  };
+
   const addFriendPickToPretenders = (friendName, pick) =>
     addToPretenders(pick.cuisineId, {
       name: pick.name,
@@ -326,6 +340,40 @@ export default function Nomarchy() {
         </div>
         <p className="mt-1 text-sm italic" style={{ ...display, color: C.muted }}>Long live your favourites.</p>
         <div className="mt-2 flex items-center justify-center gap-2">
+          <span className="relative">
+            <button
+              onClick={handleOpenNotifications}
+              aria-label="Notifications"
+              className="flex h-7 w-7 items-center justify-center rounded-full"
+              style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}
+            >
+              <Bell size={13} />
+              {hasUnseenNotifications && (
+                <span className="absolute right-0 top-0 h-2 w-2 rounded-full" style={{ background: C.coup }} />
+              )}
+            </button>
+            {showNotifications && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                <div
+                  className="absolute left-0 top-full z-50 mt-2 w-72 rounded-xl p-3 text-left"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ background: C.card, border: `1px solid ${C.cardEdge}`, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}
+                >
+                  <div className="mb-1.5 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Notifications</div>
+                  {notifications.length === 0 ? (
+                    <p className="text-xs" style={{ color: C.muted }}>Nothing new.</p>
+                  ) : notifications.map((n, i) => (
+                    <div key={i} className="py-1.5 text-xs" style={{ borderTop: i > 0 ? `1px solid ${C.cardEdge}` : "none", color: C.cream }}>
+                      {n.type === "follow"
+                        ? <><span style={{ fontWeight: 700 }}>{n.name}</span> started following you</>
+                        : <><span style={{ fontWeight: 700 }}>{n.name}</span> crowned <span style={{ color: C.gold }}>{n.place}</span> for {n.cuisine}</>}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </span>
           <div
             className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold"
             style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}

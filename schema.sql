@@ -17,7 +17,8 @@ create table if not exists profiles (
   city        text default 'Toronto',
   created_at  timestamptz default now(),
   is_owner    boolean not null default false,
-  is_public   boolean not null default true
+  is_public   boolean not null default true,
+  notifications_seen_at timestamptz not null default now()
 );
 
 -- Re-running this file against a database from before these columns existed
@@ -27,6 +28,9 @@ create table if not exists profiles (
 -- as before until they choose to go private.
 alter table profiles add column if not exists is_owner boolean not null default false;
 alter table profiles add column if not exists is_public boolean not null default true;
+-- Defaults to now() so existing follows/crowns from before this feature
+-- shipped don't all flood in as a backlog of "new" notifications.
+alter table profiles add column if not exists notifications_seen_at timestamptz not null default now();
 
 -- Auto-create a profile whenever someone signs up.
 -- Username is always the email prefix plus a random suffix, so it can never collide.
