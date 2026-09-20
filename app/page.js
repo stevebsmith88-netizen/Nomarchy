@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
+  loadRecentMembers,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited,
   moveThroneCuisine, unCrown,
@@ -67,6 +68,7 @@ export default function Nomarchy() {
   const [editingProfile, setEditingProfile] = useState(false);
   const [showLadder, setShowLadder] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
 
   useEffect(() => {
     getUser().then((u) => { setUser(u); setAuthChecked(true); });
@@ -333,6 +335,11 @@ export default function Nomarchy() {
               )}
             </span>
           </div>
+          {profile?.is_owner && (
+            <button onClick={() => setShowMembers(true)} className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
+              <Users size={12} /> Members
+            </button>
+          )}
           <button onClick={() => setShowFeedback(true)} className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <MessageSquare size={12} /> Feedback
           </button>
@@ -636,6 +643,10 @@ export default function Nomarchy() {
           onClose={() => setShowFeedback(false)}
           onSubmit={handleSubmitFeedback}
         />
+      )}
+
+      {showMembers && (
+        <MembersModal onClose={() => setShowMembers(false)} />
       )}
     </FontShell>
   );
@@ -1019,6 +1030,44 @@ function ProfileModal({ profile, onClose, onSubmit, onDeleteAccount }) {
               </div>
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MembersModal({ onClose }) {
+  const [members, setMembers] = useState(null);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    loadRecentMembers().then(setMembers).catch((e) => setErr(e.message || "Couldn't load members."));
+  }, []);
+
+  const fmt = (t) => new Date(t).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+      <div className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>Members</h3>
+          <button onClick={onClose} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
+        </div>
+        <p className="mt-1 text-xs" style={{ color: C.muted }}>Newest first. Just for you as founder.</p>
+
+        {err && <p className="mt-3 text-xs" style={{ color: C.coup }}>{err}</p>}
+        {!members && !err && <p className="mt-3 text-sm" style={{ color: C.muted }}>Loading...</p>}
+
+        <div className="mt-3">
+          {members?.map((m) => (
+            <div key={m.username} className="flex items-center justify-between py-2" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
+              <div>
+                <div className="text-sm font-semibold">{m.display_name || m.username}</div>
+                <div className="text-xs" style={{ color: C.muted }}>@{m.username}</div>
+              </div>
+              <div className="text-xs" style={{ color: C.muted }}>{fmt(m.created_at)}</div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
