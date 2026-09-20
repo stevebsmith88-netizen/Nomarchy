@@ -57,6 +57,7 @@ export default function Nomarchy() {
   const [addPretender, setAddPretender] = useState(false);
   const [importing, setImporting] = useState(false);
   const [historyOpen, setHistoryOpen] = useState({});
+  const [courtOpen, setCourtOpen] = useState({});
   const [newCuisine, setNewCuisine] = useState("");
   const [addingCuisine, setAddingCuisine] = useState(false);
   const [onlyCrowned, setOnlyCrowned] = useState(false);
@@ -555,22 +556,37 @@ export default function Nomarchy() {
               <Users size={26} className="mx-auto" style={{ color: C.muted }} />
               <p className="mt-2 text-sm" style={{ color: C.muted }}>Nobody in your court yet. Follow a friend by username above, and share yours (@{profile?.username}) so they can follow you back.</p>
             </div>
-          ) : court.map((f) => (
+          ) : court.map((f) => {
+            const open = !!courtOpen[f.id];
+            return (
             <div key={f.id} className="mb-4 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
-              <div className="flex items-baseline justify-between">
-                <h3 className="flex items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
-                  {f.name} <RankBadge score={f.score} /> {f.isOwner && <OwnerBadge />}
-                </h3>
-                <span className="text-xs font-semibold" style={{ color: C.gold }}>{f.score}</span>
-              </div>
-              <span
-                className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
-                style={{ background: C.bg, color: C.gold, letterSpacing: "0.06em" }}
+              <button
+                onClick={() => setCourtOpen((p) => ({ ...p, [f.id]: !p[f.id] }))}
+                className="flex w-full items-center justify-between gap-2 text-left"
               >
-                {getTitle(f.isOwner, f.score)}
-              </span>
-              {f.picks.length === 0 && <p className="mt-2 text-xs" style={{ color: C.muted }}>No thrones claimed yet.</p>}
-              {f.picks.map((p) => (
+                <div>
+                  <h3 className="flex items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
+                    {f.name} <RankBadge score={f.score} /> {f.isOwner && <OwnerBadge />}
+                  </h3>
+                  <span
+                    className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+                    style={{ background: C.bg, color: C.gold, letterSpacing: "0.06em" }}
+                  >
+                    {getTitle(f.isOwner, f.score)}
+                  </span>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <span className="text-xs font-semibold" style={{ color: C.gold }}>{f.score}</span>
+                  {open ? <ChevronUp size={16} style={{ color: C.muted }} /> : <ChevronDown size={16} style={{ color: C.muted }} />}
+                </div>
+              </button>
+              {!open && (
+                <p className="mt-1.5 text-xs" style={{ color: C.muted }}>
+                  {f.picks.length === 0 ? "No thrones claimed yet." : `${f.picks.length} pick${f.picks.length === 1 ? "" : "s"} - tap to view`}
+                </p>
+              )}
+              {open && f.picks.length === 0 && <p className="mt-2 text-xs" style={{ color: C.muted }}>No thrones claimed yet.</p>}
+              {open && f.picks.map((p) => (
                 <div key={p.id} className="mt-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
                   <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>{p.cuisine}</div>
                   <div className="mt-0.5 flex items-center justify-between gap-2">
@@ -584,7 +600,9 @@ export default function Nomarchy() {
                   <button onClick={() => addFriendPickToPretenders(f.name, p)}
                     className="mt-2 flex items-center gap-1.5 text-xs font-bold" style={{ color: C.gold }}><Bookmark size={12} /> Add to my list</button>
                 </div>))}
-            </div>))}
+            </div>
+            );
+          })}
         </div>)}
 
         {/* STANDING */}
