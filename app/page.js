@@ -445,6 +445,12 @@ export default function Nomarchy() {
         </div>
       </header>
 
+      {profile?.is_owner && (
+        <div className="mx-auto mb-2 max-w-2xl text-center text-[10px]" style={{ color: C.muted, opacity: 0.6 }}>
+          build {process.env.NEXT_PUBLIC_COMMIT_SHA?.slice(0, 7) || "unknown"} · db {process.env.NEXT_PUBLIC_SUPABASE_URL?.replace("https://", "").split(".")[0] || "unknown"}
+        </div>
+      )}
+
       {loadError && (
         <div className="mx-auto mb-4 max-w-2xl rounded-lg px-4 py-2 text-center text-sm" style={{ background: C.coup + "18", color: C.coup }}>
           {loadError}
