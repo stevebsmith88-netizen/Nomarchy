@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import {
-  Crown, Plus, ScrollText, Swords, X, Users, Award, ChevronDown, ChevronUp,
+  Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock, Info,
   MessageSquare, Bell,
@@ -454,7 +454,7 @@ export default function Nomarchy() {
       )}
 
       <nav className="flex flex-wrap justify-center gap-2 px-4 pb-5">
-        {[{ id: "kingdom", label: "Kingdom", icon: Crown }, { id: "pretenders", label: "Next in Line", icon: Bookmark }, { id: "court", label: "Court", icon: Users }, { id: "standing", label: "Standing", icon: Award }].map(({ id, label, icon: Icon }) => (
+        {[{ id: "kingdom", label: "Kingdom", icon: Crown }, { id: "pretenders", label: "Next in Line", icon: Bookmark }, { id: "court", label: "Court", icon: Users }].map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setTab(id)} className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold"
             style={tab === id ? { background: C.gold, color: C.bg } : { background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <Icon size={15} strokeWidth={2.2} />{label}
@@ -694,45 +694,6 @@ export default function Nomarchy() {
           })}
         </div>)}
 
-        {/* STANDING */}
-        {tab === "standing" && (<div className="text-center">
-          <div className="mx-auto max-w-md rounded-xl p-6" style={{ background: C.card, border: `1px solid ${C.gold}55` }}>
-            <Crown size={34} className="mx-auto" style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
-            <h2 className="mt-2 text-2xl" style={{ ...display, fontWeight: 900 }}>{title}</h2>
-            <p className="mt-1 text-sm italic" style={{ color: C.muted }}>
-              {profile?.is_owner ? "Nomarchy exists because you built it." : rank.note}
-            </p>
-            <div className="mt-4 text-5xl" style={{ ...display, fontWeight: 900, color: C.gold }}>{score}</div>
-            <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>Taste credibility</div>
-            {nextRank && (<div className="mt-4">
-              <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: C.bg }}>
-                <div className="h-full rounded-full" style={{ background: C.gold, width: `${Math.min(100, ((score - rank.min) / (nextRank.min - rank.min)) * 100)}%` }} />
-              </div>
-              <p className="mt-1.5 text-xs" style={{ color: C.muted }}>{nextRank.min - score} to {nextRank.title}</p>
-            </div>)}
-          </div>
-
-          <div className="mx-auto mt-4 max-w-md">
-            <RankLadder score={score} />
-          </div>
-
-          <div className="mx-auto mt-4 grid max-w-md grid-cols-2 gap-3 text-left">
-            {[{ n: thrones, label: "Thrones claimed", hint: "Crown more cuisines" },
-              { n: coups, label: "Coups staged", hint: "Better spots dethrone old ones" },
-              { n: pretenders.length, label: "Next in line", hint: "Go try them" },
-              { n: endorseCount, label: "Endorsements given", hint: "Crown your friends' picks" },
-              { n: thrones + visitedCount, label: "Restaurants been to", hint: "Crowned, plus marked as been" },
-              { n: reviewCount, label: "Reviews written", hint: "Visible to friends who follow you" }].map((s) => (
-              <div key={s.label} className="rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
-                <div className="text-2xl" style={{ ...display, fontWeight: 700, color: C.gold }}>{s.n}</div>
-                <div className="text-xs font-semibold">{s.label}</div>
-                <div className="mt-0.5 text-xs" style={{ color: C.muted }}>{s.hint}</div>
-              </div>))}
-          </div>
-          <p className="mx-auto mt-5 max-w-md text-xs leading-relaxed" style={{ color: C.muted }}>
-            Credibility rewards conviction and depth, not hype. Honest write ups about real favourites outrank trendy picks with lazy decrees.
-          </p>
-        </div>)}
         </>)}
       </main>
 
@@ -778,6 +739,18 @@ export default function Nomarchy() {
       {editingProfile && (
         <ProfileModal
           profile={profile}
+          title={title}
+          rank={rank}
+          nextRank={nextRank}
+          score={score}
+          stats={[
+            { n: thrones, label: "Thrones claimed", hint: "Crown more cuisines" },
+            { n: coups, label: "Coups staged", hint: "Better spots dethrone old ones" },
+            { n: pretenders.length, label: "Next in line", hint: "Go try them" },
+            { n: endorseCount, label: "Endorsements given", hint: "Crown your friends' picks" },
+            { n: thrones + visitedCount, label: "Restaurants been to", hint: "Crowned, plus marked as been" },
+            { n: reviewCount, label: "Reviews written", hint: "Visible to friends who follow you" },
+          ]}
           onClose={() => setEditingProfile(false)}
           onSubmit={handleUpdateProfile}
           onDeleteAccount={handleDeleteAccount}
@@ -1071,7 +1044,7 @@ function SignInScreen() {
   );
 }
 
-function ProfileModal({ profile, onClose, onSubmit, onDeleteAccount }) {
+function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, onSubmit, onDeleteAccount }) {
   const [username, setUsername] = useState(profile?.username || "");
   const [city, setCity] = useState(profile?.city || "");
   const [isPublic, setIsPublic] = useState(profile?.is_public ?? true);
@@ -1117,7 +1090,39 @@ function ProfileModal({ profile, onClose, onSubmit, onDeleteAccount }) {
           <button onClick={onClose} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
         </div>
 
-        <div className="mt-3">
+        <div className="mt-3 text-center">
+          <Crown size={30} className="mx-auto" style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
+          <h2 className="mt-1 text-xl" style={{ ...display, fontWeight: 900 }}>{title}</h2>
+          <p className="mt-1 text-sm italic" style={{ color: C.muted }}>
+            {profile?.is_owner ? "Nomarchy exists because you built it." : rank.note}
+          </p>
+          <div className="mt-3 text-4xl" style={{ ...display, fontWeight: 900, color: C.gold }}>{score}</div>
+          <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>Taste credibility</div>
+          {nextRank && (<div className="mt-3">
+            <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: C.bg }}>
+              <div className="h-full rounded-full" style={{ background: C.gold, width: `${Math.min(100, ((score - rank.min) / (nextRank.min - rank.min)) * 100)}%` }} />
+            </div>
+            <p className="mt-1.5 text-xs" style={{ color: C.muted }}>{nextRank.min - score} to {nextRank.title}</p>
+          </div>)}
+        </div>
+
+        <div className="mt-4">
+          <RankLadder score={score} />
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 text-left">
+          {stats.map((s) => (
+            <div key={s.label} className="rounded-xl p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+              <div className="text-xl" style={{ ...display, fontWeight: 700, color: C.gold }}>{s.n}</div>
+              <div className="text-xs font-semibold">{s.label}</div>
+              <div className="mt-0.5 text-xs" style={{ color: C.muted }}>{s.hint}</div>
+            </div>))}
+        </div>
+        <p className="mt-4 text-xs leading-relaxed" style={{ color: C.muted }}>
+          Credibility rewards conviction and depth, not hype. Honest write ups about real favourites outrank trendy picks with lazy decrees.
+        </p>
+
+        <div className="mt-6 border-t pt-4" style={{ borderColor: C.cardEdge }}>
           <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Username</label>
           <input
             value={username}
