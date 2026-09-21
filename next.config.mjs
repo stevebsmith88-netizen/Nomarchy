@@ -31,12 +31,6 @@ const nextConfig = {
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },
-  // Vercel sets this automatically at build time (not client-visible by
-  // default) - surfacing it lets the owner-only debug line in app/page.js
-  // confirm two devices are actually running the same deployment.
-  env: {
-    NEXT_PUBLIC_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA || "",
-  },
 };
 
 export default nextConfig;

@@ -371,6 +371,33 @@ export default function Nomarchy() {
           <h1 className="text-3xl tracking-[0.12em]" style={{ ...display, fontWeight: 900 }}>NOMARCHY</h1>
         </div>
         <p className="mt-1 text-sm italic" style={{ ...display, color: C.muted }}>Long live your favourites.</p>
+        <div className="mt-2 flex items-center justify-center">
+          <div
+            className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold"
+            style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}
+          >
+            <button onClick={() => setEditingProfile(true)} className="flex items-center gap-1">
+              @{profile?.username} · {title} <RankBadge score={score} /> {profile?.is_owner && <OwnerBadge />} <Pencil size={11} />
+            </button>
+            <span className="relative">
+              <button onClick={() => setShowLadder((v) => !v)} aria-label="Show rank ladder" className="flex items-center">
+                <Info size={12} />
+              </button>
+              {showLadder && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowLadder(false)} />
+                  <div
+                    className="absolute left-1/2 top-full z-50 mt-2 w-72 -translate-x-1/2"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ filter: "drop-shadow(0 8px 20px rgba(0,0,0,0.45))" }}
+                  >
+                    <RankLadder score={score} />
+                  </div>
+                </>
+              )}
+            </span>
+          </div>
+        </div>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5">
           <span className="relative">
             <button
@@ -406,31 +433,6 @@ export default function Nomarchy() {
               </>
             )}
           </span>
-          <div
-            className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold"
-            style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}
-          >
-            <button onClick={() => setEditingProfile(true)} className="flex items-center gap-1">
-              @{profile?.username} · {title} <RankBadge score={score} /> {profile?.is_owner && <OwnerBadge />} <Pencil size={11} />
-            </button>
-            <span className="relative">
-              <button onClick={() => setShowLadder((v) => !v)} aria-label="Show rank ladder" className="flex items-center">
-                <Info size={12} />
-              </button>
-              {showLadder && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowLadder(false)} />
-                  <div
-                    className="absolute left-1/2 top-full z-50 mt-2 w-72 -translate-x-1/2"
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ filter: "drop-shadow(0 8px 20px rgba(0,0,0,0.45))" }}
-                  >
-                    <RankLadder score={score} />
-                  </div>
-                </>
-              )}
-            </span>
-          </div>
           {profile?.is_owner && (
             <button onClick={() => setShowMembers(true)} aria-label="Members" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
               <Users size={12} /> <span className="hidden sm:inline">Members</span>
@@ -444,12 +446,6 @@ export default function Nomarchy() {
           </button>
         </div>
       </header>
-
-      {profile?.is_owner && (
-        <div className="mx-auto mb-2 max-w-2xl text-center text-[10px]" style={{ color: C.muted, opacity: 0.6 }}>
-          build {process.env.NEXT_PUBLIC_COMMIT_SHA?.slice(0, 7) || "unknown"} · db {process.env.NEXT_PUBLIC_SUPABASE_URL?.replace("https://", "").split(".")[0] || "unknown"}
-        </div>
-      )}
 
       {loadError && (
         <div className="mx-auto mb-4 max-w-2xl rounded-lg px-4 py-2 text-center text-sm" style={{ background: C.coup + "18", color: C.coup }}>
