@@ -181,7 +181,11 @@ export default function Nomarchy() {
     await refreshPretenders();
   };
 
-  const handleToggleVisited = async (id, currentlyVisited) => {
+  const handleToggleVisited = async (id, currentlyVisited, cuisineId) => {
+    if (!currentlyVisited && !cuisineId) {
+      flash("Pick a cuisine below first");
+      return;
+    }
     await markVisited(id, !currentlyVisited);
     await refreshPretenders();
   };
@@ -330,15 +334,7 @@ export default function Nomarchy() {
         [p.name, p.cuisine, p.area, p.note].some((f) => f && f.toLowerCase().includes(pretenderQuery))
       )
     : pretenders;
-  const pretenderGroups = Object.entries(
-    filteredPretenders.reduce((groups, p) => {
-      const key = p.cuisine || "Uncategorized";
-      (groups[key] = groups[key] || []).push(p);
-      return groups;
-    }, {})
-  )
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([cuisine, items]) => ({ cuisine, items: [...items].sort((a, b) => a.name.localeCompare(b.name)) }));
+  const sortedPretenders = [...filteredPretenders].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <FontShell>
@@ -525,14 +521,11 @@ export default function Nomarchy() {
               <p className="mt-2 text-sm" style={{ color: C.muted }}>Nothing waiting in throne just yet. Add the places you keep meaning to try, then promote the good ones.</p>
               <p className="mt-2 text-sm" style={{ color: C.muted }}>Already got a list in Notes or a spreadsheet? Paste the whole thing into Import and it&apos;ll sort it out.</p>
             </div>
-          ) : pretenderGroups.length === 0 ? (
+          ) : sortedPretenders.length === 0 ? (
             <div className="rounded-xl p-6 text-center" style={{ background: C.card, border: `1px dashed ${C.cardEdge}` }}>
               <p className="text-sm" style={{ color: C.muted }}>Nothing matches &ldquo;{pretenderSearch}&rdquo;.</p>
             </div>
-          ) : pretenderGroups.map(({ cuisine, items }) => (
-            <div key={cuisine} className="mb-4">
-              <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>{cuisine}</h3>
-              {items.map((p) => (
+          ) : sortedPretenders.map((p) => (
                 <div key={p.id} className="mb-3 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, opacity: p.visitedAt ? 0.7 : 1 }}>
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -561,8 +554,8 @@ export default function Nomarchy() {
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <button
                       onClick={() => setModal({
-                        cuisineId: p.cuisineId || selectableCuisines[0]?.id,
-                        cuisineName: p.cuisine || selectableCuisines[0]?.name,
+                        cuisineId: p.cuisineId || "",
+                        cuisineName: p.cuisine || "",
                         mode: p.cuisine && slots[p.cuisine]?.current ? "coup" : "claim",
                         prefill: p,
                         pretenderId: p.id,
@@ -571,15 +564,13 @@ export default function Nomarchy() {
                       <Crown size={13} /> Crown it
                     </button>
                     <button
-                      onClick={() => handleToggleVisited(p.id, !!p.visitedAt)}
+                      onClick={() => handleToggleVisited(p.id, !!p.visitedAt, p.cuisineId)}
                       className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
                       style={p.visitedAt ? { background: C.green + "22", color: C.green, border: `1px solid ${C.green}66` } : { color: C.muted, border: `1px solid ${C.cardEdge}` }}>
                       <Check size={13} /> {p.visitedAt ? "Been here" : "Mark as been"}
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
           ))}
         </div>)}
 
@@ -1318,7 +1309,8 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
 
         {(isPretender || prefill) && (<div className="mt-3">
           <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Cuisine</label>
-          <select value={cz} onChange={(e) => setCz(e.target.value)} className="mt-1 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}>
+          <select value={cz} onChange={(e) => setCz(e.target.value)} className="mt-1 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: cz ? C.cream : C.muted }}>
+            {!cz && <option value="">Choose a cuisine...</option>}
             {cuisines.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>)}
