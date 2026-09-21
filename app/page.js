@@ -340,6 +340,7 @@ export default function Nomarchy() {
   const endorseCount = court.reduce((n, f) => n + f.picks.filter((p) => p.endorsedByMe).length, 0);
   const visitedCount = pretenders.filter((p) => p.visitedAt).length;
   const reviewCount = pretenders.filter((p) => p.visitedAt && p.note).length;
+  const unvisitedCount = pretenders.length - visitedCount;
   const score = standing?.score ?? 0;
   const rank = getRank(score);
   const title = getTitle(profile?.is_owner, score);
@@ -353,7 +354,9 @@ export default function Nomarchy() {
         [p.name, p.cuisine, p.area, p.note].some((f) => f && f.toLowerCase().includes(pretenderQuery))
       )
     : pretenders;
-  const sortedPretenders = [...filteredPretenders].sort((a, b) => a.name.localeCompare(b.name));
+  const sortByName = (a, b) => a.name.localeCompare(b.name);
+  const stillToTry = filteredPretenders.filter((p) => !p.visitedAt).sort(sortByName);
+  const beenTo = filteredPretenders.filter((p) => p.visitedAt).sort(sortByName);
 
   return (
     <FontShell>
@@ -448,7 +451,7 @@ export default function Nomarchy() {
           <button key={id} onClick={() => setTab(id)} className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold"
             style={tab === id ? { background: C.gold, color: C.bg } : { background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <Icon size={15} strokeWidth={2.2} />{label}
-            {id === "pretenders" && pretenders.length > 0 && <span className="rounded-full px-1.5 text-xs" style={{ background: tab === id ? C.bg : C.cardEdge, color: tab === id ? C.gold : C.cream }}>{pretenders.length}</span>}
+            {id === "pretenders" && unvisitedCount > 0 && <span className="rounded-full px-1.5 text-xs" style={{ background: tab === id ? C.bg : C.cardEdge, color: tab === id ? C.gold : C.cream }}>{unvisitedCount}</span>}
           </button>
         ))}
       </nav>
@@ -540,65 +543,44 @@ export default function Nomarchy() {
               <p className="mt-2 text-sm" style={{ color: C.muted }}>Nothing waiting in throne just yet. Add the places you keep meaning to try, then promote the good ones.</p>
               <p className="mt-2 text-sm" style={{ color: C.muted }}>Already got a list in Notes or a spreadsheet? Paste the whole thing into Import and it&apos;ll sort it out.</p>
             </div>
-          ) : sortedPretenders.length === 0 ? (
+          ) : stillToTry.length === 0 && beenTo.length === 0 ? (
             <div className="rounded-xl p-6 text-center" style={{ background: C.card, border: `1px dashed ${C.cardEdge}` }}>
               <p className="text-sm" style={{ color: C.muted }}>Nothing matches &ldquo;{pretenderSearch}&rdquo;.</p>
             </div>
-          ) : sortedPretenders.map((p) => (
-                <div key={p.id} className="mb-3 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, opacity: p.visitedAt ? 0.7 : 1 }}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="flex items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
-                        {p.name}
-                        {p.visitedAt && <Check size={14} style={{ color: C.green }} />}
-                      </h3>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
-                        {(p.area || p.address) && <><MapPin size={11} /> {p.area || p.address}</>}
-                        {p.rating && <><Star size={11} style={{ color: C.gold }} fill={C.gold} /> {p.rating}</>}
-                        {p.mapsUrl && <a href={p.mapsUrl} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
-                      </div>
-                    </div>
-                    <button onClick={() => handleRemovePretender(p.id)} aria-label="Remove" style={{ color: C.muted }}><Trash2 size={15} /></button>
-                  </div>
-                  <textarea
-                    key={p.id + (p.note || "")}
-                    defaultValue={p.note || ""}
-                    onBlur={(e) => { if (e.target.value !== (p.note || "")) handleChangePretenderNote(p.id, e.target.value.trim()); }}
-                    placeholder={p.visitedAt ? "Write a review - visible to friends who follow you" : "Note (optional, private until you've been)"}
-                    rows={2}
-                    className="mt-2 w-full rounded-lg px-3 py-2 text-sm italic outline-none"
-                    style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
-                  />
-                  <select
-                    value={p.cuisineId || ""}
-                    onChange={(e) => handleChangePretenderCuisine(p.id, e.target.value)}
-                    className="mt-2 rounded px-2 py-1 text-xs outline-none"
-                    style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: p.cuisineId ? C.cream : C.muted }}
-                  >
-                    <option value="">Uncategorized</option>
-                    {selectableCuisines.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <button
-                      onClick={() => setModal({
-                        cuisineId: p.cuisineId || "",
-                        cuisineName: p.cuisine || "",
-                        mode: p.cuisine && slots[p.cuisine]?.current ? "coup" : "claim",
-                        prefill: p,
-                        pretenderId: p.id,
-                      })}
-                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>
-                      <Crown size={13} /> Crown it
-                    </button>
-                    <button
-                      onClick={() => handleToggleVisited(p.id, !!p.visitedAt, p.cuisineId)}
-                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
-                      style={p.visitedAt ? { background: C.green + "22", color: C.green, border: `1px solid ${C.green}66` } : { color: C.muted, border: `1px solid ${C.cardEdge}` }}>
-                      <Check size={13} /> {p.visitedAt ? "Been here" : "Mark as been"}
-                    </button>
-                  </div>
-                </div>
-          ))}
+          ) : (<>
+            {stillToTry.length > 0 && (<>
+              <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Still to try</h3>
+              {stillToTry.map((p) => (
+                <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines}
+                  onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
+                  onChangeCuisine={handleChangePretenderCuisine} onToggleVisited={handleToggleVisited}
+                  onCrown={(prefill) => setModal({
+                    cuisineId: prefill.cuisineId || "",
+                    cuisineName: prefill.cuisine || "",
+                    mode: prefill.cuisine && slots[prefill.cuisine]?.current ? "coup" : "claim",
+                    prefill,
+                    pretenderId: prefill.id,
+                  })}
+                />
+              ))}
+            </>)}
+            {beenTo.length > 0 && (<>
+              <h3 className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Been to</h3>
+              {beenTo.map((p) => (
+                <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines}
+                  onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
+                  onChangeCuisine={handleChangePretenderCuisine} onToggleVisited={handleToggleVisited}
+                  onCrown={(prefill) => setModal({
+                    cuisineId: prefill.cuisineId || "",
+                    cuisineName: prefill.cuisine || "",
+                    mode: prefill.cuisine && slots[prefill.cuisine]?.current ? "coup" : "claim",
+                    prefill,
+                    pretenderId: prefill.id,
+                  })}
+                />
+              ))}
+            </>)}
+          </>)}
         </div>)}
 
         {/* COURT */}
@@ -835,6 +817,58 @@ function RankLadder({ score }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onToggleVisited, onCrown }) {
+  return (
+    <div className="mb-3 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, opacity: p.visitedAt ? 0.7 : 1 }}>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h3 className="flex items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
+            {p.name}
+            {p.visitedAt && <Check size={14} style={{ color: C.green }} />}
+          </h3>
+          <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
+            {(p.area || p.address) && <><MapPin size={11} /> {p.area || p.address}</>}
+            {p.rating && <><Star size={11} style={{ color: C.gold }} fill={C.gold} /> {p.rating}</>}
+            {p.mapsUrl && <a href={p.mapsUrl} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
+          </div>
+        </div>
+        <button onClick={() => onRemove(p.id)} aria-label="Remove" style={{ color: C.muted }}><Trash2 size={15} /></button>
+      </div>
+      <textarea
+        key={p.id + (p.note || "")}
+        defaultValue={p.note || ""}
+        onBlur={(e) => { if (e.target.value !== (p.note || "")) onChangeNote(p.id, e.target.value.trim()); }}
+        placeholder={p.visitedAt ? "Write a review - visible to friends who follow you" : "Note (optional, private until you've been)"}
+        rows={2}
+        className="mt-2 w-full rounded-lg px-3 py-2 text-sm italic outline-none"
+        style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+      />
+      <select
+        value={p.cuisineId || ""}
+        onChange={(e) => onChangeCuisine(p.id, e.target.value)}
+        className="mt-2 rounded px-2 py-1 text-xs outline-none"
+        style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: p.cuisineId ? C.cream : C.muted }}
+      >
+        <option value="">Uncategorized</option>
+        {selectableCuisines.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => onCrown(p)}
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>
+          <Crown size={13} /> Crown it
+        </button>
+        <button
+          onClick={() => onToggleVisited(p.id, !!p.visitedAt, p.cuisineId)}
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
+          style={p.visitedAt ? { background: C.green + "22", color: C.green, border: `1px solid ${C.green}66` } : { color: C.muted, border: `1px solid ${C.cardEdge}` }}>
+          <Check size={13} /> {p.visitedAt ? "Been here" : "Mark as been"}
+        </button>
+      </div>
     </div>
   );
 }
