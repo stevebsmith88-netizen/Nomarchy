@@ -101,10 +101,23 @@ create unique index if not exists cuisines_unique_name_per_owner
 
 insert into cuisines (name, is_default)
 select unnest(array[
-  'Pizza','Thai','Sushi','Mexican','Italian','Indian','Chinese',
-  'Burgers','Ramen','Caribbean','Breakfast','Coffee','Dessert','Shawarma'
+  'Breakfast and Brunch','Burgers','Pizza','Coffee','Sushi','Italian','Chinese','Indian',
+  'Shawarma and Middle Eastern','Thai','Japanese and Ramen','Mexican','Caribbean','Greek',
+  'Korean','Vietnamese','Steak','Dessert and Bakery','Persian','Portuguese','Filipino',
+  'Sri Lankan','Ethiopian','Jewish Deli','Polish and Eastern European'
 ]), true
 on conflict (name, coalesce(created_by, '00000000-0000-0000-0000-000000000000'::uuid)) do nothing;
+
+-- Renaming rather than delete+recreate: these four replace earlier default
+-- names ('Breakfast', 'Shawarma', 'Ramen', 'Dessert'). A rename keeps the
+-- same cuisine_id, so anyone who already crowned a throne or has a
+-- next_in_line item under the old name keeps it intact under the new one -
+-- deleting the old row instead would cascade-delete their data. A no-op
+-- once already renamed, safe to re-run.
+update cuisines set name = 'Breakfast and Brunch' where name = 'Breakfast' and is_default = true;
+update cuisines set name = 'Shawarma and Middle Eastern' where name = 'Shawarma' and is_default = true;
+update cuisines set name = 'Japanese and Ramen' where name = 'Ramen' and is_default = true;
+update cuisines set name = 'Dessert and Bakery' where name = 'Dessert' and is_default = true;
 
 -- A reserved, shared cuisine every user gets exactly one throne on (via the
 -- normal unique(user_id, cuisine_id) constraint below) - the app treats it
