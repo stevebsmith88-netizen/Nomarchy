@@ -361,6 +361,18 @@ drop policy if exists "own list only" on next_in_line;
 create policy "own list only" on next_in_line for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+-- A visited (not necessarily crowned) place with a note is effectively a
+-- review, and shown to followers - unvisited "want to go" items stay fully
+-- private, seen only by the owner via the policy above. Following needs no
+-- approval here, so this is "visible to anyone who follows you," not a
+-- vetted friends list - worth being clear-eyed about that boundary.
+drop policy if exists "followers see visited picks" on next_in_line;
+create policy "followers see visited picks" on next_in_line for select
+  using (
+    visited_at is not null
+    and exists (select 1 from follows f where f.follower_id = auth.uid() and f.followee_id = next_in_line.user_id)
+  );
+
 -- Endorsements: readable by all, and you can never endorse your own pick
 drop policy if exists "endorsements readable" on endorsements;
 create policy "endorsements readable" on endorsements for select using (true);

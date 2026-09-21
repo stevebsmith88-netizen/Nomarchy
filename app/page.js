@@ -11,7 +11,7 @@ import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
   loadRecentMembers, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
-  crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine,
+  crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote,
   moveThroneCuisine, unCrown,
   loadCourt, toggleEndorsement, followByUsername, loadStanding,
 } from "@/lib/data";
@@ -190,6 +190,11 @@ export default function Nomarchy() {
 
   const handleChangePretenderCuisine = async (id, cuisineId) => {
     await updatePretenderCuisine(id, cuisineId || null);
+    await refreshPretenders();
+  };
+
+  const handleChangePretenderNote = async (id, note) => {
+    await updatePretenderNote(id, note);
     await refreshPretenders();
   };
 
@@ -553,7 +558,15 @@ export default function Nomarchy() {
                     </div>
                     <button onClick={() => handleRemovePretender(p.id)} aria-label="Remove" style={{ color: C.muted }}><Trash2 size={15} /></button>
                   </div>
-                  {p.note && <p className="mt-2 text-sm italic leading-relaxed" style={{ color: C.cream + "CC" }}>{p.note}</p>}
+                  <textarea
+                    key={p.id + (p.note || "")}
+                    defaultValue={p.note || ""}
+                    onBlur={(e) => { if (e.target.value !== (p.note || "")) handleChangePretenderNote(p.id, e.target.value.trim()); }}
+                    placeholder={p.visitedAt ? "Write a review - visible to friends who follow you" : "Note (optional, private until you've been)"}
+                    rows={2}
+                    className="mt-2 w-full rounded-lg px-3 py-2 text-sm italic outline-none"
+                    style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+                  />
                   <select
                     value={p.cuisineId || ""}
                     onChange={(e) => handleChangePretenderCuisine(p.id, e.target.value)}
@@ -651,10 +664,15 @@ export default function Nomarchy() {
               </button>
               {!open && (
                 <p className="mt-1.5 text-xs" style={{ color: C.muted }}>
-                  {f.picks.length === 0 ? "No thrones claimed yet." : `${f.picks.length} pick${f.picks.length === 1 ? "" : "s"} - tap to view`}
+                  {f.picks.length === 0 && f.reviews.length === 0
+                    ? "No thrones claimed yet."
+                    : [
+                        f.picks.length ? `${f.picks.length} pick${f.picks.length === 1 ? "" : "s"}` : null,
+                        f.reviews.length ? `${f.reviews.length} review${f.reviews.length === 1 ? "" : "s"}` : null,
+                      ].filter(Boolean).join(", ") + " - tap to view"}
                 </p>
               )}
-              {open && f.picks.length === 0 && <p className="mt-2 text-xs" style={{ color: C.muted }}>No thrones claimed yet.</p>}
+              {open && f.picks.length === 0 && f.reviews.length === 0 && <p className="mt-2 text-xs" style={{ color: C.muted }}>No thrones claimed yet.</p>}
               {open && f.picks.map((p) => (
                 <div key={p.id} className="mt-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
                   <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>{p.cuisine}</div>
@@ -668,6 +686,17 @@ export default function Nomarchy() {
                   <p className="mt-1.5 text-sm italic leading-relaxed" style={{ color: C.cream + "CC" }}>&ldquo;{p.decree}&rdquo;</p>
                   <button onClick={() => addFriendPickToPretenders(f.name, p)}
                     className="mt-2 flex items-center gap-1.5 text-xs font-bold" style={{ color: C.gold }}><Bookmark size={12} /> Add to my list</button>
+                </div>))}
+              {open && f.reviews.length > 0 && (
+                <div className="mt-3 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Been to, not crowned</div>
+              )}
+              {open && f.reviews.map((r) => (
+                <div key={r.id} className="mt-2 rounded-lg p-3" style={{ background: C.bg, border: `1px dashed ${C.cardEdge}` }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span style={{ ...display, fontWeight: 700 }} className="text-sm">{r.name}</span>
+                    <span className="text-xs" style={{ color: C.muted }}>{[r.cuisine, r.area].filter(Boolean).join(" · ")}</span>
+                  </div>
+                  {r.note && <p className="mt-1 text-sm italic leading-relaxed" style={{ color: C.cream + "CC" }}>&ldquo;{r.note}&rdquo;</p>}
                 </div>))}
             </div>
             );
