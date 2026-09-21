@@ -4,4 +4,12 @@ html,
 body {
   padding: 0;
   margin: 0;
+  /* Match the app's dark background so any stray horizontal overflow
+     (a popover or unwrapped row briefly wider than the screen) reveals
+     this instead of the browser's default white canvas. */
+  background: #1C1326;
+  /* A phone-width layout has little margin for error - clip rather than
+     let the page grow wider than the viewport and show a scrollbar/gap. */
+  overflow-x: hidden;
+  max-width: 100vw;
 }

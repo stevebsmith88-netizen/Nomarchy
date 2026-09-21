@@ -388,7 +388,7 @@ export default function Nomarchy() {
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
                 <div
-                  className="absolute left-0 top-full z-50 mt-2 w-72 rounded-xl p-3 text-left"
+                  className="absolute left-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2.5rem)] rounded-xl p-3 text-left"
                   onClick={(e) => e.stopPropagation()}
                   style={{ background: C.card, border: `1px solid ${C.cardEdge}`, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}
                 >
