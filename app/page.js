@@ -139,7 +139,12 @@ export default function Nomarchy() {
     const key = c.name.toLowerCase();
     if (!seenNames.has(key)) seenNames.set(key, c);
   }
-  const selectableCuisines = Array.from(seenNames.values());
+  // loadCuisines sorts defaults before customs as two separate alphabetical
+  // blocks (needed there so the dedup above prefers the default), not one
+  // unified A-Z order - re-sort here so the list actually reads A-Z
+  // regardless of default/custom status, since that's what both the
+  // Kingdom cards and the Next in Line cuisine dropdowns display in.
+  const selectableCuisines = Array.from(seenNames.values()).sort((a, b) => a.name.localeCompare(b.name));
   const cuisineNames = selectableCuisines.map((c) => c.name);
 
   const crown = async (cuisineId, entry, fromPretenderId) => {
