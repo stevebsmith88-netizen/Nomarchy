@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
   Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
-  ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock, Info,
+  ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock,
   MessageSquare, Bell,
 } from "lucide-react";
 import {
@@ -72,7 +72,6 @@ export default function Nomarchy() {
   const [followError, setFollowError] = useState("");
 
   const [editingProfile, setEditingProfile] = useState(false);
-  const [showLadder, setShowLadder] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
 
@@ -379,23 +378,6 @@ export default function Nomarchy() {
             <button onClick={() => setEditingProfile(true)} className="flex items-center gap-1">
               @{profile?.username} · {title} <RankBadge score={score} /> {profile?.is_owner && <OwnerBadge />} <Pencil size={11} />
             </button>
-            <span className="relative">
-              <button onClick={() => setShowLadder((v) => !v)} aria-label="Show rank ladder" className="flex items-center">
-                <Info size={12} />
-              </button>
-              {showLadder && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowLadder(false)} />
-                  <div
-                    className="absolute left-1/2 top-full z-50 mt-2 w-72 -translate-x-1/2"
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ filter: "drop-shadow(0 8px 20px rgba(0,0,0,0.45))" }}
-                  >
-                    <RankLadder score={score} />
-                  </div>
-                </>
-              )}
-            </span>
           </div>
         </div>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5">
