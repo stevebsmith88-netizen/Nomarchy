@@ -371,7 +371,7 @@ export default function Nomarchy() {
           <h1 className="text-3xl tracking-[0.12em]" style={{ ...display, fontWeight: 900 }}>NOMARCHY</h1>
         </div>
         <p className="mt-1 text-sm italic" style={{ ...display, color: C.muted }}>Long live your favourites.</p>
-        <div className="mt-2 flex items-center justify-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5">
           <span className="relative">
             <button
               onClick={handleOpenNotifications}
@@ -432,15 +432,15 @@ export default function Nomarchy() {
             </span>
           </div>
           {profile?.is_owner && (
-            <button onClick={() => setShowMembers(true)} className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
-              <Users size={12} /> Members
+            <button onClick={() => setShowMembers(true)} aria-label="Members" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
+              <Users size={12} /> <span className="hidden sm:inline">Members</span>
             </button>
           )}
-          <button onClick={() => setShowFeedback(true)} className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
-            <MessageSquare size={12} /> Feedback
+          <button onClick={() => setShowFeedback(true)} aria-label="Feedback" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
+            <MessageSquare size={12} /> <span className="hidden sm:inline">Feedback</span>
           </button>
-          <button onClick={signOut} className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
-            <LogOut size={12} /> Sign out
+          <button onClick={signOut} aria-label="Sign out" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
+            <LogOut size={12} /> <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
       </header>
