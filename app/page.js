@@ -8,7 +8,7 @@ import {
   MessageSquare, Bell,
 } from "lucide-react";
 import {
-  supabase, getUser, onAuthChange, signIn, verifyCode, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
+  supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
   loadDirectory, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote,
@@ -924,6 +924,19 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
   );
 }
 
+// Google's own logomark, drawn inline so the button meets their branding
+// guidelines (their four brand colors, not recolored to match the app).
+function GoogleIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48">
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.1 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/>
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.1 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
+      <path fill="#4CAF50" d="M24 44c5.5 0 10.4-2.1 14.2-5.5l-6.6-5.6C29.4 34.7 26.8 35.6 24 35.6c-5.2 0-9.6-3.3-11.2-7.9l-6.6 5.1C9.5 39.6 16.2 44 24 44z"/>
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.6 5.6C41.4 36 44 30.6 44 24c0-1.3-.1-2.7-.4-3.5z"/>
+    </svg>
+  );
+}
+
 function SignInScreen() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -931,6 +944,17 @@ function SignInScreen() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
+
+  const handleGoogle = async () => {
+    setError(""); setGoogleBusy(true);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err.message);
+      setGoogleBusy(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1005,23 +1029,41 @@ function SignInScreen() {
               </button>
             </form>
           ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-              <input
-                type="email"
-                required
-                autoFocus
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg px-3 py-2.5 text-sm outline-none"
-                style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
-              />
-              {error && <p className="text-xs" style={{ color: C.coup }}>{error}</p>}
-              <button type="submit" disabled={submitting} className="flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>
-                {submitting ? <Loader2 size={15} className="animate-spin" /> : <Crown size={15} />}
-                {submitting ? "Sending..." : "Send sign-in code"}
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={handleGoogle}
+                disabled={googleBusy}
+                className="flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold"
+                style={{ background: C.cream, color: "#1f1f1f" }}
+              >
+                {googleBusy ? <Loader2 size={15} className="animate-spin" /> : <GoogleIcon size={16} />}
+                {googleBusy ? "Redirecting..." : "Continue with Google"}
               </button>
-            </form>
+
+              <div className="flex items-center gap-2">
+                <div className="h-px flex-1" style={{ background: C.cardEdge }} />
+                <span className="text-xs" style={{ color: C.muted }}>or</span>
+                <div className="h-px flex-1" style={{ background: C.cardEdge }} />
+              </div>
+
+              <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                <input
+                  type="email"
+                  required
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-lg px-3 py-2.5 text-sm outline-none"
+                  style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+                />
+                {error && <p className="text-xs" style={{ color: C.coup }}>{error}</p>}
+                <button type="submit" disabled={submitting} className="flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>
+                  {submitting ? <Loader2 size={15} className="animate-spin" /> : <Crown size={15} />}
+                  {submitting ? "Sending..." : "Send sign-in code"}
+                </button>
+              </form>
+            </div>
           )}
         </div>
       </div>
