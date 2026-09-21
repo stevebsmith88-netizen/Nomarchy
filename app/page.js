@@ -1361,7 +1361,21 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
   const [raw, setRaw] = useState("");
   const [rows, setRows] = useState(null);
   const [working, setWorking] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [err, setErr] = useState("");
+
+  // A slow confirm (creating several new custom cuisines can take a moment)
+  // with no busy state on the button invited an impatient double-click,
+  // which fired two full imports of the same list a few seconds apart.
+  const confirmImport = async (keptRows) => {
+    if (confirming) return;
+    setConfirming(true);
+    try {
+      await onImport(keptRows);
+    } finally {
+      setConfirming(false);
+    }
+  };
 
   const parse = async () => {
     if (!raw.trim() || working) return;
@@ -1465,10 +1479,11 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
           </div>
           <div className="flex gap-2">
             <button onClick={() => setRows(null)} className="rounded-lg px-4 py-3 text-sm font-bold" style={{ border: `1px solid ${C.cardEdge}`, color: C.muted }}>Back</button>
-            <button disabled={!keeping.length} onClick={() => onImport(keeping.map(({ _id, _keep, ...r }) => r))}
+            <button disabled={!keeping.length || confirming} onClick={() => confirmImport(keeping.map(({ _id, _keep, ...r }) => r))}
               className="flex flex-1 items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold"
-              style={keeping.length ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}>
-              <Bookmark size={15} /> Add {keeping.length} to Next in Line
+              style={keeping.length && !confirming ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}>
+              {confirming ? <Loader2 size={15} className="animate-spin" /> : <Bookmark size={15} />}
+              {confirming ? "Adding..." : `Add ${keeping.length} to Next in Line`}
             </button>
           </div>
         </>)}
