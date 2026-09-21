@@ -127,7 +127,19 @@ export default function Nomarchy() {
   };
 
   const overallCuisine = cuisineList.find((c) => c.is_default && c.name === OVERALL_FAVOURITE_NAME);
-  const selectableCuisines = cuisineList.filter((c) => c !== overallCuisine);
+  // Defends against a name collision between a shared default and someone's
+  // pre-existing custom cuisine of the same name (exactly what happened
+  // when new defaults were added and retroactively collided with a custom
+  // one - both rows are legitimate, but showing both as separate cards with
+  // the same name broke rendering). Keeps the first match per name; since
+  // loadCuisines sorts defaults before customs, that's always the default.
+  const seenNames = new Map();
+  for (const c of cuisineList) {
+    if (c === overallCuisine) continue;
+    const key = c.name.toLowerCase();
+    if (!seenNames.has(key)) seenNames.set(key, c);
+  }
+  const selectableCuisines = Array.from(seenNames.values());
   const cuisineNames = selectableCuisines.map((c) => c.name);
 
   const crown = async (cuisineId, entry, fromPretenderId) => {
