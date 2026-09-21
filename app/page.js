@@ -1066,12 +1066,13 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
-      <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 z-10 -mx-5 -mt-5 mb-1 flex items-center justify-between px-5 pt-5 pb-3" style={{ background: C.card }}>
+      <div className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex shrink-0 items-center justify-between px-5 pt-5 pb-3" style={{ background: C.card, borderBottom: `1px solid ${C.cardEdge}` }}>
           <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>Your profile</h3>
           <button onClick={onClose} aria-label="Close" className="flex h-8 w-8 items-center justify-center" style={{ color: C.muted }}><X size={18} /></button>
         </div>
 
+        <div className="overflow-y-auto px-5 pb-5">
         <div className="mt-3 text-center">
           <Crown size={30} className="mx-auto" style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
           <h2 className="mt-1 text-xl" style={{ ...display, fontWeight: 900 }}>{title}</h2>
@@ -1215,6 +1216,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>
