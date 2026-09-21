@@ -338,6 +338,8 @@ export default function Nomarchy() {
   const thrones = standing?.thrones ?? 0;
   const coups = standing?.coups ?? 0;
   const endorseCount = court.reduce((n, f) => n + f.picks.filter((p) => p.endorsedByMe).length, 0);
+  const visitedCount = pretenders.filter((p) => p.visitedAt).length;
+  const reviewCount = pretenders.filter((p) => p.visitedAt && p.note).length;
   const score = standing?.score ?? 0;
   const rank = getRank(score);
   const title = getTitle(profile?.is_owner, score);
@@ -729,7 +731,9 @@ export default function Nomarchy() {
             {[{ n: thrones, label: "Thrones claimed", hint: "Crown more cuisines" },
               { n: coups, label: "Coups staged", hint: "Better spots dethrone old ones" },
               { n: pretenders.length, label: "Next in line", hint: "Go try them" },
-              { n: endorseCount, label: "Endorsements given", hint: "Crown your friends' picks" }].map((s) => (
+              { n: endorseCount, label: "Endorsements given", hint: "Crown your friends' picks" },
+              { n: thrones + visitedCount, label: "Restaurants been to", hint: "Crowned, plus marked as been" },
+              { n: reviewCount, label: "Reviews written", hint: "Visible to friends who follow you" }].map((s) => (
               <div key={s.label} className="rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
                 <div className="text-2xl" style={{ ...display, fontWeight: 700, color: C.gold }}>{s.n}</div>
                 <div className="text-xs font-semibold">{s.label}</div>
