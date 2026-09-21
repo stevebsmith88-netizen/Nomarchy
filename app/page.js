@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
-  loadRecentMembers, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
+  loadDirectory, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote,
   moveThroneCuisine, unCrown,
@@ -123,6 +123,11 @@ export default function Nomarchy() {
       flash(e.message || "Couldn't follow back");
     }
     setFollowBackBusy(null);
+  };
+
+  const handleFollowFromDirectory = async (targetId) => {
+    await followUser(user.id, targetId);
+    await refreshCourt();
   };
 
   const overallCuisine = cuisineList.find((c) => c.is_default && c.name === OVERALL_FAVOURITE_NAME);
@@ -415,11 +420,9 @@ export default function Nomarchy() {
               </>
             )}
           </span>
-          {profile?.is_owner && (
-            <button onClick={() => setShowMembers(true)} aria-label="Members" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
-              <Users size={12} /> <span className="hidden sm:inline">Members</span>
-            </button>
-          )}
+          <button onClick={() => setShowMembers(true)} aria-label="Find people" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
+            <Users size={12} /> <span className="hidden sm:inline">Find people</span>
+          </button>
           <button onClick={() => setShowFeedback(true)} aria-label="Feedback" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <MessageSquare size={12} /> <span className="hidden sm:inline">Feedback</span>
           </button>
@@ -747,7 +750,7 @@ export default function Nomarchy() {
       )}
 
       {showMembers && (
-        <MembersModal onClose={() => setShowMembers(false)} />
+        <MembersModal userId={user.id} onFollow={handleFollowFromDirectory} onClose={() => setShowMembers(false)} />
       )}
     </FontShell>
   );
@@ -1223,36 +1226,61 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
   );
 }
 
-function MembersModal({ onClose }) {
+function MembersModal({ userId, onFollow, onClose }) {
   const [members, setMembers] = useState(null);
   const [err, setErr] = useState("");
+  const [followBusy, setFollowBusy] = useState(null);
 
   useEffect(() => {
-    loadRecentMembers().then(setMembers).catch((e) => setErr(e.message || "Couldn't load members."));
-  }, []);
+    loadDirectory(userId).then(setMembers).catch((e) => setErr(e.message || "Couldn't load members."));
+  }, [userId]);
 
-  const fmt = (t) => new Date(t).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
+  const follow = async (m) => {
+    setFollowBusy(m.id);
+    try {
+      await onFollow(m.id);
+      setMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, alreadyFollowing: true } : x)));
+    } catch (e) {
+      setErr(e.message || "Couldn't follow");
+    }
+    setFollowBusy(null);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
       <div className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>Members</h3>
+          <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>Find people</h3>
           <button onClick={onClose} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
         </div>
-        <p className="mt-1 text-xs" style={{ color: C.muted }}>Newest first. Just for you as founder.</p>
+        <p className="mt-1 text-xs" style={{ color: C.muted }}>Public kingdoms only - private profiles won&apos;t show up here.</p>
 
         {err && <p className="mt-3 text-xs" style={{ color: C.coup }}>{err}</p>}
         {!members && !err && <p className="mt-3 text-sm" style={{ color: C.muted }}>Loading...</p>}
+        {members?.length === 0 && <p className="mt-3 text-sm" style={{ color: C.muted }}>No one to find yet.</p>}
 
         <div className="mt-3">
           {members?.map((m) => (
-            <div key={m.username} className="flex items-center justify-between py-2" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
-              <div>
-                <div className="text-sm font-semibold">{m.display_name || m.username}</div>
-                <div className="text-xs" style={{ color: C.muted }}>@{m.username}</div>
+            <div key={m.id} className="flex items-center justify-between py-2" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
+              <div className="flex items-center gap-1.5">
+                <div>
+                  <div className="text-sm font-semibold">{m.name}</div>
+                  <div className="text-xs" style={{ color: C.muted }}>@{m.username}</div>
+                </div>
+                {m.isOwner && <OwnerBadge size={12} />}
               </div>
-              <div className="text-xs" style={{ color: C.muted }}>{fmt(m.created_at)}</div>
+              {m.alreadyFollowing ? (
+                <span className="text-xs font-semibold" style={{ color: C.muted }}>Following</span>
+              ) : (
+                <button
+                  onClick={() => follow(m)}
+                  disabled={followBusy === m.id}
+                  className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
+                  style={{ background: C.gold, color: C.bg }}
+                >
+                  {followBusy === m.id ? <Loader2 size={11} className="animate-spin" /> : <UserPlus size={11} />} Follow
+                </button>
+              )}
             </div>
           ))}
         </div>
