@@ -5,11 +5,11 @@ import {
   Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock,
-  MessageSquare, Bell,
+  MessageSquare, Bell, Trophy, Navigation,
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
-  loadDirectory, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
+  loadDirectory, loadTopCrowned, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote,
   moveThroneCuisine, updateThroneDecree, unCrown,
@@ -75,6 +75,11 @@ export default function Nomarchy() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
 
+  const [top25, setTop25] = useState(null);
+  const [top25Error, setTop25Error] = useState("");
+  const [top25City, setTop25City] = useState("");
+  const [top25Locating, setTop25Locating] = useState(false);
+
   useEffect(() => {
     getUser().then((u) => { setUser(u); setAuthChecked(true); });
     return onAuthChange((u) => setUser(u));
@@ -128,6 +133,41 @@ export default function Nomarchy() {
   const handleFollowFromDirectory = async (targetId) => {
     await followUser(user.id, targetId);
     await refreshCourt();
+  };
+
+  useEffect(() => {
+    if (tab !== "top25" || top25 !== null) return;
+    loadTopCrowned().then(setTop25).catch((e) => setTop25Error(e.message || "Couldn't load the leaderboard."));
+  }, [tab, top25]);
+
+  const handleNearMe = () => {
+    if (!navigator.geolocation) {
+      setTop25Error("Your browser won't share your location.");
+      return;
+    }
+    setTop25Locating(true); setTop25Error("");
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const res = await fetch("/api/geocode", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+            body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Couldn't figure out where you are");
+          setTop25City(data.city);
+        } catch (e) {
+          setTop25Error(e.message || "Couldn't figure out where you are");
+        }
+        setTop25Locating(false);
+      },
+      () => {
+        setTop25Error("Location access was blocked - try entering your city instead.");
+        setTop25Locating(false);
+      }
+    );
   };
 
   const overallCuisine = cuisineList.find((c) => c.is_default && c.name === OVERALL_FAVOURITE_NAME);
@@ -444,7 +484,7 @@ export default function Nomarchy() {
       )}
 
       <nav className="flex flex-wrap justify-center gap-2 px-4 pb-5">
-        {[{ id: "kingdom", label: "Kingdom", icon: Crown }, { id: "pretenders", label: "Next in Line", icon: Bookmark }, { id: "court", label: "Court", icon: Users }].map(({ id, label, icon: Icon }) => (
+        {[{ id: "kingdom", label: "Kingdom", icon: Crown }, { id: "pretenders", label: "Next in Line", icon: Bookmark }, { id: "court", label: "Court", icon: Users }, { id: "top25", label: "Top 25", icon: Trophy }].map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setTab(id)} className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold"
             style={tab === id ? { background: C.gold, color: C.bg } : { background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <Icon size={15} strokeWidth={2.2} />{label}
@@ -684,6 +724,45 @@ export default function Nomarchy() {
             </div>
             );
           })}
+        </div>)}
+
+        {/* TOP 25 */}
+        {tab === "top25" && (<div>
+          <p className="mb-3 text-sm" style={{ color: C.muted }}>The most-crowned restaurants across everyone&apos;s public kingdoms.</p>
+          <div className="mb-2 flex gap-2">
+            <input value={top25City} onChange={(e) => setTop25City(e.target.value)} placeholder="Filter by city or neighbourhood" className="w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+            <button onClick={handleNearMe} disabled={top25Locating} className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-bold" style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
+              {top25Locating ? <Loader2 size={13} className="animate-spin" /> : <Navigation size={13} />} Near me
+            </button>
+          </div>
+          {top25City && <button onClick={() => setTop25City("")} className="mb-3 text-xs font-semibold" style={{ color: C.muted }}>Clear filter</button>}
+          {top25Error && <p className="mb-3 text-xs" style={{ color: C.coup }}>{top25Error}</p>}
+          {!top25 && !top25Error && <p className="text-sm" style={{ color: C.muted }}>Loading...</p>}
+          {top25 && (() => {
+            const q = top25City.trim().toLowerCase();
+            const filtered = q
+              ? top25.filter((p) => [p.area, p.address].filter(Boolean).some((f) => f.toLowerCase().includes(q)))
+              : top25;
+            const shownPlaces = filtered.slice(0, 25);
+            if (shownPlaces.length === 0) return <p className="text-sm" style={{ color: C.muted }}>Nothing crowned there yet.</p>;
+            return shownPlaces.map((p, i) => (
+              <div key={i} className="mb-2 flex items-center gap-3 rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold" style={{ background: i < 3 ? C.gold : C.bg, color: i < 3 ? C.bg : C.muted }}>{i + 1}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-semibold">{p.name}</span>
+                    {p.rating && <span className="flex shrink-0 items-center gap-0.5 text-xs" style={{ color: C.gold }}><Star size={11} fill={C.gold} /> {p.rating}</span>}
+                  </div>
+                  <div className="truncate text-xs" style={{ color: C.muted }}>{[p.area, p.address].filter(Boolean).join(" · ")}</div>
+                </div>
+                <div className="shrink-0 text-right">
+                  {p.mapsUrl && <a href={p.mapsUrl} target="_blank" rel="noreferrer" className="mb-0.5 flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
+                  <div className="text-lg" style={{ ...display, fontWeight: 700, color: C.gold }}>{p.count}</div>
+                  <div className="text-[10px] uppercase" style={{ color: C.muted, letterSpacing: "0.08em" }}>{p.count === 1 ? "crown" : "crowns"}</div>
+                </div>
+              </div>
+            ));
+          })()}
         </div>)}
 
         </>)}
