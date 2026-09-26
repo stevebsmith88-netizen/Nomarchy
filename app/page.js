@@ -12,7 +12,7 @@ import {
   loadDirectory, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote,
-  moveThroneCuisine, unCrown,
+  moveThroneCuisine, updateThroneDecree, unCrown,
   loadCourt, toggleEndorsement, followByUsername, loadStanding,
 } from "@/lib/data";
 import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell } from "./theme";
@@ -163,6 +163,11 @@ export default function Nomarchy() {
 
   const handleMoveCuisine = async (throneId, newCuisineId) => {
     await moveThroneCuisine(throneId, newCuisineId);
+    await refreshKingdom();
+  };
+
+  const handleEditDecree = async (throneId, decree) => {
+    await updateThroneDecree(throneId, decree);
     await refreshKingdom();
   };
 
@@ -467,6 +472,7 @@ export default function Nomarchy() {
                 sharePick={sharePick}
                 fmt={fmt}
                 onUnCrown={() => handleUnCrown(overallCuisine.id, slots[OVERALL_FAVOURITE_NAME]?.current)}
+                onEditDecree={(decree) => handleEditDecree(slots[OVERALL_FAVOURITE_NAME]?.current?.id, decree)}
               />
             </div>
           )}
@@ -495,6 +501,7 @@ export default function Nomarchy() {
                   emptyCuisines={selectableCuisines.filter((c) => c.id !== thisId && !slots[c.name]?.current)}
                   onMoveCuisine={(newCuisineId) => handleMoveCuisine(slots[cuisineName]?.current?.id, newCuisineId)}
                   onUnCrown={() => handleUnCrown(thisId, slots[cuisineName]?.current)}
+                  onEditDecree={(decree) => handleEditDecree(slots[cuisineName]?.current?.id, decree)}
                 />
               );
             })}
@@ -838,7 +845,7 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
   );
 }
 
-function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown }) {
+function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown, onEditDecree }) {
   const r = slot?.current;
   const fallenList = slot?.fallen || [];
   const open = historyOpen[cuisineName];
@@ -847,6 +854,11 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
   const [targetCuisineId, setTargetCuisineId] = useState("");
   const [moving, setMoving] = useState(false);
   const [moveErr, setMoveErr] = useState("");
+
+  const [editingDecree, setEditingDecree] = useState(false);
+  const [decreeText, setDecreeText] = useState("");
+  const [savingDecree, setSavingDecree] = useState(false);
+  const [decreeErr, setDecreeErr] = useState("");
 
   const confirmMove = async () => {
     if (!targetCuisineId || moving) return;
@@ -859,6 +871,24 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
       setMoveErr(e.message || "Couldn't move it.");
     }
     setMoving(false);
+  };
+
+  const startEditDecree = () => {
+    setDecreeText(r.decree);
+    setDecreeErr("");
+    setEditingDecree(true);
+  };
+
+  const confirmEditDecree = async () => {
+    if (decreeText.trim().length < 30 || savingDecree) return;
+    setSavingDecree(true); setDecreeErr("");
+    try {
+      await onEditDecree(decreeText.trim());
+      setEditingDecree(false);
+    } catch (e) {
+      setDecreeErr(e.message || "Couldn't save that.");
+    }
+    setSavingDecree(false);
   };
 
   return (
@@ -882,12 +912,36 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
           crowned {fmt(r.crownedAt)}
           {r.mapsUrl && <a href={r.mapsUrl} target="_blank" rel="noreferrer" className="ml-1 flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
         </div>
-        <p className="mt-2 text-sm leading-relaxed" style={{ color: C.cream + "E6" }}>
-          <ScrollText size={13} className="mr-1 inline" style={{ color: C.gold }} />{r.decree}
-        </p>
+        {editingDecree ? (
+          <div className="mt-2">
+            <textarea
+              autoFocus
+              value={decreeText}
+              onChange={(e) => setDecreeText(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+              style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+            />
+            <div className="mt-1 text-xs" style={{ color: decreeText.trim().length < 30 ? C.coup : C.muted }}>{decreeText.trim().length}/30 minimum</div>
+            {decreeErr && <p className="mt-1 text-xs" style={{ color: C.coup }}>{decreeErr}</p>}
+            <div className="mt-2 flex gap-2">
+              <button onClick={() => setEditingDecree(false)} className="rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>Cancel</button>
+              <button disabled={decreeText.trim().length < 30 || savingDecree} onClick={confirmEditDecree} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={decreeText.trim().length >= 30 ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}>
+                {savingDecree ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Save
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-2 text-sm leading-relaxed" style={{ color: C.cream + "E6" }}>
+            <ScrollText size={13} className="mr-1 inline" style={{ color: C.gold }} />{r.decree}
+          </p>
+        )}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
           <button onClick={() => sharePick(cuisineName, r)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Share2 size={13} /> Share</button>
+          {onEditDecree && !editingDecree && (
+            <button onClick={startEditDecree} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Pencil size={13} /> Edit review</button>
+          )}
           {onMoveCuisine && (
             <button onClick={() => setChangingCuisine((v) => !v)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Pencil size={13} /> Wrong category?</button>
           )}
