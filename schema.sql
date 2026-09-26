@@ -304,6 +304,38 @@ create policy "feedback read own or owner" on feedback for select
   );
 
 -- ------------------------------------------------------------
+-- 7d. REVIEW PHOTOS
+-- Up to 3 photos per throne decree or next_in_line review, stored in
+-- Supabase Storage (a public bucket - a photo of a restaurant isn't
+-- sensitive, and public URLs mean the app never needs signed-URL logic
+-- to display one) rather than an external image host.
+-- ------------------------------------------------------------
+alter table thrones add column if not exists photos text[] not null default '{}';
+alter table thrones drop constraint if exists thrones_photos_limit;
+alter table thrones add constraint thrones_photos_limit check (cardinality(photos) <= 3);
+
+alter table next_in_line add column if not exists photos text[] not null default '{}';
+alter table next_in_line drop constraint if exists nil_photos_limit;
+alter table next_in_line add constraint nil_photos_limit check (cardinality(photos) <= 3);
+
+insert into storage.buckets (id, name, public)
+values ('review-photos', 'review-photos', true)
+on conflict (id) do nothing;
+
+-- Uploads are keyed as "{user_id}/{filename}" - storage.foldername(name)
+-- splits that path into segments, so segment 1 being the caller's own
+-- id is what keeps one person from writing into another's folder.
+drop policy if exists "review photos readable" on storage.objects;
+create policy "review photos readable" on storage.objects for select
+  using (bucket_id = 'review-photos');
+drop policy if exists "review photos insertable by owner" on storage.objects;
+create policy "review photos insertable by owner" on storage.objects for insert
+  with check (bucket_id = 'review-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "review photos deletable by owner" on storage.objects;
+create policy "review photos deletable by owner" on storage.objects for delete
+  using (bucket_id = 'review-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ------------------------------------------------------------
 -- 8. ROW LEVEL SECURITY
 -- Do NOT skip this. Without it every table is wide open and anyone
 -- can overwrite anyone else's kingdom.

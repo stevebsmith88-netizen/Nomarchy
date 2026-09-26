@@ -11,6 +11,20 @@ import { C, display, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell } from
 // the ordinary cuisine/throne machinery instead of its own table.
 const OVERALL_FAVOURITE_NAME = "Overall Favourite";
 
+function PhotoStrip({ photos }) {
+  if (!photos || photos.length === 0) return null;
+  return (
+    <div className="mt-2 flex gap-2">
+      {photos.map((url) => (
+        <div key={url} className="h-16 w-16 shrink-0 overflow-hidden rounded-lg" style={{ border: `1px solid ${C.cardEdge}` }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={url} alt="" className="h-full w-full object-cover" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function PublicProfilePage({ params }) {
   const { username } = use(params);
 
@@ -147,6 +161,7 @@ export default function PublicProfilePage({ params }) {
             <p className="mt-2 text-sm leading-relaxed" style={{ color: C.cream + "E6" }}>
               <ScrollText size={13} className="mr-1 inline" style={{ color: C.gold }} />{overall.decree}
             </p>
+            <PhotoStrip photos={overall.photos} />
           </div>
         )}
 
@@ -174,6 +189,7 @@ export default function PublicProfilePage({ params }) {
                   <p className="mt-2 text-sm leading-relaxed" style={{ color: C.cream + "E6" }}>
                     <ScrollText size={13} className="mr-1 inline" style={{ color: C.gold }} />{r.decree}
                   </p>
+                  <PhotoStrip photos={r.photos} />
                 </div>
               );
             })}

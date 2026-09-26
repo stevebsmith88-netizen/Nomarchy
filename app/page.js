@@ -5,14 +5,15 @@ import {
   Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock,
-  MessageSquare, Bell, Trophy, Navigation,
+  MessageSquare, Bell, Trophy, Navigation, Camera,
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
   loadDirectory, loadTopCrowned, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
-  crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote,
-  moveThroneCuisine, updateThroneDecree, unCrown,
+  crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderPhotos,
+  moveThroneCuisine, updateThroneDecree, updateThronePhotos, unCrown,
+  uploadReviewPhoto, deleteReviewPhoto, MAX_REVIEW_PHOTOS,
   loadCourt, toggleEndorsement, followByUsername, loadStanding,
 } from "@/lib/data";
 import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell } from "./theme";
@@ -211,6 +212,11 @@ export default function Nomarchy() {
     await refreshKingdom();
   };
 
+  const handleEditThronePhotos = async (throneId, photos) => {
+    await updateThronePhotos(throneId, photos);
+    await refreshKingdom();
+  };
+
   const handleUnCrown = async (cuisineId, throne) => {
     await unCrown(user.id, throne.id, {
       name: throne.name,
@@ -218,6 +224,7 @@ export default function Nomarchy() {
       address: throne.address,
       rating: throne.rating,
       mapsUrl: throne.mapsUrl,
+      photos: throne.photos,
       cuisineId,
     });
     await refreshKingdom();
@@ -249,6 +256,11 @@ export default function Nomarchy() {
 
   const handleChangePretenderNote = async (id, note) => {
     await updatePretenderNote(id, note);
+    await refreshPretenders();
+  };
+
+  const handleChangePretenderPhotos = async (id, photos) => {
+    await updatePretenderPhotos(id, photos);
     await refreshPretenders();
   };
 
@@ -513,6 +525,8 @@ export default function Nomarchy() {
                 fmt={fmt}
                 onUnCrown={() => handleUnCrown(overallCuisine.id, slots[OVERALL_FAVOURITE_NAME]?.current)}
                 onEditDecree={(decree) => handleEditDecree(slots[OVERALL_FAVOURITE_NAME]?.current?.id, decree)}
+                onEditPhotos={(photos) => handleEditThronePhotos(slots[OVERALL_FAVOURITE_NAME]?.current?.id, photos)}
+                userId={user.id}
               />
             </div>
           )}
@@ -542,6 +556,8 @@ export default function Nomarchy() {
                   onMoveCuisine={(newCuisineId) => handleMoveCuisine(slots[cuisineName]?.current?.id, newCuisineId)}
                   onUnCrown={() => handleUnCrown(thisId, slots[cuisineName]?.current)}
                   onEditDecree={(decree) => handleEditDecree(slots[cuisineName]?.current?.id, decree)}
+                  onEditPhotos={(photos) => handleEditThronePhotos(slots[cuisineName]?.current?.id, photos)}
+                  userId={user.id}
                 />
               );
             })}
@@ -590,9 +606,9 @@ export default function Nomarchy() {
             {stillToTry.length > 0 && (<>
               <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Still to try</h3>
               {stillToTry.map((p) => (
-                <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines}
+                <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines} userId={user.id}
                   onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
-                  onChangeCuisine={handleChangePretenderCuisine} onToggleVisited={handleToggleVisited}
+                  onChangeCuisine={handleChangePretenderCuisine} onChangePhotos={handleChangePretenderPhotos} onToggleVisited={handleToggleVisited}
                   onCrown={(prefill) => setModal({
                     cuisineId: prefill.cuisineId || "",
                     cuisineName: prefill.cuisine || "",
@@ -606,9 +622,9 @@ export default function Nomarchy() {
             {beenTo.length > 0 && (<>
               <h3 className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Been to</h3>
               {beenTo.map((p) => (
-                <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines}
+                <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines} userId={user.id}
                   onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
-                  onChangeCuisine={handleChangePretenderCuisine} onToggleVisited={handleToggleVisited}
+                  onChangeCuisine={handleChangePretenderCuisine} onChangePhotos={handleChangePretenderPhotos} onToggleVisited={handleToggleVisited}
                   onCrown={(prefill) => setModal({
                     cuisineId: prefill.cuisineId || "",
                     cuisineName: prefill.cuisine || "",
@@ -707,6 +723,7 @@ export default function Nomarchy() {
                     </button>
                   </div>
                   <p className="mt-1.5 text-sm italic leading-relaxed" style={{ color: C.cream + "CC" }}>&ldquo;{p.decree}&rdquo;</p>
+                  <PhotoStrip photos={p.photos} />
                   <button onClick={() => addFriendPickToPretenders(f.name, p)}
                     className="mt-2 flex items-center gap-1.5 text-xs font-bold" style={{ color: C.gold }}><Bookmark size={12} /> Add to my list</button>
                 </div>))}
@@ -720,6 +737,7 @@ export default function Nomarchy() {
                     <span className="text-xs" style={{ color: C.muted }}>{[r.cuisine, r.area].filter(Boolean).join(" · ")}</span>
                   </div>
                   {r.note && <p className="mt-1 text-sm italic leading-relaxed" style={{ color: C.cream + "CC" }}>&ldquo;{r.note}&rdquo;</p>}
+                  <PhotoStrip photos={r.photos} />
                 </div>))}
             </div>
             );
@@ -782,6 +800,7 @@ export default function Nomarchy() {
           prefill={modal.prefill}
           reigning={slots[modal.cuisineName]?.current}
           defaultCity={profile?.city || "Toronto"}
+          userId={user.id}
           onClose={() => setModal(null)}
           onSubmit={(cid, entry) => crown(cid, entry, modal.pretenderId)}
         />
@@ -872,7 +891,7 @@ function RankLadder({ score }) {
   );
 }
 
-function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onToggleVisited, onCrown }) {
+function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onChangePhotos, onToggleVisited, onCrown, userId }) {
   return (
     <div className="mb-3 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, opacity: p.visitedAt ? 0.7 : 1 }}>
       <div className="flex items-start justify-between gap-2">
@@ -907,6 +926,7 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
         <option value="">Uncategorized</option>
         {selectableCuisines.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
       </select>
+      {p.visitedAt && <PhotoPicker userId={userId} photos={p.photos || []} onChange={(photos) => onChangePhotos(p.id, photos)} />}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           onClick={() => onCrown(p)}
@@ -924,7 +944,67 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
   );
 }
 
-function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown, onEditDecree }) {
+// Read-only thumbnail row - used both for the owner's own picks (paired
+// with PhotoPicker below) and for reading a friend's or a public profile's
+// photos, where no remove button applies.
+function PhotoStrip({ photos, onRemove }) {
+  if (!photos || photos.length === 0) return null;
+  return (
+    <div className="mt-2 flex gap-2">
+      {photos.map((url, i) => (
+        <div key={url} className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg" style={{ border: `1px solid ${C.cardEdge}` }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={url} alt="" className="h-full w-full object-cover" />
+          {onRemove && (
+            <button onClick={() => onRemove(i)} aria-label="Remove photo" className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full" style={{ background: "rgba(0,0,0,0.6)", color: "#fff" }}>
+              <X size={10} />
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Uploads happen the moment a photo is picked, not deferred to some later
+// "save" - simpler state, and it means a review's photos are never lost to
+// a closed tab mid-edit. Removing one is a local array change the caller
+// persists (immediately for an existing review, or on submit for a new one).
+function PhotoPicker({ userId, photos, onChange }) {
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState("");
+
+  const handleFiles = async (e) => {
+    const files = Array.from(e.target.files || []).slice(0, MAX_REVIEW_PHOTOS - photos.length);
+    e.target.value = "";
+    if (!files.length) return;
+    setUploading(true); setErr("");
+    try {
+      const urls = [];
+      for (const file of files) urls.push(await uploadReviewPhoto(userId, file));
+      onChange([...photos, ...urls]);
+    } catch (e2) {
+      setErr(e2.message || "Couldn't upload that photo.");
+    }
+    setUploading(false);
+  };
+
+  return (
+    <div className="mt-2">
+      <PhotoStrip photos={photos} onRemove={(i) => { deleteReviewPhoto(photos[i]); onChange(photos.filter((_, idx) => idx !== i)); }} />
+      {photos.length < MAX_REVIEW_PHOTOS && (
+        <label className="mt-2 flex w-fit cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
+          {uploading ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
+          {uploading ? "Uploading..." : `Add photo (${photos.length}/${MAX_REVIEW_PHOTOS})`}
+          <input type="file" accept="image/*" multiple onChange={handleFiles} disabled={uploading} className="hidden" />
+        </label>
+      )}
+      {err && <p className="mt-1 text-xs" style={{ color: C.coup }}>{err}</p>}
+    </div>
+  );
+}
+
+function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown, onEditDecree, onEditPhotos, userId }) {
   const r = slot?.current;
   const fallenList = slot?.fallen || [];
   const open = historyOpen[cuisineName];
@@ -1015,6 +1095,7 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
             <ScrollText size={13} className="mr-1 inline" style={{ color: C.gold }} />{r.decree}
           </p>
         )}
+        {onEditPhotos && <PhotoPicker userId={userId} photos={r.photos || []} onChange={(photos) => onEditPhotos(photos)} />}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
           <button onClick={() => sharePick(cuisineName, r)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Share2 size={13} /> Share</button>
@@ -1527,7 +1608,7 @@ function FeedbackModal({ onClose, onSubmit }) {
   );
 }
 
-function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning, defaultCity, onClose, onSubmit }) {
+function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning, defaultCity, userId, onClose, onSubmit }) {
   const isCoup = mode === "coup"; const isPretender = mode === "pretender";
   const [cz, setCz] = useState(cuisineId);
   const [query, setQuery] = useState(prefill?.name || "");
@@ -1539,6 +1620,7 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
   const [name, setName] = useState(prefill?.name || "");
   const [area, setArea] = useState(prefill?.area || "");
   const [text, setText] = useState("");
+  const [photos, setPhotos] = useState(prefill?.photos || []);
   const minLen = isPretender ? 0 : MIN_DECREE_LENGTH;
   const valid = name.trim().length > 1 && text.trim().length >= minLen && !!cz;
   const czName = cuisines.find((c) => c.id === cz)?.name || cuisineName;
@@ -1624,8 +1706,9 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
         {!isPretender && (<div className="mt-1 text-right text-xs" style={{ color: text.trim().length >= minLen ? C.green : C.muted }}>
           {text.trim().length}/{minLen} minimum. No throne without a decree.
         </div>)}
+        {!isPretender && <PhotoPicker userId={userId} photos={photos} onChange={setPhotos} />}
 
-        <button disabled={!valid} onClick={() => onSubmit(cz, { name: name.trim(), area: area.trim(), ...(isPretender ? { note: text.trim() } : { decree: text.trim() }), address: sel?.address || "", rating: sel?.rating || "", mapsUrl: sel?.mapsUrl || "" })}
+        <button disabled={!valid} onClick={() => onSubmit(cz, { name: name.trim(), area: area.trim(), ...(isPretender ? { note: text.trim() } : { decree: text.trim(), photos }), address: sel?.address || "", rating: sel?.rating || "", mapsUrl: sel?.mapsUrl || "" })}
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold"
           style={valid ? { background: isCoup ? C.coup : C.gold, color: isCoup ? C.cream : C.bg } : { background: C.cardEdge, color: C.muted }}>
           {isPretender ? <Bookmark size={15} /> : isCoup ? <Swords size={15} /> : <Crown size={15} />}
