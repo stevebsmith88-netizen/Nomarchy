@@ -1067,7 +1067,7 @@ export default function Nomarchy() {
       </main>
 
       {toast && (
-        <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full px-4 py-2 text-sm font-semibold shadow-lg" style={{ background: C.gold, color: C.bg }}>
+        <div className="fixed bottom-5 left-1/2 z-[1100] -translate-x-1/2 rounded-full px-4 py-2 text-sm font-semibold shadow-lg" style={{ background: C.gold, color: C.bg }}>
           <Check size={14} className="mr-1 inline" />{toast}
         </div>)}
 
@@ -1716,7 +1716,7 @@ function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-5" style={{ background: "rgba(10,5,16,0.92)" }}>
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-5" style={{ background: "rgba(10,5,16,0.92)" }}>
       <div className="w-full max-w-sm rounded-2xl p-6 text-center" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
         <Crown size={30} className="mx-auto" style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
         <h2 className="mt-2 text-xl" style={{ ...display, fontWeight: 900 }}>Welcome to Nomarchy</h2>
@@ -1822,7 +1822,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
       <div className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
         <div className="flex shrink-0 items-center justify-between px-5 pt-5 pb-3" style={{ background: C.card, borderBottom: `1px solid ${C.cardEdge}` }}>
           <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>Your profile</h3>
@@ -1914,7 +1914,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
             style={{ background: isPublic ? C.gold : C.cardEdge }}
           >
             <span
-              className="absolute top-0.5 h-5 w-5 rounded-full transition-transform"
+              className="absolute left-0 top-0.5 h-5 w-5 rounded-full transition-transform"
               style={{ background: C.bg, transform: isPublic ? "translateX(22px)" : "translateX(2px)" }}
             />
           </button>
@@ -1940,7 +1940,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
             style={{ background: discoverable ? C.gold : C.cardEdge }}
           >
             <span
-              className="absolute top-0.5 h-5 w-5 rounded-full transition-transform"
+              className="absolute left-0 top-0.5 h-5 w-5 rounded-full transition-transform"
               style={{ background: C.bg, transform: discoverable ? "translateX(22px)" : "translateX(2px)" }}
             />
           </button>
@@ -1965,7 +1965,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
             style={{ background: remindersOn ? C.gold : C.cardEdge }}
           >
             <span
-              className="absolute top-0.5 h-5 w-5 rounded-full transition-transform"
+              className="absolute left-0 top-0.5 h-5 w-5 rounded-full transition-transform"
               style={{ background: C.bg, transform: remindersOn ? "translateX(22px)" : "translateX(2px)" }}
             />
           </button>
@@ -2113,7 +2113,7 @@ function MembersModal({ userId, onFollow, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
       <div className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>Find people</h3>
@@ -2170,7 +2170,7 @@ function FeedbackModal({ onClose, onSubmit }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
       <div className="w-full max-w-sm rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>Feedback</h3>
@@ -2259,7 +2259,7 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
   const choose = (r) => { setSel(r); setName(r.name || ""); setArea(r.neighbourhood || ""); setResults([]); };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
       <div className="max-h-screen w-full max-w-md overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>
@@ -2376,7 +2376,7 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
   const keeping = rows ? rows.filter((r) => r._keep) : [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
       <div className="max-h-screen w-full max-w-md overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>Import your list</h3>
