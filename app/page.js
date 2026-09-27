@@ -626,6 +626,11 @@ export default function Nomarchy() {
           <div className="mb-3 flex items-center justify-between gap-2">
             <p className="text-sm" style={{ color: C.muted }}>One throne per cuisine. Choose like it matters.</p>
             <div className="flex shrink-0 gap-2">
+              {kingdomView === "grid" && (
+                <button onClick={() => setOnlyCrowned(!onlyCrowned)} className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: onlyCrowned ? C.gold : C.card, color: onlyCrowned ? C.bg : C.muted, border: `1px solid ${C.cardEdge}` }}>
+                  {onlyCrowned ? "Showing crowned" : "Show all"}
+                </button>
+              )}
               <div className="flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}` }}>
                 <button onClick={() => setKingdomView("grid")} className="px-3 py-1 text-xs font-semibold" style={{ background: kingdomView === "grid" ? C.gold : C.card, color: kingdomView === "grid" ? C.bg : C.muted }}>
                   Grid
@@ -634,11 +639,6 @@ export default function Nomarchy() {
                   Map
                 </button>
               </div>
-              {kingdomView === "grid" && (
-                <button onClick={() => setOnlyCrowned(!onlyCrowned)} className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: onlyCrowned ? C.gold : C.card, color: onlyCrowned ? C.bg : C.muted, border: `1px solid ${C.cardEdge}` }}>
-                  {onlyCrowned ? "Showing crowned" : "Show all"}
-                </button>
-              )}
             </div>
           </div>
 
