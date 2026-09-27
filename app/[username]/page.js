@@ -11,6 +11,13 @@ import { C, display, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell } from
 // the ordinary cuisine/throne machinery instead of its own table.
 const OVERALL_FAVOURITE_NAME = "Overall Favourite";
 
+function Avatar({ url, size = 28 }) {
+  return url ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={url} alt="" className="mx-auto rounded-full object-cover" style={{ width: size, height: size, border: `1px solid ${C.cardEdge}` }} />
+  ) : null;
+}
+
 function PhotoStrip({ photos }) {
   if (!photos || photos.length === 0) return null;
   return (
@@ -120,6 +127,7 @@ export default function PublicProfilePage({ params }) {
             <RankBadge score={score} size={16} /> {profile.is_owner && <OwnerBadge size={16} />}
           </h1>
         </div>
+        {profile.avatar_url && <div className="mt-3"><Avatar url={profile.avatar_url} size={56} /></div>}
         <p className="mt-1 text-sm italic" style={{ ...display, color: C.muted }}>
           @{profile.username}{profile.city ? ` · ${profile.city}` : ""}
         </p>

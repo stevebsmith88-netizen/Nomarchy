@@ -13,7 +13,7 @@ import {
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderPhotos,
   moveThroneCuisine, updateThroneDecree, updateThronePhotos, unCrown,
-  uploadReviewPhoto, deleteReviewPhoto, MAX_REVIEW_PHOTOS,
+  uploadReviewPhoto, deleteReviewPhoto, uploadAvatar, MAX_REVIEW_PHOTOS,
   loadCourt, toggleEndorsement, followByUsername, loadStanding,
 } from "@/lib/data";
 import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell } from "./theme";
@@ -437,7 +437,8 @@ export default function Nomarchy() {
             className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold"
             style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}
           >
-            <button onClick={() => setEditingProfile(true)} className="flex items-center gap-1">
+            <button onClick={() => setEditingProfile(true)} className="flex items-center gap-1.5">
+              <Avatar url={profile?.avatar_url} size={18} />
               @{profile?.username} · {title} <RankBadge score={score} /> {profile?.is_owner && <OwnerBadge />} <Pencil size={11} />
             </button>
           </div>
@@ -685,7 +686,9 @@ export default function Nomarchy() {
                 onClick={() => setCourtOpen((p) => ({ ...p, [f.id]: !p[f.id] }))}
                 className="flex w-full items-center justify-between gap-2 text-left"
               >
-                <div>
+                <div className="flex items-center gap-2">
+                  <Avatar url={f.avatarUrl} size={32} />
+                  <div>
                   <h3 className="flex items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
                     {f.name} <RankBadge score={f.score} /> {f.isOwner && <OwnerBadge />}
                   </h3>
@@ -695,6 +698,7 @@ export default function Nomarchy() {
                   >
                     {getTitle(f.isOwner, f.score)}
                   </span>
+                  </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
                   <span className="text-xs font-semibold" style={{ color: C.gold }}>{f.score}</span>
@@ -843,6 +847,7 @@ export default function Nomarchy() {
           ]}
           onClose={() => setEditingProfile(false)}
           onSubmit={handleUpdateProfile}
+          onChangeAvatar={(avatar_url) => handleUpdateProfile({ avatar_url })}
           onDeleteAccount={handleDeleteAccount}
         />
       )}
@@ -940,6 +945,51 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
           <Check size={13} /> {p.visitedAt ? "Been here" : "Mark as been"}
         </button>
       </div>
+    </div>
+  );
+}
+
+function Avatar({ url, size = 28 }) {
+  return url ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={url} alt="" className="shrink-0 rounded-full object-cover" style={{ width: size, height: size, border: `1px solid ${C.cardEdge}` }} />
+  ) : (
+    <div className="flex shrink-0 items-center justify-center rounded-full" style={{ width: size, height: size, background: C.card, border: `1px solid ${C.cardEdge}`, color: C.muted }}>
+      <Users size={Math.round(size * 0.55)} />
+    </div>
+  );
+}
+
+// One photo, always the same storage path (a re-upload overwrites it),
+// with a small camera badge to invite changing it - distinct from
+// PhotoPicker below, which manages up to 3 photos on a review.
+function AvatarPicker({ userId, url, onChange }) {
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState("");
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true); setErr("");
+    try {
+      onChange(await uploadAvatar(userId, file));
+    } catch (e2) {
+      setErr(e2.message || "Couldn't upload that photo.");
+    }
+    setUploading(false);
+  };
+
+  return (
+    <div className="flex flex-col items-center">
+      <label className="relative cursor-pointer">
+        <Avatar url={url} size={72} />
+        <span className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full" style={{ background: C.gold, color: C.bg, border: `2px solid ${C.card}` }}>
+          {uploading ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
+        </span>
+        <input type="file" accept="image/*" onChange={handleFile} disabled={uploading} className="hidden" />
+      </label>
+      {err && <p className="mt-1 text-xs" style={{ color: C.coup }}>{err}</p>}
     </div>
   );
 }
@@ -1285,7 +1335,7 @@ function SignInScreen() {
   );
 }
 
-function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, onSubmit, onDeleteAccount }) {
+function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, onSubmit, onChangeAvatar, onDeleteAccount }) {
   const [username, setUsername] = useState(profile?.username || "");
   const [city, setCity] = useState(profile?.city || "");
   const [isPublic, setIsPublic] = useState(profile?.is_public ?? true);
@@ -1332,6 +1382,9 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
         </div>
 
         <div className="overflow-y-auto px-5 pb-5">
+        <div className="mt-3">
+          <AvatarPicker userId={profile?.id} url={profile?.avatar_url} onChange={onChangeAvatar} />
+        </div>
         <div className="mt-3 text-center">
           <Crown size={30} className="mx-auto" style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
           <h2 className="mt-1 text-xl" style={{ ...display, fontWeight: 900 }}>{title}</h2>
@@ -1518,7 +1571,8 @@ function MembersModal({ userId, onFollow, onClose }) {
         <div className="mt-3">
           {members?.map((m) => (
             <div key={m.id} className="flex items-center justify-between py-2" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
+                <Avatar url={m.avatarUrl} size={28} />
                 <div>
                   <div className="text-sm font-semibold">{m.name}</div>
                   <div className="text-xs" style={{ color: C.muted }}>@{m.username}</div>

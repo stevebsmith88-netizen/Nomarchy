@@ -28,6 +28,7 @@ create table if not exists profiles (
 -- as before until they choose to go private.
 alter table profiles add column if not exists is_owner boolean not null default false;
 alter table profiles add column if not exists is_public boolean not null default true;
+alter table profiles add column if not exists avatar_url text;
 -- Defaults to now() so existing follows/crowns from before this feature
 -- shipped don't all flood in as a backlog of "new" notifications.
 alter table profiles add column if not exists notifications_seen_at timestamptz not null default now();
@@ -334,6 +335,27 @@ create policy "review photos insertable by owner" on storage.objects for insert
 drop policy if exists "review photos deletable by owner" on storage.objects;
 create policy "review photos deletable by owner" on storage.objects for delete
   using (bucket_id = 'review-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Profile photos: same "{user_id}/filename" path convention, but a
+-- re-upload overwrites the same path (one avatar per person), so this
+-- bucket also needs an UPDATE policy, unlike review-photos above where
+-- every upload gets a fresh filename and nothing is ever overwritten.
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+drop policy if exists "avatars readable" on storage.objects;
+create policy "avatars readable" on storage.objects for select
+  using (bucket_id = 'avatars');
+drop policy if exists "avatars insertable by owner" on storage.objects;
+create policy "avatars insertable by owner" on storage.objects for insert
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "avatars updatable by owner" on storage.objects;
+create policy "avatars updatable by owner" on storage.objects for update
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "avatars deletable by owner" on storage.objects;
+create policy "avatars deletable by owner" on storage.objects for delete
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ------------------------------------------------------------
 -- 8. ROW LEVEL SECURITY
