@@ -1347,6 +1347,16 @@ function GoogleIcon({ size = 16 }) {
   );
 }
 
+// Illustrative only - no real user's data. Cold traffic (a stranger from
+// Instagram, say) has nothing to judge the product by otherwise; a made-up
+// but concrete-looking kingdom does more work than another sentence of
+// description, without needing an actual account's screenshots.
+const EXAMPLE_THRONES = [
+  { cuisine: "PIZZA", name: "Pizzeria Libretto", note: "Best margherita in the city, hands down." },
+  { cuisine: "RAMEN", name: "Sakura House", note: "Rich tonkotsu broth that never misses." },
+  { cuisine: "TACOS", name: "El Fuego", note: "Al pastor that ruined every other taco for me." },
+];
+
 function SignInScreen() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -1393,7 +1403,7 @@ function SignInScreen() {
 
   return (
     <FontShell>
-      <div className="flex min-h-screen items-center justify-center px-5">
+      <div className="flex min-h-screen flex-col items-center px-5 py-10">
         <div className="w-full max-w-sm rounded-2xl p-7 text-center" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
           <div className="flex items-center justify-center gap-2">
             <LogoMark size={28} />
@@ -1479,6 +1489,48 @@ function SignInScreen() {
             By continuing, you agree to our{" "}
             <Link href="/terms" style={{ color: C.muted, textDecoration: "underline" }}>Terms</Link> and{" "}
             <Link href="/privacy" style={{ color: C.muted, textDecoration: "underline" }}>Privacy Policy</Link>.
+          </p>
+        </div>
+
+        <div className="mt-10 w-full max-w-sm">
+          <p className="text-center text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>See it in action</p>
+
+          <p className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Your kingdom</p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {EXAMPLE_THRONES.map((t) => (
+              <div key={t.cuisine} className="rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.gold}55` }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>{t.cuisine}</span>
+                  <Crown size={13} style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
+                </div>
+                <p className="mt-1.5 text-sm" style={{ ...display, fontWeight: 700 }}>{t.name}</p>
+                <p className="mt-1 text-xs italic leading-snug" style={{ color: C.muted }}>&ldquo;{t.note}&rdquo;</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>A coup in progress</p>
+          <div className="rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+            <div className="flex items-center justify-between opacity-60">
+              <div>
+                <span className="text-[10px] font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Reigning &mdash; Pizza</span>
+                <p className="text-sm" style={{ ...display, fontWeight: 700, textDecoration: "line-through" }}>Mario&rsquo;s Pizzeria</p>
+              </div>
+              <Crown size={16} style={{ color: C.muted }} />
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>Challenger</span>
+                <p className="text-sm" style={{ ...display, fontWeight: 700 }}>Pizzeria Libretto</p>
+              </div>
+              <span className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>
+                <Crown size={12} /> Crown it
+              </span>
+            </div>
+          </div>
+
+          <p className="mt-4 text-center text-[11px] italic" style={{ color: C.muted }}>
+            Example kingdom shown &mdash; yours starts empty, waiting for your first pick.
           </p>
         </div>
       </div>
