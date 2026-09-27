@@ -122,7 +122,7 @@ export default function Nomarchy() {
         ]);
         setSlots(k); setPretenders(n); setCuisineList(c);
         setStanding(s); setCourt(crt); setFollowers(flw); setProfile(p);
-        const notifs = await loadNotifications(user.id, p.notifications_seen_at);
+        const notifs = await loadNotifications(user.id, p.notifications_seen_at, p);
         setNotifications(notifs);
         setHasUnseenNotifications(notifs.length > 0);
       } catch (err) {
@@ -596,9 +596,10 @@ export default function Nomarchy() {
                     <p className="text-xs" style={{ color: C.muted }}>Nothing new.</p>
                   ) : notifications.map((n, i) => (
                     <div key={i} className="py-1.5 text-xs" style={{ borderTop: i > 0 ? `1px solid ${C.cardEdge}` : "none", color: C.cream }}>
-                      {n.type === "follow"
-                        ? <><span style={{ fontWeight: 700 }}>{n.name}</span> started following you</>
-                        : <><span style={{ fontWeight: 700 }}>{n.name}</span> crowned <span style={{ color: C.gold }}>{n.place}</span> for {n.cuisine}</>}
+                      {n.type === "follow" && <><span style={{ fontWeight: 700 }}>{n.name}</span> started following you</>}
+                      {n.type === "crown" && <><span style={{ fontWeight: 700 }}>{n.name}</span> crowned <span style={{ color: C.gold }}>{n.place}</span> for {n.cuisine}</>}
+                      {n.type === "review" && <><span style={{ fontWeight: 700 }}>{n.name}</span> tried <span style={{ color: C.gold }}>{n.place}</span>{n.cuisine ? ` for ${n.cuisine}` : ""}</>}
+                      {n.type === "endorse" && <><span style={{ fontWeight: 700 }}>{n.name}</span> endorsed your <span style={{ color: C.gold }}>{n.place}</span> pick</>}
                     </div>
                   ))}
                 </div>
@@ -1747,6 +1748,10 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
   const [isPublic, setIsPublic] = useState(profile?.is_public ?? true);
   const [discoverable, setDiscoverable] = useState(profile?.discoverable ?? false);
   const [remindersOn, setRemindersOn] = useState(!(profile?.reminders_opt_out ?? false));
+  const [notifyFollows, setNotifyFollows] = useState(profile?.notify_follows ?? true);
+  const [notifyCrowns, setNotifyCrowns] = useState(profile?.notify_crowns ?? true);
+  const [notifyReviews, setNotifyReviews] = useState(profile?.notify_reviews ?? true);
+  const [notifyEndorsements, setNotifyEndorsements] = useState(profile?.notify_endorsements ?? true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -1786,7 +1791,10 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
     if (!usernameValid || busy) return;
     setBusy(true); setErr("");
     try {
-      await onSubmit({ username: username.trim().toLowerCase(), city: city.trim() || null, is_public: isPublic, discoverable, reminders_opt_out: !remindersOn });
+      await onSubmit({
+        username: username.trim().toLowerCase(), city: city.trim() || null, is_public: isPublic, discoverable, reminders_opt_out: !remindersOn,
+        notify_follows: notifyFollows, notify_crowns: notifyCrowns, notify_reviews: notifyReviews, notify_endorsements: notifyEndorsements,
+      });
       onClose();
     } catch (e) {
       setErr(e.message || "Couldn't save. Try again.");
@@ -1953,6 +1961,33 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
               style={{ background: C.bg, transform: remindersOn ? "translateX(22px)" : "translateX(2px)" }}
             />
           </button>
+        </div>
+
+        <div className="mt-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+          <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Notify me about</div>
+          {[
+            ["New followers", notifyFollows, setNotifyFollows],
+            ["New crowns from Court", notifyCrowns, setNotifyCrowns],
+            ["New reviews from Court", notifyReviews, setNotifyReviews],
+            ["Endorsements on my picks", notifyEndorsements, setNotifyEndorsements],
+          ].map(([label, value, setValue]) => (
+            <div key={label} className="mt-2 flex items-center justify-between gap-3">
+              <span className="text-sm">{label}</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={value}
+                onClick={() => setValue((v) => !v)}
+                className="relative h-5 w-9 shrink-0 overflow-hidden rounded-full transition-colors"
+                style={{ background: value ? C.gold : C.cardEdge }}
+              >
+                <span
+                  className="absolute left-0 top-0.5 h-4 w-4 rounded-full transition-transform"
+                  style={{ background: C.bg, transform: value ? "translateX(18px)" : "translateX(2px)" }}
+                />
+              </button>
+            </div>
+          ))}
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>

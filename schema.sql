@@ -63,6 +63,13 @@ alter table profiles add column if not exists reminders_opt_out boolean not null
 -- Defaults to now() so existing follows/crowns from before this feature
 -- shipped don't all flood in as a backlog of "new" notifications.
 alter table profiles add column if not exists notifications_seen_at timestamptz not null default now();
+-- Per-type opt-outs for the in-app notification bell (separate from the
+-- reminders_opt_out email above) - default true so nobody's notifications
+-- go quiet just because this shipped after they signed up.
+alter table profiles add column if not exists notify_follows boolean not null default true;
+alter table profiles add column if not exists notify_crowns boolean not null default true;
+alter table profiles add column if not exists notify_reviews boolean not null default true;
+alter table profiles add column if not exists notify_endorsements boolean not null default true;
 
 -- Auto-create a profile whenever someone signs up.
 -- Username is always the email prefix plus a random suffix, so it can never collide.
