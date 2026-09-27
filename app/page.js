@@ -11,7 +11,7 @@ import {
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
   linkGoogle, unlinkGoogle, getLinkedProviders,
-  loadDirectory, loadCrownedThrones, groupCrownedThrones, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
+  loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderPhotos,
   moveThroneCuisine, updateThroneDecree, updateThronePhotos, unCrown,
@@ -1393,6 +1393,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
   const [username, setUsername] = useState(profile?.username || "");
   const [city, setCity] = useState(profile?.city || "");
   const [isPublic, setIsPublic] = useState(profile?.is_public ?? true);
+  const [discoverable, setDiscoverable] = useState(profile?.discoverable ?? false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -1432,7 +1433,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
     if (!usernameValid || busy) return;
     setBusy(true); setErr("");
     try {
-      await onSubmit({ username: username.trim().toLowerCase(), city: city.trim() || null, is_public: isPublic });
+      await onSubmit({ username: username.trim().toLowerCase(), city: city.trim() || null, is_public: isPublic, discoverable });
       onClose();
     } catch (e) {
       setErr(e.message || "Couldn't save. Try again.");
@@ -1551,6 +1552,32 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+          <div className="flex items-start gap-2">
+            <Search size={16} className="mt-0.5 shrink-0" style={{ color: discoverable ? C.gold : C.muted }} />
+            <div>
+              <div className="text-sm font-semibold">Discoverable</div>
+              <div className="mt-0.5 text-xs" style={{ color: C.muted }}>
+                Show up in Find People for anyone to browse and follow - separate from Public/Private above,
+                which only controls who can see your kingdom if they already have your link.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={discoverable}
+            onClick={() => setDiscoverable((v) => !v)}
+            className="relative h-6 w-11 shrink-0 rounded-full transition-colors"
+            style={{ background: discoverable ? C.gold : C.cardEdge }}
+          >
+            <span
+              className="absolute top-0.5 h-5 w-5 rounded-full transition-transform"
+              style={{ background: C.bg, transform: discoverable ? "translateX(22px)" : "translateX(2px)" }}
+            />
+          </button>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
           <div className="flex items-center gap-2">
             <GoogleIcon size={18} />
             <div>
@@ -1638,20 +1665,53 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
   );
 }
 
+function PersonRow({ p, onFollow, busy, hint }) {
+  return (
+    <div className="flex items-center justify-between py-2" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
+      <div className="flex items-center gap-2">
+        <Avatar url={p.avatarUrl} size={28} />
+        <div>
+          <div className="text-sm font-semibold">{p.name}</div>
+          <div className="text-xs" style={{ color: C.muted }}>
+            @{p.username}{hint ? ` · ${hint}` : ""}
+          </div>
+        </div>
+        {p.isOwner && <OwnerBadge size={12} />}
+      </div>
+      {p.alreadyFollowing ? (
+        <span className="text-xs font-semibold" style={{ color: C.muted }}>Following</span>
+      ) : (
+        <button
+          onClick={() => onFollow(p)}
+          disabled={busy}
+          className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
+          style={{ background: C.gold, color: C.bg }}
+        >
+          {busy ? <Loader2 size={11} className="animate-spin" /> : <UserPlus size={11} />} Follow
+        </button>
+      )}
+    </div>
+  );
+}
+
 function MembersModal({ userId, onFollow, onClose }) {
+  const [suggested, setSuggested] = useState(null);
   const [members, setMembers] = useState(null);
   const [err, setErr] = useState("");
   const [followBusy, setFollowBusy] = useState(null);
 
   useEffect(() => {
+    loadSuggestedFriends(userId).then(setSuggested).catch(() => setSuggested([]));
     loadDirectory(userId).then(setMembers).catch((e) => setErr(e.message || "Couldn't load members."));
   }, [userId]);
 
-  const follow = async (m) => {
-    setFollowBusy(m.id);
+  const follow = async (p) => {
+    setFollowBusy(p.id);
     try {
-      await onFollow(m.id);
-      setMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, alreadyFollowing: true } : x)));
+      await onFollow(p.id);
+      const mark = (list) => list.map((x) => (x.id === p.id ? { ...x, alreadyFollowing: true } : x));
+      setSuggested((prev) => prev && mark(prev));
+      setMembers((prev) => prev && mark(prev));
     } catch (e) {
       setErr(e.message || "Couldn't follow");
     }
@@ -1665,37 +1725,32 @@ function MembersModal({ userId, onFollow, onClose }) {
           <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>Find people</h3>
           <button onClick={onClose} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
         </div>
-        <p className="mt-1 text-xs" style={{ color: C.muted }}>Public kingdoms only - private profiles won&apos;t show up here.</p>
 
         {err && <p className="mt-3 text-xs" style={{ color: C.coup }}>{err}</p>}
-        {!members && !err && <p className="mt-3 text-sm" style={{ color: C.muted }}>Loading...</p>}
-        {members?.length === 0 && <p className="mt-3 text-sm" style={{ color: C.muted }}>No one to find yet.</p>}
 
-        <div className="mt-3">
-          {members?.map((m) => (
-            <div key={m.id} className="flex items-center justify-between py-2" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
-              <div className="flex items-center gap-2">
-                <Avatar url={m.avatarUrl} size={28} />
-                <div>
-                  <div className="text-sm font-semibold">{m.name}</div>
-                  <div className="text-xs" style={{ color: C.muted }}>@{m.username}</div>
-                </div>
-                {m.isOwner && <OwnerBadge size={12} />}
-              </div>
-              {m.alreadyFollowing ? (
-                <span className="text-xs font-semibold" style={{ color: C.muted }}>Following</span>
-              ) : (
-                <button
-                  onClick={() => follow(m)}
-                  disabled={followBusy === m.id}
-                  className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
-                  style={{ background: C.gold, color: C.bg }}
-                >
-                  {followBusy === m.id ? <Loader2 size={11} className="animate-spin" /> : <UserPlus size={11} />} Follow
-                </button>
-              )}
+        {suggested && suggested.length > 0 && (
+          <div className="mt-4">
+            <div className="text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>Suggested for you</div>
+            <p className="mt-0.5 text-xs" style={{ color: C.muted }}>People your Court already follows.</p>
+            <div className="mt-1">
+              {suggested.map((p) => (
+                <PersonRow key={p.id} p={p} onFollow={follow} busy={followBusy === p.id}
+                  hint={`${p.mutualCount} mutual${p.mutualCount === 1 ? "" : "s"}`} />
+              ))}
             </div>
-          ))}
+          </div>
+        )}
+
+        <div className="mt-4">
+          <div className="text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>Public profiles</div>
+          <p className="mt-0.5 text-xs" style={{ color: C.muted }}>People who&apos;ve chosen to be discoverable by anyone.</p>
+          {!members && <p className="mt-3 text-sm" style={{ color: C.muted }}>Loading...</p>}
+          {members?.length === 0 && <p className="mt-3 text-sm" style={{ color: C.muted }}>No one&apos;s opted into this yet.</p>}
+          <div className="mt-1">
+            {members?.map((p) => (
+              <PersonRow key={p.id} p={p} onFollow={follow} busy={followBusy === p.id} />
+            ))}
+          </div>
         </div>
       </div>
     </div>

@@ -29,6 +29,20 @@ create table if not exists profiles (
 alter table profiles add column if not exists is_owner boolean not null default false;
 alter table profiles add column if not exists is_public boolean not null default true;
 alter table profiles add column if not exists avatar_url text;
+-- Whether someone's been through the one-time "pick a username" welcome
+-- step - defaults false so it only ever shows for brand-new signups, not
+-- retroactively for existing accounts, which is why the very next line
+-- immediately backfills every row that already existed to true. New
+-- signups still get the column default (false) since handle_new_user()
+-- doesn't set it explicitly.
+alter table profiles add column if not exists onboarded boolean not null default false;
+update profiles set onboarded = true where onboarded = false;
+-- Separate from is_public: is_public controls whether your kingdom link
+-- and Court visibility work at all; discoverable controls whether you
+-- show up in the "Find people" directory for anyone to browse. Off by
+-- default - being findable by strangers is an opt-in, "public figure"
+-- choice, not the default for a private beta of friends.
+alter table profiles add column if not exists discoverable boolean not null default false;
 -- The automated monthly digest (and its opt-out/unsubscribe-token columns)
 -- was tried and then removed in favor of Steve sending updates manually -
 -- these two lines undo it for anyone who already ran the version of this
