@@ -111,6 +111,10 @@ export async function GET(request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: "Missing SUPABASE_SERVICE_ROLE_KEY environment variable" }, { status: 500 });
+  }
+
   let csvUrl;
   try {
     csvUrl = await fetchCsvUrl();
@@ -127,48 +131,52 @@ export async function GET(request) {
     return NextResponse.json({ error: e.message }, { status: 502 });
   }
 
-  const allRows = parseCsv(text);
-  const headerRow = allRows[0];
-  const dataRows = allRows.slice(1).filter((r) => r.length > 1 || r[0] !== "");
-  if (!headerRow || dataRows.length === 0) {
-    return NextResponse.json({ error: "No rows found in the DineSafe CSV" }, { status: 502 });
+  let rows;
+  try {
+    const allRows = parseCsv(text);
+    const headerRow = allRows[0];
+    const dataRows = allRows.slice(1).filter((r) => r.length > 1 || r[0] !== "");
+    if (!headerRow || dataRows.length === 0) {
+      return NextResponse.json({ error: "No rows found in the DineSafe CSV" }, { status: 502 });
+    }
+
+    const idIdx = headerRow.indexOf(findKey(headerRow, ["estId", "establishmentId", "establishment_id"]));
+    const nameIdx = headerRow.indexOf(findKey(headerRow, ["estName", "establishmentName", "establishment_name"]));
+    const typeIdx = headerRow.indexOf(findKey(headerRow, ["typeDesc", "establishmentType", "establishment_type"]));
+    const addressIdx = headerRow.indexOf(findKey(headerRow, ["address", "establishmentAddress", "establishment_address"]));
+    const latIdx = headerRow.indexOf(findKey(headerRow, ["latitude"]));
+    const lngIdx = headerRow.indexOf(findKey(headerRow, ["longitude"]));
+
+    if (idIdx === -1 || nameIdx === -1 || addressIdx === -1) {
+      return NextResponse.json(
+        { error: "Couldn't find expected columns in the DineSafe CSV", sampleColumns: headerRow },
+        { status: 500 }
+      );
+    }
+
+    const byId = new Map();
+    for (const cells of dataRows) {
+      const type = (typeIdx !== -1 ? cells[typeIdx] || "" : "").toLowerCase();
+      if (EXCLUDE_KEYWORDS.some((kw) => type.includes(kw))) continue;
+      const id = cells[idIdx];
+      const name = cells[nameIdx];
+      if (!id || !name) continue;
+      if (byId.has(id)) continue;
+      byId.set(id, {
+        source: "dinesafe",
+        source_id: String(id),
+        name: name.trim(),
+        address: (cells[addressIdx] || "").trim() || null,
+        city: "Toronto",
+        lat: latIdx !== -1 && cells[latIdx] ? Number(cells[latIdx]) : null,
+        lng: lngIdx !== -1 && cells[lngIdx] ? Number(cells[lngIdx]) : null,
+        updated_at: new Date().toISOString(),
+      });
+    }
+    rows = Array.from(byId.values());
+  } catch (e) {
+    return NextResponse.json({ error: `Parsing failed: ${e.message}` }, { status: 500 });
   }
-
-  const idIdx = headerRow.indexOf(findKey(headerRow, ["estId", "establishmentId", "establishment_id"]));
-  const nameIdx = headerRow.indexOf(findKey(headerRow, ["estName", "establishmentName", "establishment_name"]));
-  const typeIdx = headerRow.indexOf(findKey(headerRow, ["typeDesc", "establishmentType", "establishment_type"]));
-  const addressIdx = headerRow.indexOf(findKey(headerRow, ["address", "establishmentAddress", "establishment_address"]));
-  const latIdx = headerRow.indexOf(findKey(headerRow, ["latitude"]));
-  const lngIdx = headerRow.indexOf(findKey(headerRow, ["longitude"]));
-
-  if (idIdx === -1 || nameIdx === -1 || addressIdx === -1) {
-    return NextResponse.json(
-      { error: "Couldn't find expected columns in the DineSafe CSV", sampleColumns: headerRow },
-      { status: 500 }
-    );
-  }
-
-  const byId = new Map();
-  for (const cells of dataRows) {
-    const type = (typeIdx !== -1 ? cells[typeIdx] || "" : "").toLowerCase();
-    if (EXCLUDE_KEYWORDS.some((kw) => type.includes(kw))) continue;
-    const id = cells[idIdx];
-    const name = cells[nameIdx];
-    if (!id || !name) continue;
-    if (byId.has(id)) continue;
-    byId.set(id, {
-      source: "dinesafe",
-      source_id: String(id),
-      name: name.trim(),
-      address: (cells[addressIdx] || "").trim() || null,
-      city: "Toronto",
-      lat: latIdx !== -1 && cells[latIdx] ? Number(cells[latIdx]) : null,
-      lng: lngIdx !== -1 && cells[lngIdx] ? Number(cells[lngIdx]) : null,
-      updated_at: new Date().toISOString(),
-    });
-  }
-
-  const rows = Array.from(byId.values());
   const supabase = admin();
   let imported = 0;
   for (let i = 0; i < rows.length; i += 1000) {
