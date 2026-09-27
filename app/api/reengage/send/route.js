@@ -16,6 +16,10 @@ import { createClient } from "@supabase/supabase-js";
 const SENDGRID_FROM = process.env.DIGEST_FROM_EMAIL || "hello@nomarchy.ca";
 const SITE_URL = "https://nomarchy.ca";
 const QUIET_MS = 30 * 24 * 60 * 60 * 1000;
+// Optional - only shown in the footer if set. CASL/CAN-SPAM expect a real
+// mailing address on messages like this; set this in Vercel if you want
+// it included (Settings -> Environment Variables -> MAILING_ADDRESS).
+const MAILING_ADDRESS = process.env.MAILING_ADDRESS || "";
 
 function admin() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -36,19 +40,23 @@ async function listAllUsers(supabase) {
 
 function renderEmail({ name, unsubscribeUrl }) {
   return `
-  <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:24px;">
-    <div style="font-size:20px;font-weight:900;letter-spacing:2px;color:#1C1326;">NOMARCHY</div>
-    <p style="font-size:16px;color:#1C1326;margin-top:20px;">Your kingdom&rsquo;s been quiet, ${name}.</p>
-    <p style="font-size:14px;color:#333;line-height:1.6;">
-      It's been a while since you signed in or crowned somewhere new. Your friends' picks are still
-      waiting to be endorsed, and there's probably a new favourite spot worth adding.
-    </p>
-    <p style="margin-top:24px;">
-      <a href="${SITE_URL}" style="background:#E3B341;color:#1C1326;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:700;font-size:14px;">Open Nomarchy</a>
-    </p>
-    <p style="margin-top:32px;font-size:11px;color:#999;">
+  <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;border:1px solid #eee;border-radius:12px;overflow:hidden;">
+    <div style="background:#1C1326;padding:28px 24px;text-align:center;">
+      <div style="font-size:22px;font-weight:900;letter-spacing:3px;color:#E3B341;">&#128081; NOMARCHY</div>
+    </div>
+    <div style="padding:24px;">
+      <p style="font-size:16px;color:#1C1326;margin-top:0;">Your kingdom&rsquo;s been quiet, ${name}.</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;">
+        It's been a while since you signed in or crowned somewhere new. Your friends' picks are still
+        waiting to be endorsed, and there's probably a new favourite spot worth adding.
+      </p>
+      <p style="margin-top:24px;">
+        <a href="${SITE_URL}" style="background:#E3B341;color:#1C1326;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:700;font-size:14px;">Open Nomarchy</a>
+      </p>
+    </div>
+    <p style="font-size:11px;color:#999;padding:0 24px 24px;">
       You're getting this because your Nomarchy account has been quiet for a while.
-      <a href="${unsubscribeUrl}" style="color:#999;">Turn off these reminders</a>.
+      <a href="${unsubscribeUrl}" style="color:#999;">Turn off these reminders</a>.${MAILING_ADDRESS ? `<br/>Nomarchy, ${MAILING_ADDRESS}` : ""}
     </p>
   </div>`;
 }
