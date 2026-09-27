@@ -5,6 +5,7 @@
 -- ============================================================
 
 create extension if not exists pgcrypto;
+create extension if not exists pg_trgm;
 
 -- ------------------------------------------------------------
 -- 1. PROFILES
@@ -294,6 +295,36 @@ create policy "signed-in users populate the cache" on place_lookup_cache for ins
 drop policy if exists "signed-in users refresh the cache" on place_lookup_cache;
 create policy "signed-in users refresh the cache" on place_lookup_cache for update
   using (auth.uid() is not null) with check (auth.uid() is not null);
+
+-- ------------------------------------------------------------
+-- 7bb. RESTAURANTS (pre-loaded local reference data)
+-- A fast, local first stop for "Look it up" in the crown/add-a-place
+-- flow, populated from the City of Toronto's open DineSafe dataset (see
+-- app/api/restaurants/import) instead of hitting Claude's slow web
+-- search for every single restaurant someone might type. No rating -
+-- DineSafe is health-inspection data, not reviews - and only Toronto for
+-- now; anywhere else still falls back to the AI search exactly as before.
+-- ------------------------------------------------------------
+create table if not exists restaurants (
+  id            uuid primary key default gen_random_uuid(),
+  source        text not null default 'dinesafe',
+  source_id     text,
+  name          text not null,
+  address       text,
+  neighbourhood text,
+  city          text not null default 'Toronto',
+  lat           numeric,
+  lng           numeric,
+  updated_at    timestamptz not null default now(),
+  unique (source, source_id)
+);
+
+create index if not exists restaurants_name_trgm_idx on restaurants using gin (name gin_trgm_ops);
+create index if not exists restaurants_city_idx on restaurants (city);
+
+alter table restaurants enable row level security;
+drop policy if exists "restaurants readable" on restaurants;
+create policy "restaurants readable" on restaurants for select using (true);
 
 -- ------------------------------------------------------------
 -- 7c. FEEDBACK

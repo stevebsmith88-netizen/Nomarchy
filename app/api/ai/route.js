@@ -128,7 +128,37 @@ function lookupCacheKey(query, city) {
   return `${query.trim().toLowerCase()}|${(city || "").trim().toLowerCase()}`;
 }
 
+// Checked before the AI web search (and before the cache, since it's
+// even cheaper): a pre-loaded local table of real Toronto restaurants
+// (see app/api/restaurants/import), so the common case - someone typing
+// a real, already-known Toronto restaurant - never has to wait 10-20s
+// for Claude's web search at all. Empty for any other city, or if the
+// import hasn't been run yet, in which case this always falls through
+// to the AI path exactly as before.
+async function searchLocalRestaurants(supabase, query, city) {
+  if ((city || "Toronto").trim().toLowerCase() !== "toronto") return [];
+  const { data, error } = await supabase
+    .from("restaurants")
+    .select("name, address, neighbourhood")
+    .eq("city", "Toronto")
+    .ilike("name", `%${query.trim()}%`)
+    .limit(3);
+  if (error || !data?.length) return [];
+  return data.map((r) => ({
+    name: r.name,
+    address: r.address || "",
+    neighbourhood: r.neighbourhood || "",
+    rating: "",
+    mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${r.name} ${r.address || ""}`)}`,
+  }));
+}
+
 async function handleLookup(supabase, query, city) {
+  const local = await searchLocalRestaurants(supabase, query, city);
+  if (local.length > 0) {
+    return { result: { results: local }, cached: true };
+  }
+
   const queryKey = lookupCacheKey(query, city);
 
   // The first person to search for a place pays the ~10-20s web-search
