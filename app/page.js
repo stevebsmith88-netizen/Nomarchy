@@ -76,7 +76,7 @@ export default function Nomarchy() {
   const [addPretender, setAddPretender] = useState(false);
   const [importing, setImporting] = useState(false);
   const [historyOpen, setHistoryOpen] = useState({});
-  const [courtOpen, setCourtOpen] = useState({});
+  const [courtModalFriendId, setCourtModalFriendId] = useState(null);
   const [newCuisine, setNewCuisine] = useState("");
   const [addingCuisine, setAddingCuisine] = useState(false);
   const [onlyCrowned, setOnlyCrowned] = useState(false);
@@ -862,17 +862,16 @@ export default function Nomarchy() {
               <Users size={26} className="mx-auto" style={{ color: C.muted }} />
               <p className="mt-2 text-sm" style={{ color: C.muted }}>Nobody in your court yet. Follow a friend by username above, and share yours (@{profile?.username}) so they can follow you back.</p>
             </div>
-          ) : court.map((f) => {
-            const open = !!courtOpen[f.id];
-            return (
-            <div key={f.id} className="mb-4 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
-              <button
-                onClick={() => setCourtOpen((p) => ({ ...p, [f.id]: !p[f.id] }))}
-                className="flex w-full items-center justify-between gap-2 text-left"
-              >
-                <div className="flex items-center gap-2">
-                  <Avatar url={f.avatarUrl} size={32} />
-                  <div>
+          ) : court.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setCourtModalFriendId(f.id)}
+              className="mb-3 flex w-full items-center justify-between gap-2 rounded-xl p-4 text-left"
+              style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}
+            >
+              <div className="flex items-center gap-2">
+                <Avatar url={f.avatarUrl} size={32} />
+                <div>
                   <h3 className="flex items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
                     {f.name} <RankBadge score={f.score} /> {f.isOwner && <OwnerBadge />}
                   </h3>
@@ -882,54 +881,22 @@ export default function Nomarchy() {
                   >
                     {getTitle(f.isOwner, f.score)}
                   </span>
-                  </div>
+                  <p className="mt-1 text-xs" style={{ color: C.muted }}>
+                    {f.picks.length === 0 && f.reviews.length === 0
+                      ? "No thrones claimed yet."
+                      : [
+                          f.picks.length ? `${f.picks.length} pick${f.picks.length === 1 ? "" : "s"}` : null,
+                          f.reviews.length ? `${f.reviews.length} review${f.reviews.length === 1 ? "" : "s"}` : null,
+                        ].filter(Boolean).join(", ")}
+                  </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <span className="text-xs font-semibold" style={{ color: C.gold }}>{f.score}</span>
-                  {open ? <ChevronUp size={16} style={{ color: C.muted }} /> : <ChevronDown size={16} style={{ color: C.muted }} />}
-                </div>
-              </button>
-              {!open && (
-                <p className="mt-1.5 text-xs" style={{ color: C.muted }}>
-                  {f.picks.length === 0 && f.reviews.length === 0
-                    ? "No thrones claimed yet."
-                    : [
-                        f.picks.length ? `${f.picks.length} pick${f.picks.length === 1 ? "" : "s"}` : null,
-                        f.reviews.length ? `${f.reviews.length} review${f.reviews.length === 1 ? "" : "s"}` : null,
-                      ].filter(Boolean).join(", ") + " - tap to view"}
-                </p>
-              )}
-              {open && f.picks.length === 0 && f.reviews.length === 0 && <p className="mt-2 text-xs" style={{ color: C.muted }}>No thrones claimed yet.</p>}
-              {open && f.picks.map((p) => (
-                <div key={p.id} className="mt-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
-                  <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>{p.cuisine}</div>
-                  <div className="mt-0.5 flex items-center justify-between gap-2">
-                    <div><span style={{ ...display, fontWeight: 700 }} className="text-base">{p.name}</span><span className="ml-2 text-xs" style={{ color: C.muted }}>{p.area}</span></div>
-                    <button onClick={() => handleEndorse(p.id, p.endorsedByMe)} className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
-                      style={p.endorsedByMe ? { background: C.gold, color: C.bg } : { border: `1px solid ${C.cardEdge}`, color: C.muted }}>
-                      <Crown size={12} /> {p.endorsedByMe ? "Endorsed" : "Endorse"}
-                    </button>
-                  </div>
-                  <p className="mt-1.5 text-sm italic leading-relaxed" style={{ color: C.cream + "CC" }}>&ldquo;{p.decree}&rdquo;</p>
-                  <PhotoStrip photos={p.photos} />
-                  <button onClick={() => addFriendPickToPretenders(f.name, p)}
-                    className="mt-2 flex items-center gap-1.5 text-xs font-bold" style={{ color: C.gold }}><Bookmark size={12} /> Add to my list</button>
-                </div>))}
-              {open && f.reviews.length > 0 && (
-                <div className="mt-3 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Been to, not crowned</div>
-              )}
-              {open && f.reviews.map((r) => (
-                <div key={r.id} className="mt-2 rounded-lg p-3" style={{ background: C.bg, border: `1px dashed ${C.cardEdge}` }}>
-                  <div className="flex items-center justify-between gap-2">
-                    <span style={{ ...display, fontWeight: 700 }} className="text-sm">{r.name}</span>
-                    <span className="text-xs" style={{ color: C.muted }}>{[r.cuisine, r.area].filter(Boolean).join(" · ")}</span>
-                  </div>
-                  {r.note && <p className="mt-1 text-sm italic leading-relaxed" style={{ color: C.cream + "CC" }}>&ldquo;{r.note}&rdquo;</p>}
-                  <PhotoStrip photos={r.photos} />
-                </div>))}
-            </div>
-            );
-          })}
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <span className="text-xs font-semibold" style={{ color: C.gold }}>{f.score}</span>
+                <ChevronDown size={16} style={{ color: C.muted, transform: "rotate(-90deg)" }} />
+              </div>
+            </button>
+          ))}
         </div>)}
 
         {/* TRENDING */}
@@ -1093,6 +1060,19 @@ export default function Nomarchy() {
           onImport={importMany}
         />
       )}
+
+      {courtModalFriendId && (() => {
+        const f = court.find((x) => x.id === courtModalFriendId);
+        if (!f) return null;
+        return (
+          <FriendKingdomModal
+            friend={f}
+            onClose={() => setCourtModalFriendId(null)}
+            onEndorse={handleEndorse}
+            onAddToList={addFriendPickToPretenders}
+          />
+        );
+      })()}
 
       {addPretender && selectableCuisines.length > 0 && (
         <PlaceModal
@@ -2092,6 +2072,70 @@ function PersonRow({ p, onFollow, busy, hint }) {
           {busy ? <Loader2 size={11} className="animate-spin" /> : <UserPlus size={11} />} Follow
         </button>
       )}
+    </div>
+  );
+}
+
+// A friend's full kingdom, in its own dismissable modal rather than
+// expanding inline in the Court list - inline worked fine for a handful
+// of thrones, but someone with a long history of picks and reviews would
+// turn the whole Court tab into one giant scroll, burying every other
+// friend below them.
+function FriendKingdomModal({ friend: f, onClose, onEndorse, onAddToList }) {
+  return (
+    <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+      <div className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Avatar url={f.avatarUrl} size={36} />
+            <div>
+              <h3 className="flex items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
+                {f.name} <RankBadge score={f.score} /> {f.isOwner && <OwnerBadge />}
+              </h3>
+              <span
+                className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+                style={{ background: C.bg, color: C.gold, letterSpacing: "0.06em" }}
+              >
+                {getTitle(f.isOwner, f.score)}
+              </span>
+            </div>
+          </div>
+          <button onClick={onClose} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
+        </div>
+
+        {f.picks.length === 0 && f.reviews.length === 0 && <p className="mt-4 text-sm" style={{ color: C.muted }}>No thrones claimed yet.</p>}
+
+        {f.picks.map((p) => (
+          <div key={p.id} className="mt-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+            <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>{p.cuisine}</div>
+            <div className="mt-0.5 flex items-center justify-between gap-2">
+              <div><span style={{ ...display, fontWeight: 700 }} className="text-base">{p.name}</span><span className="ml-2 text-xs" style={{ color: C.muted }}>{p.area}</span></div>
+              <button onClick={() => onEndorse(p.id, p.endorsedByMe)} className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
+                style={p.endorsedByMe ? { background: C.gold, color: C.bg } : { border: `1px solid ${C.cardEdge}`, color: C.muted }}>
+                <Crown size={12} /> {p.endorsedByMe ? "Endorsed" : "Endorse"}
+              </button>
+            </div>
+            <p className="mt-1.5 text-sm italic leading-relaxed" style={{ color: C.cream + "CC" }}>&ldquo;{p.decree}&rdquo;</p>
+            <PhotoStrip photos={p.photos} />
+            <button onClick={() => onAddToList(f.name, p)}
+              className="mt-2 flex items-center gap-1.5 text-xs font-bold" style={{ color: C.gold }}><Bookmark size={12} /> Add to my list</button>
+          </div>
+        ))}
+
+        {f.reviews.length > 0 && (
+          <div className="mt-4 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Been to, not crowned</div>
+        )}
+        {f.reviews.map((r) => (
+          <div key={r.id} className="mt-2 rounded-lg p-3" style={{ background: C.bg, border: `1px dashed ${C.cardEdge}` }}>
+            <div className="flex items-center justify-between gap-2">
+              <span style={{ ...display, fontWeight: 700 }} className="text-sm">{r.name}</span>
+              <span className="text-xs" style={{ color: C.muted }}>{[r.cuisine, r.area].filter(Boolean).join(" · ")}</span>
+            </div>
+            {r.note && <p className="mt-1 text-sm italic leading-relaxed" style={{ color: C.cream + "CC" }}>&ldquo;{r.note}&rdquo;</p>}
+            <PhotoStrip photos={r.photos} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
