@@ -8,14 +8,11 @@
 // key) whenever you want to (re)populate or refresh it. Re-running is
 // safe: it upserts on (source, source_id), so it never duplicates.
 //
-// Honest caveat: DineSafe's column names have shifted slightly across
-// the dataset's history, and this was written without being able to
-// live-fetch the current file to confirm exact headers (a network
-// restriction in the dev environment this was built in, not a Vercel
-// limitation) - findKey() below matches by keyword rather than an exact
-// string specifically to absorb small naming differences. If a run
-// fails with "Couldn't find expected columns," send the sampleColumns
-// it returns and the matching gets fixed in one line.
+// Column names confirmed against a real run of the live dataset (2026-09):
+// estId, estName, address, typeDesc, latitude, longitude. findKey() still
+// checks a couple of alternate spellings first, purely so a future schema
+// change fails loudly with sampleColumns rather than silently importing
+// the wrong field.
 // ============================================================
 
 import { NextResponse } from "next/server";
@@ -40,11 +37,13 @@ function admin() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-function findKey(row, keywords) {
-  return Object.keys(row).find((k) => {
-    const norm = k.toLowerCase().replace(/[^a-z]/g, "");
-    return keywords.every((kw) => norm.includes(kw));
-  });
+function findKey(row, candidates) {
+  const keys = Object.keys(row);
+  for (const candidate of candidates) {
+    const match = keys.find((k) => k.toLowerCase() === candidate.toLowerCase());
+    if (match) return match;
+  }
+  return undefined;
 }
 
 async function fetchResourceId() {
@@ -97,10 +96,10 @@ export async function GET(request) {
   }
 
   const sample = records[0];
-  const idKey = findKey(sample, ["establishment", "id"]);
-  const nameKey = findKey(sample, ["establishment", "name"]);
-  const typeKey = findKey(sample, ["establishment", "type"]);
-  const addressKey = findKey(sample, ["establishment", "address"]);
+  const idKey = findKey(sample, ["estId", "establishmentId", "establishment_id"]);
+  const nameKey = findKey(sample, ["estName", "establishmentName", "establishment_name"]);
+  const typeKey = findKey(sample, ["typeDesc", "establishmentType", "establishment_type"]);
+  const addressKey = findKey(sample, ["address", "establishmentAddress", "establishment_address"]);
   const latKey = findKey(sample, ["latitude"]);
   const lngKey = findKey(sample, ["longitude"]);
 
