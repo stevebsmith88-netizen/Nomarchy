@@ -47,6 +47,7 @@ function renderEmail() {
         <li>Crown your first pick in <strong>Kingdom</strong> - it just needs a real place and a real reason.</li>
         <li>Follow a friend by username in <strong>Court</strong>, or find people to follow directly.</li>
         <li>Add the places you keep meaning to try to <strong>Next in Line</strong>.</li>
+        <li>Already keep a list of favourites in Notes or a spreadsheet? Paste the whole thing into <strong>Next in Line</strong>'s Import a list and it'll sort it out.</li>
       </ul>
       <div style="margin-top:20px;padding-top:20px;border-top:1px solid #eee;">
         <p style="font-size:13px;font-weight:700;color:#1C1326;margin-bottom:6px;">Nomarchy works best added to your home screen</p>

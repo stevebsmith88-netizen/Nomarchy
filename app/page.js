@@ -1565,7 +1565,7 @@ function SignInScreen() {
 
           {!sent && (
             <p className="mb-6 mt-3 text-xs leading-relaxed" style={{ color: C.muted }}>
-              Crown your favourite spot in every cuisine. When something better comes along, stage a coup. Compare your kingdom with friends, and climb the ranks as your picks earn trust.
+              Crown your favourite spot in every cuisine. When something better comes along, stage a coup. Compare your kingdom with friends, and climb the ranks as your picks earn trust. Already keep a list of favourites? Paste the whole thing in once you&apos;re signed in and we&apos;ll sort it out.
             </p>
           )}
 
