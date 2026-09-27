@@ -455,11 +455,17 @@ create policy "cuisines insertable" on cuisines for insert with check (auth.uid(
 -- it), so treating a follow as consent to share would let anyone unlock a
 -- private profile just by following it. Going private means only you can
 -- see your picks, including in a friend's Court, until you go public again.
+-- Owner bypass added for the admin dashboard's content stats (most-crowned
+-- places/cuisines across everyone) - same pattern as feedback's own-or-owner
+-- policy below. Deliberately not extended to next_in_line, which stays
+-- "nobody else's business" per its own comment - the owner didn't ask to
+-- see everyone's private shortlists, just aggregate throne/decree stats.
 drop policy if exists "thrones readable" on thrones;
 create policy "thrones readable" on thrones for select
   using (
     auth.uid() = thrones.user_id
     or exists (select 1 from profiles p where p.id = thrones.user_id and p.is_public)
+    or exists (select 1 from profiles p where p.id = auth.uid() and p.is_owner)
   );
 drop policy if exists "own thrones writable" on thrones;
 create policy "own thrones writable" on thrones for all

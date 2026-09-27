@@ -7,7 +7,7 @@ import {
   Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock,
-  MessageSquare, Bell, TrendingUp, Navigation, Camera, Mail,
+  MessageSquare, Bell, TrendingUp, Navigation, Camera, Mail, ShieldCheck,
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
@@ -18,6 +18,7 @@ import {
   moveThroneCuisine, updateThroneDecree, updateThronePhotos, unCrown,
   uploadReviewPhoto, deleteReviewPhoto, uploadAvatar, MAX_REVIEW_PHOTOS,
   loadCourt, toggleEndorsement, followByUsername, loadStanding,
+  loadAdminOverview,
 } from "@/lib/data";
 import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell } from "./theme";
 
@@ -81,6 +82,8 @@ export default function Nomarchy() {
   const [onlyCrowned, setOnlyCrowned] = useState(false);
   const [kingdomView, setKingdomView] = useState("grid");
   const [nilView, setNilView] = useState("grid");
+  const [adminData, setAdminData] = useState(null);
+  const [adminError, setAdminError] = useState("");
   const [pretenderSearch, setPretenderSearch] = useState("");
   const [toast, setToast] = useState("");
 
@@ -157,6 +160,11 @@ export default function Nomarchy() {
     if (tab !== "top25" || top25 !== null) return;
     loadCrownedThrones().then(setTop25).catch((e) => setTop25Error(e.message || "Couldn't load the leaderboard."));
   }, [tab, top25]);
+
+  useEffect(() => {
+    if (tab !== "admin" || !profile?.is_owner || adminData !== null || adminError) return;
+    loadAdminOverview().then(setAdminData).catch((e) => setAdminError(e.message || "Couldn't load admin data."));
+  }, [tab, profile?.is_owner, adminData, adminError]);
 
   const handleNearMe = () => {
     if (!navigator.geolocation) {
@@ -603,7 +611,13 @@ export default function Nomarchy() {
       )}
 
       <nav className="flex flex-wrap justify-center gap-2 px-4 pb-5">
-        {[{ id: "kingdom", label: "Kingdom", icon: Crown }, { id: "pretenders", label: "Next in Line", icon: Bookmark }, { id: "court", label: "Court", icon: Users }, { id: "top25", label: "Trending", icon: TrendingUp }].map(({ id, label, icon: Icon }) => (
+        {[
+          { id: "kingdom", label: "Kingdom", icon: Crown },
+          { id: "pretenders", label: "Next in Line", icon: Bookmark },
+          { id: "court", label: "Court", icon: Users },
+          { id: "top25", label: "Trending", icon: TrendingUp },
+          ...(profile?.is_owner ? [{ id: "admin", label: "Admin", icon: ShieldCheck }] : []),
+        ].map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setTab(id)} className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold"
             style={tab === id ? { background: C.gold, color: C.bg } : { background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <Icon size={15} strokeWidth={2.2} />{label}
@@ -941,6 +955,87 @@ export default function Nomarchy() {
               </div>
             ));
           })()}
+        </div>)}
+
+        {/* ADMIN (owner-only tab - see loadAdminOverview in lib/data.js) */}
+        {tab === "admin" && (<div>
+          {!adminData && !adminError && <p className="text-sm" style={{ color: C.muted }}>Loading admin overview...</p>}
+          {adminError && <p className="mb-3 text-sm" style={{ color: C.coup }}>{adminError}</p>}
+          {adminData && (<>
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                ["Total users", adminData.stats.totalUsers],
+                ["Active, last 30d", adminData.stats.activeLast30d],
+                ["New this week", adminData.stats.newThisWeek],
+                ["Total crowns", adminData.stats.totalCrowns],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-xl p-3 text-center" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+                  <div className="text-2xl" style={{ ...display, fontWeight: 900, color: C.gold }}>{value}</div>
+                  <div className="mt-0.5 text-xs" style={{ color: C.muted }}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            <h3 className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>All users ({adminData.users.length})</h3>
+            <div className="max-h-96 overflow-y-auto rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+              {adminData.users.map((u) => (
+                <div key={u.id} className="flex items-center justify-between gap-2 px-3 py-2" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">@{u.username}{!u.onboarded && <span className="ml-1.5 text-xs font-normal" style={{ color: C.muted }}>(not onboarded)</span>}</div>
+                    <div className="truncate text-xs" style={{ color: C.muted }}>{u.email || "no email on file"}</div>
+                  </div>
+                  <div className="shrink-0 text-right text-xs" style={{ color: C.muted }}>
+                    <div>Joined {fmt(u.createdAt)}</div>
+                    <div>{u.lastSignInAt ? `Last in ${fmt(u.lastSignInAt)}` : "Never signed in"}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Most-crowned places</h3>
+                <div className="rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+                  {adminData.topPlaces.length === 0 && <p className="p-3 text-sm" style={{ color: C.muted }}>Nothing crowned yet.</p>}
+                  {adminData.topPlaces.map((p, i) => (
+                    <div key={p.name} className="flex items-center justify-between px-3 py-2 text-sm" style={i > 0 ? { borderTop: `1px solid ${C.cardEdge}` } : undefined}>
+                      <span className="truncate">{p.name}</span>
+                      <span className="shrink-0 font-bold" style={{ color: C.gold }}>{p.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Most-crowned cuisines</h3>
+                <div className="rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+                  {adminData.topCuisines.length === 0 && <p className="p-3 text-sm" style={{ color: C.muted }}>Nothing crowned yet.</p>}
+                  {adminData.topCuisines.map((c, i) => (
+                    <div key={c.name} className="flex items-center justify-between px-3 py-2 text-sm" style={i > 0 ? { borderTop: `1px solid ${C.cardEdge}` } : undefined}>
+                      <span className="truncate">{c.name}</span>
+                      <span className="shrink-0 font-bold" style={{ color: C.gold }}>{c.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <h3 className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Feedback ({adminData.feedback.length})</h3>
+            {adminData.feedback.length === 0 ? (
+              <p className="text-sm" style={{ color: C.muted }}>Nothing submitted yet.</p>
+            ) : (
+              <div className="rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+                {adminData.feedback.map((f, i) => (
+                  <div key={f.id} className="px-3 py-2.5" style={i > 0 ? { borderTop: `1px solid ${C.cardEdge}` } : undefined}>
+                    <div className="flex items-center justify-between gap-2 text-xs" style={{ color: C.muted }}>
+                      <span>@{f.username || "unknown"}{f.page ? ` · ${f.page}` : ""}</span>
+                      <span className="shrink-0">{fmt(f.createdAt)}</span>
+                    </div>
+                    <p className="mt-1 text-sm">{f.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>)}
         </div>)}
 
         </>)}
