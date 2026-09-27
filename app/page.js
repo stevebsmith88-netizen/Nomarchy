@@ -1445,7 +1445,7 @@ function SignInScreen() {
                 onClick={handleGoogle}
                 disabled={googleBusy}
                 className="flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold"
-                style={{ background: C.cream, color: "#1f1f1f" }}
+                style={{ background: C.gold, color: C.bg }}
               >
                 {googleBusy ? <Loader2 size={15} className="animate-spin" /> : <GoogleIcon size={16} />}
                 {googleBusy ? "Redirecting..." : "Continue with Google"}
@@ -1468,7 +1468,7 @@ function SignInScreen() {
                   style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
                 />
                 {error && <p className="text-xs" style={{ color: C.coup }}>{error}</p>}
-                <button type="submit" disabled={submitting} className="flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>
+                <button type="submit" disabled={submitting} className="flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold" style={{ background: "transparent", color: C.cream, border: `1px solid ${C.cardEdge}` }}>
                   {submitting ? <Loader2 size={15} className="animate-spin" /> : <Crown size={15} />}
                   {submitting ? "Sending..." : "Send sign-in code"}
                 </button>
