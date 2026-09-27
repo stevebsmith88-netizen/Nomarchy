@@ -1,8 +1,14 @@
 // ============================================================
 // One-time (or repeatable) backfill: finds next_in_line rows - across ALL
 // users, same as the thrones backfill - missing lat/lng (anything added
-// before geocode-on-save existed) and geocodes their address via
-// Nominatim, for the Next in Line map view.
+// before geocode-on-save existed) and geocodes them via Nominatim, for
+// the Next in Line map view.
+//
+// Bulk-imported entries (importToNextInLine) never get a street address
+// at all, only a neighbourhood - the import flow has no address field to
+// give them. Falls back to "name, neighbourhood, city" in that case,
+// which is less precise but still plots something rather than silently
+// skipping every imported row (which is most of them, in practice).
 //
 // Not triggered by app code - visit this URL yourself with the same
 // secret used for the restaurant import. Nominatim's usage policy caps
@@ -44,15 +50,16 @@ export async function GET(request) {
   const supabase = admin();
   const { data: rows, error } = await supabase
     .from("next_in_line")
-    .select("id, address")
+    .select("id, address, place_name, neighbourhood")
     .is("lat", null)
-    .not("address", "is", null)
+    .or("address.not.is.null,neighbourhood.not.is.null")
     .limit(BATCH_SIZE);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   let updated = 0, failed = 0;
   for (const row of rows) {
-    const coords = await geocode(row.address);
+    const query = row.address || [row.place_name, row.neighbourhood, "Toronto"].filter(Boolean).join(", ");
+    const coords = await geocode(query);
     if (coords) {
       const { error: updErr } = await supabase.from("next_in_line").update(coords).eq("id", row.id);
       if (updErr) failed += 1; else updated += 1;
