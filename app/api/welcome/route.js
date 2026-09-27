@@ -26,28 +26,29 @@ function admin() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-function renderEmail({ name }) {
+function renderEmail() {
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;border:1px solid #eee;border-radius:12px;overflow:hidden;">
-    <div style="background:#1C1326;padding:28px 24px;text-align:center;">
-      <div style="font-size:22px;font-weight:900;letter-spacing:3px;color:#E3B341;">&#128081; NOMARCHY</div>
+    <div style="background:#1C1326;padding:32px 24px;text-align:center;">
+      <div style="font-size:36px;line-height:1;">&#128081;</div>
+      <div style="font-size:20px;font-weight:900;letter-spacing:3px;color:#E3B341;margin-top:8px;">NOMARCHY</div>
     </div>
     <div style="padding:24px;">
-      <p style="font-size:16px;color:#1C1326;margin-top:0;">Welcome, ${name} - your kingdom awaits.</p>
+      <p style="font-size:18px;font-weight:700;color:#1C1326;margin-top:0;">Your kingdom awaits.</p>
       <p style="font-size:14px;color:#333;line-height:1.6;">
         Nomarchy is where you crown your favourite restaurant in every cuisine, stage a coup when
         something better comes along, and compare your kingdom with friends.
       </p>
-      <p style="font-size:14px;color:#333;line-height:1.6;">A few things to try first:</p>
+      <p style="margin-top:20px;">
+        <a href="${SITE_URL}" style="background:#E3B341;color:#1C1326;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:700;font-size:14px;">Open Nomarchy</a>
+      </p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin-top:24px;">Once you're in, a few things to try:</p>
       <ul style="font-size:14px;color:#333;line-height:1.8;padding-left:20px;">
         <li>Crown your first pick in <strong>Kingdom</strong> - it just needs a real place and a real reason.</li>
         <li>Follow a friend by username in <strong>Court</strong>, or find people to follow directly.</li>
         <li>Add the places you keep meaning to try to <strong>Next in Line</strong>.</li>
       </ul>
-      <p style="margin-top:24px;">
-        <a href="${SITE_URL}" style="background:#E3B341;color:#1C1326;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:700;font-size:14px;">Open Nomarchy</a>
-      </p>
-      <div style="margin-top:28px;padding-top:20px;border-top:1px solid #eee;">
+      <div style="margin-top:20px;padding-top:20px;border-top:1px solid #eee;">
         <p style="font-size:13px;font-weight:700;color:#1C1326;margin-bottom:6px;">Nomarchy works best added to your home screen</p>
         <p style="font-size:13px;color:#333;line-height:1.7;margin-top:0;">
           <strong>iPhone:</strong> open this in Safari, tap the Share icon, then "Add to Home Screen".<br/>
@@ -57,8 +58,7 @@ function renderEmail({ name }) {
       <p style="margin-top:20px;font-size:13px;color:#333;">Got feedback, or found something broken? Just reply to this email - it comes straight to me.</p>
     </div>
     <p style="font-size:11px;color:#999;padding:0 24px 24px;">
-      You're getting this because you just created a Nomarchy account. This is a one-time welcome,
-      not a recurring email.${MAILING_ADDRESS ? `<br/>Nomarchy, ${MAILING_ADDRESS}` : ""}
+      Sent once, when you join. No recurring emails from us.${MAILING_ADDRESS ? `<br/>Nomarchy, ${MAILING_ADDRESS}` : ""}
     </p>
   </div>`;
 }
@@ -109,7 +109,7 @@ export async function POST(request) {
   await sendEmail(
     data.user.email,
     "Welcome to Nomarchy",
-    renderEmail({ name: record.display_name || record.username })
+    renderEmail()
   );
 
   return NextResponse.json({ sent: true });
