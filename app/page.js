@@ -5,7 +5,7 @@ import {
   Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock,
-  MessageSquare, Bell, Trophy, Navigation, Camera,
+  MessageSquare, Bell, Trophy, Navigation, Camera, Mail,
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
@@ -1361,6 +1361,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
   const [username, setUsername] = useState(profile?.username || "");
   const [city, setCity] = useState(profile?.city || "");
   const [isPublic, setIsPublic] = useState(profile?.is_public ?? true);
+  const [digestOn, setDigestOn] = useState(!(profile?.digest_opt_out ?? false));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -1376,7 +1377,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
     if (!usernameValid || busy) return;
     setBusy(true); setErr("");
     try {
-      await onSubmit({ username: username.trim().toLowerCase(), city: city.trim() || null, is_public: isPublic });
+      await onSubmit({ username: username.trim().toLowerCase(), city: city.trim() || null, is_public: isPublic, digest_opt_out: !digestOn });
       onClose();
     } catch (e) {
       setErr(e.message || "Couldn't save. Try again.");
@@ -1490,6 +1491,31 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
             <span
               className="absolute top-0.5 h-5 w-5 rounded-full transition-transform"
               style={{ background: C.bg, transform: isPublic ? "translateX(22px)" : "translateX(2px)" }}
+            />
+          </button>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+          <div className="flex items-start gap-2">
+            <Mail size={16} className="mt-0.5 shrink-0" style={{ color: digestOn ? C.gold : C.muted }} />
+            <div>
+              <div className="text-sm font-semibold">Weekly digest</div>
+              <div className="mt-0.5 text-xs" style={{ color: C.muted }}>
+                Most-crowned picks near you, once a week. You can turn this off any time, here or from the email itself.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={digestOn}
+            onClick={() => setDigestOn((v) => !v)}
+            className="relative h-6 w-11 shrink-0 rounded-full transition-colors"
+            style={{ background: digestOn ? C.gold : C.cardEdge }}
+          >
+            <span
+              className="absolute top-0.5 h-5 w-5 rounded-full transition-transform"
+              style={{ background: C.bg, transform: digestOn ? "translateX(22px)" : "translateX(2px)" }}
             />
           </button>
         </div>
