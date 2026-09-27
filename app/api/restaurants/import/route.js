@@ -61,39 +61,47 @@ async function fetchCsvUrl() {
 // Minimal RFC4180 parser - handles quoted fields, embedded commas/newlines,
 // and doubled-quote escaping ("" inside a quoted field means a literal ").
 // Returns an array of rows, each row an array of raw string cells.
+// Slices whole runs of characters out at once (text.slice) rather than
+// building fields one character at a time - a char-by-char += loop looks
+// equivalent but is drastically more memory-hungry over tens of millions
+// of characters, since each append can force a fresh allocation.
 function parseCsv(text) {
   const rows = [];
+  const len = text.length;
+  let i = 0;
   let row = [];
-  let field = "";
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; } else { inQuotes = false; }
-      } else {
-        field += c;
+  while (i < len) {
+    let field;
+    if (text[i] === '"') {
+      let j = i + 1;
+      let hasEscaped = false;
+      while (j < len) {
+        if (text[j] === '"') {
+          if (text[j + 1] === '"') { hasEscaped = true; j += 2; continue; }
+          break;
+        }
+        j++;
       }
-    } else if (c === '"') {
-      inQuotes = true;
-    } else if (c === ",") {
-      row.push(field);
-      field = "";
-    } else if (c === "\r") {
-      // ignore - \n (handled below) ends the row
-    } else if (c === "\n") {
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = "";
+      const raw = text.slice(i + 1, j);
+      field = hasEscaped ? raw.replace(/""/g, '"') : raw;
+      i = j + 1;
     } else {
-      field += c;
+      let j = i;
+      while (j < len && text[j] !== "," && text[j] !== "\n" && text[j] !== "\r") j++;
+      field = text.slice(i, j);
+      i = j;
     }
-  }
-  if (field.length > 0 || row.length > 0) {
     row.push(field);
+    if (text[i] === ",") {
+      i++;
+      continue;
+    }
+    if (text[i] === "\r") i++;
+    if (text[i] === "\n") i++;
     rows.push(row);
+    row = [];
   }
+  if (row.length > 0) rows.push(row);
   return rows;
 }
 
