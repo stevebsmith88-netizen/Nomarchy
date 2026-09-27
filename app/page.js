@@ -11,7 +11,7 @@ import {
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
   linkGoogle, unlinkGoogle, getLinkedProviders,
-  loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
+  loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, placeKey, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderPhotos,
   moveThroneCuisine, updateThroneDecree, updateThronePhotos, unCrown,
@@ -477,6 +477,26 @@ export default function Nomarchy() {
   const stillToTry = filteredPretenders.filter((p) => !p.visitedAt).sort(sortByName);
   const beenTo = filteredPretenders.filter((p) => p.visitedAt).sort(sortByName);
 
+  // "A friend's already been here" - built from data already loaded for
+  // Court (picks + reviews per friend), matched by the same
+  // name+address/area key Trending uses, so a place in your own Next in
+  // Line can point back to a friend's crowned pick or visited review of
+  // that exact same restaurant without a separate query.
+  const friendActivityByPlace = new Map();
+  for (const f of court) {
+    for (const p of f.picks) {
+      const key = placeKey(p.name, p.address, p.area);
+      if (!friendActivityByPlace.has(key)) friendActivityByPlace.set(key, []);
+      friendActivityByPlace.get(key).push({ friend: f.name, crowned: true, cuisine: p.cuisine, text: p.decree });
+    }
+    for (const r of f.reviews) {
+      if (!r.note) continue;
+      const key = placeKey(r.name, r.address, r.area);
+      if (!friendActivityByPlace.has(key)) friendActivityByPlace.set(key, []);
+      friendActivityByPlace.get(key).push({ friend: f.name, crowned: false, cuisine: r.cuisine, text: r.note });
+    }
+  }
+
   // NOW is a module-level constant (evaluated once at page load), not a
   // fresh Date.now() call here - calling that directly in render is an
   // impure render (react-hooks/purity), and a Trending range like "this
@@ -669,6 +689,7 @@ export default function Nomarchy() {
               <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Still to try</h3>
               {stillToTry.map((p) => (
                 <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines} userId={user.id}
+                  friendMatches={friendActivityByPlace.get(placeKey(p.name, p.address, p.area))}
                   onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
                   onChangeCuisine={handleChangePretenderCuisine} onChangePhotos={handleChangePretenderPhotos} onToggleVisited={handleToggleVisited}
                   onCrown={(prefill) => setModal({
@@ -685,6 +706,7 @@ export default function Nomarchy() {
               <h3 className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Been to</h3>
               {beenTo.map((p) => (
                 <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines} userId={user.id}
+                  friendMatches={friendActivityByPlace.get(placeKey(p.name, p.address, p.area))}
                   onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
                   onChangeCuisine={handleChangePretenderCuisine} onChangePhotos={handleChangePretenderPhotos} onToggleVisited={handleToggleVisited}
                   onCrown={(prefill) => setModal({
@@ -980,7 +1002,7 @@ function RankLadder({ score }) {
   );
 }
 
-function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onChangePhotos, onToggleVisited, onCrown, userId }) {
+function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onChangePhotos, onToggleVisited, onCrown, userId, friendMatches }) {
   return (
     <div className="mb-3 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, opacity: p.visitedAt ? 0.7 : 1 }}>
       <div className="flex items-start justify-between gap-2">
@@ -997,6 +1019,20 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
         </div>
         <button onClick={() => onRemove(p.id)} aria-label="Remove" style={{ color: C.muted }}><Trash2 size={15} /></button>
       </div>
+      {friendMatches && friendMatches.length > 0 && (
+        <div className="mt-2 rounded-lg p-2.5" style={{ background: C.bg, border: `1px dashed ${C.gold}66` }}>
+          {friendMatches.slice(0, 2).map((m, i) => (
+            <p key={i} className="text-xs leading-relaxed" style={{ color: C.cream + "CC" }}>
+              {m.crowned ? <Crown size={11} className="mr-1 inline" style={{ color: C.gold }} /> : <Check size={11} className="mr-1 inline" style={{ color: C.green }} />}
+              <strong>{m.friend}</strong>{m.crowned ? ` crowned this for ${m.cuisine}` : "'s been"}
+              {m.text && <>: &ldquo;{m.text}&rdquo;</>}
+            </p>
+          ))}
+          {friendMatches.length > 2 && (
+            <p className="text-xs" style={{ color: C.muted }}>+{friendMatches.length - 2} more from your Court</p>
+          )}
+        </div>
+      )}
       <textarea
         key={p.id + (p.note || "")}
         defaultValue={p.note || ""}
