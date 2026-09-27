@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/reengage/send",
+      "schedule": "0 13 1 * *"
+    }
+  ]
+}

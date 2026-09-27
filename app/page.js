@@ -6,7 +6,7 @@ import {
   Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock,
-  MessageSquare, Bell, TrendingUp, Navigation, Camera,
+  MessageSquare, Bell, TrendingUp, Navigation, Camera, Mail,
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
@@ -1532,6 +1532,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
   const [city, setCity] = useState(profile?.city || "");
   const [isPublic, setIsPublic] = useState(profile?.is_public ?? true);
   const [discoverable, setDiscoverable] = useState(profile?.discoverable ?? false);
+  const [remindersOn, setRemindersOn] = useState(!(profile?.reminders_opt_out ?? false));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -1571,7 +1572,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
     if (!usernameValid || busy) return;
     setBusy(true); setErr("");
     try {
-      await onSubmit({ username: username.trim().toLowerCase(), city: city.trim() || null, is_public: isPublic, discoverable });
+      await onSubmit({ username: username.trim().toLowerCase(), city: city.trim() || null, is_public: isPublic, discoverable, reminders_opt_out: !remindersOn });
       onClose();
     } catch (e) {
       setErr(e.message || "Couldn't save. Try again.");
@@ -1711,6 +1712,31 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
             <span
               className="absolute top-0.5 h-5 w-5 rounded-full transition-transform"
               style={{ background: C.bg, transform: discoverable ? "translateX(22px)" : "translateX(2px)" }}
+            />
+          </button>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+          <div className="flex items-start gap-2">
+            <Mail size={16} className="mt-0.5 shrink-0" style={{ color: remindersOn ? C.gold : C.muted }} />
+            <div>
+              <div className="text-sm font-semibold">Inactivity reminders</div>
+              <div className="mt-0.5 text-xs" style={{ color: C.muted }}>
+                A nudge by email if your kingdom&apos;s been quiet for a month - no sign-in, or nothing new crowned.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={remindersOn}
+            onClick={() => setRemindersOn((v) => !v)}
+            className="relative h-6 w-11 shrink-0 rounded-full transition-colors"
+            style={{ background: remindersOn ? C.gold : C.cardEdge }}
+          >
+            <span
+              className="absolute top-0.5 h-5 w-5 rounded-full transition-transform"
+              style={{ background: C.bg, transform: remindersOn ? "translateX(22px)" : "translateX(2px)" }}
             />
           </button>
         </div>

@@ -44,12 +44,22 @@ update profiles set onboarded = true where onboarded = false;
 -- default - being findable by strangers is an opt-in, "public figure"
 -- choice, not the default for a private beta of friends.
 alter table profiles add column if not exists discoverable boolean not null default false;
--- The automated monthly digest (and its opt-out/unsubscribe-token columns)
--- was tried and then removed in favor of Steve sending updates manually -
--- these two lines undo it for anyone who already ran the version of this
--- file that added them. Harmless no-op if you never ran that version.
+-- The automated monthly content digest was tried and removed in favor of
+-- Steve sending updates manually - this line undoes its opt-out column
+-- for anyone who already ran the version of this file that added it.
+-- Harmless no-op if you never ran that version.
 alter table profiles drop column if exists digest_opt_out;
-alter table profiles drop column if exists unsubscribe_token;
+-- A random, unguessable value (distinct from the profile's own id) is
+-- what an unsubscribe link carries - so clicking it needs no sign-in,
+-- and it can't be used to do anything but turn one email off. Shared by
+-- any future one-click-unsubscribe email, not tied to one feature.
+alter table profiles add column if not exists unsubscribe_token uuid not null default gen_random_uuid();
+create unique index if not exists profiles_unsubscribe_token_idx on profiles(unsubscribe_token);
+-- On by default (see digest_opt_out's comment history above for why that
+-- pattern was reconsidered - this one's a per-person lifecycle nudge,
+-- not a broadcast, so it stays) - a monthly check emails anyone quiet for
+-- 30+ days (no sign-in, or nothing new crowned/added) to bring them back.
+alter table profiles add column if not exists reminders_opt_out boolean not null default false;
 -- Defaults to now() so existing follows/crowns from before this feature
 -- shipped don't all flood in as a backlog of "new" notifications.
 alter table profiles add column if not exists notifications_seen_at timestamptz not null default now();
