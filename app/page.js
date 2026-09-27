@@ -82,6 +82,7 @@ export default function Nomarchy() {
   const [onlyCrowned, setOnlyCrowned] = useState(false);
   const [kingdomView, setKingdomView] = useState("grid");
   const [nilView, setNilView] = useState("grid");
+  const [nilCuisineFilter, setNilCuisineFilter] = useState("");
   const [adminData, setAdminData] = useState(null);
   const [adminError, setAdminError] = useState("");
   const [pretenderSearch, setPretenderSearch] = useState("");
@@ -485,8 +486,21 @@ export default function Nomarchy() {
   const nextRank = RANKS.find((r) => r.min > score);
   const fmt = (t) => new Date(t).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
   const shown = onlyCrowned ? cuisineNames.filter((c) => slots[c]?.current) : cuisineNames;
+
+  // Cuisine filter for Next in Line (grid and map both) - "fancying pizza,
+  // what are my options" - matched by cuisine NAME rather than id, since
+  // that's the one field both a crowned throne (slots is keyed by name)
+  // and a next_in_line pick (pretenders' own .cuisine string) already
+  // share, with no join needed. Options are only cuisines actually present
+  // right now, plus Uncategorized if anything's untagged - not the full
+  // app-wide cuisine list, most of which wouldn't match anything here.
+  const nilCuisineOptions = Array.from(new Set(pretenders.map((p) => p.cuisine).filter(Boolean))).sort();
+  const nilHasUncategorized = pretenders.some((p) => !p.cuisine);
+  const matchesNilCuisine = (cuisineName) =>
+    !nilCuisineFilter || (nilCuisineFilter === "__uncategorized__" ? !cuisineName : cuisineName === nilCuisineFilter);
+
   const kingdomPins = Object.entries(slots)
-    .filter(([, slot]) => slot.current?.lat && slot.current?.lng)
+    .filter(([cuisineName, slot]) => slot.current?.lat && slot.current?.lng && matchesNilCuisine(cuisineName))
     .map(([cuisineName, slot]) => ({ lat: slot.current.lat, lng: slot.current.lng, name: slot.current.name, cuisine: cuisineName }));
   // Two buckets for the Next in Line map, matching "where I've been" vs
   // "where I still want to go" - a crowned favourite counts as "been"
@@ -494,18 +508,17 @@ export default function Nomarchy() {
   // not it ever became a throne.
   const beenPins = [
     ...kingdomPins,
-    ...pretenders.filter((p) => p.lat && p.lng && p.visitedAt).map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine || "Uncategorized" })),
+    ...pretenders.filter((p) => p.lat && p.lng && p.visitedAt && matchesNilCuisine(p.cuisine)).map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine || "Uncategorized" })),
   ];
   const wantPins = pretenders
-    .filter((p) => p.lat && p.lng && !p.visitedAt)
+    .filter((p) => p.lat && p.lng && !p.visitedAt && matchesNilCuisine(p.cuisine))
     .map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine || "Uncategorized" }));
 
   const pretenderQuery = pretenderSearch.trim().toLowerCase();
-  const filteredPretenders = pretenderQuery
-    ? pretenders.filter((p) =>
-        [p.name, p.cuisine, p.area, p.note].some((f) => f && f.toLowerCase().includes(pretenderQuery))
-      )
-    : pretenders;
+  const filteredPretenders = pretenders.filter((p) => {
+    const matchesQuery = !pretenderQuery || [p.name, p.cuisine, p.area, p.note].some((f) => f && f.toLowerCase().includes(pretenderQuery));
+    return matchesQuery && matchesNilCuisine(p.cuisine);
+  });
   const sortByName = (a, b) => a.name.localeCompare(b.name);
   const stillToTry = filteredPretenders.filter((p) => !p.visitedAt).sort(sortByName);
   const beenTo = filteredPretenders.filter((p) => p.visitedAt).sort(sortByName);
@@ -717,8 +730,18 @@ export default function Nomarchy() {
           </div>
 
           {pretenders.length > 0 && (
-            <div className="mb-3 flex justify-end">
-              <div className="flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}` }}>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <select
+                value={nilCuisineFilter}
+                onChange={(e) => setNilCuisineFilter(e.target.value)}
+                className="rounded-lg px-3 py-1.5 text-xs outline-none"
+                style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: nilCuisineFilter ? C.gold : C.cream }}
+              >
+                <option value="">All cuisines</option>
+                {nilCuisineOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+                {nilHasUncategorized && <option value="__uncategorized__">Uncategorized</option>}
+              </select>
+              <div className="flex shrink-0 overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}` }}>
                 <button onClick={() => setNilView("grid")} className="px-3 py-1 text-xs font-semibold" style={{ background: nilView === "grid" ? C.gold : C.card, color: nilView === "grid" ? C.bg : C.muted }}>
                   Grid
                 </button>
@@ -753,7 +776,9 @@ export default function Nomarchy() {
             </div>
           ) : stillToTry.length === 0 && beenTo.length === 0 ? (
             <div className="rounded-xl p-6 text-center" style={{ background: C.card, border: `1px dashed ${C.cardEdge}` }}>
-              <p className="text-sm" style={{ color: C.muted }}>Nothing matches &ldquo;{pretenderSearch}&rdquo;.</p>
+              <p className="text-sm" style={{ color: C.muted }}>
+                {pretenderSearch ? <>Nothing matches &ldquo;{pretenderSearch}&rdquo;.</> : "Nothing in that cuisine yet."}
+              </p>
             </div>
           ) : (<>
             {stillToTry.length > 0 && (<>
