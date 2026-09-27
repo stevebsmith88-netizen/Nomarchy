@@ -1758,7 +1758,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
             role="switch"
             aria-checked={isPublic}
             onClick={() => setIsPublic((v) => !v)}
-            className="relative h-6 w-11 shrink-0 rounded-full transition-colors"
+            className="relative h-6 w-11 shrink-0 overflow-hidden rounded-full transition-colors"
             style={{ background: isPublic ? C.gold : C.cardEdge }}
           >
             <span
@@ -1784,7 +1784,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
             role="switch"
             aria-checked={discoverable}
             onClick={() => setDiscoverable((v) => !v)}
-            className="relative h-6 w-11 shrink-0 rounded-full transition-colors"
+            className="relative h-6 w-11 shrink-0 overflow-hidden rounded-full transition-colors"
             style={{ background: discoverable ? C.gold : C.cardEdge }}
           >
             <span
@@ -1809,7 +1809,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
             role="switch"
             aria-checked={remindersOn}
             onClick={() => setRemindersOn((v) => !v)}
-            className="relative h-6 w-11 shrink-0 rounded-full transition-colors"
+            className="relative h-6 w-11 shrink-0 overflow-hidden rounded-full transition-colors"
             style={{ background: remindersOn ? C.gold : C.cardEdge }}
           >
             <span
