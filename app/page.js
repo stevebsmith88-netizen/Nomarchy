@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
+  linkGoogle, unlinkGoogle, getLinkedProviders,
   loadDirectory, loadCrownedThrones, groupCrownedThrones, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderPhotos,
@@ -1394,6 +1395,30 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
   const [deleting, setDeleting] = useState(false);
   const [deleteErr, setDeleteErr] = useState("");
 
+  const [providers, setProviders] = useState(null);
+  const [linkBusy, setLinkBusy] = useState(false);
+  const [linkErr, setLinkErr] = useState("");
+
+  useEffect(() => {
+    getLinkedProviders().then(setProviders).catch(() => setProviders([]));
+  }, []);
+  const googleLinked = providers?.includes("google");
+
+  const toggleGoogle = async () => {
+    setLinkBusy(true); setLinkErr("");
+    try {
+      if (googleLinked) {
+        await unlinkGoogle();
+        setProviders((p) => p.filter((x) => x !== "google"));
+      } else {
+        await linkGoogle(); // redirects away and back - nothing to update here on success
+      }
+    } catch (e) {
+      setLinkErr(e.message || "Couldn't update that.");
+    }
+    setLinkBusy(false);
+  };
+
   const usernameValid = /^[a-z0-9-]{3,30}$/.test(username.trim().toLowerCase());
   const deleteConfirmed = deleteText.trim().toLowerCase() === profile?.username?.toLowerCase();
 
@@ -1518,6 +1543,31 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
             />
           </button>
         </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+          <div className="flex items-center gap-2">
+            <GoogleIcon size={18} />
+            <div>
+              <div className="text-sm font-semibold">Google sign-in</div>
+              <div className="mt-0.5 text-xs" style={{ color: C.muted }}>
+                {providers === null ? "Checking..." : googleLinked ? "Connected - you can sign in with either method." : "Not connected yet."}
+              </div>
+            </div>
+          </div>
+          {providers !== null && (
+            <button
+              type="button"
+              onClick={toggleGoogle}
+              disabled={linkBusy}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
+              style={googleLinked ? { color: C.muted, border: `1px solid ${C.cardEdge}` } : { background: C.gold, color: C.bg }}
+            >
+              {linkBusy ? <Loader2 size={13} className="animate-spin" /> : null}
+              {googleLinked ? "Unlink" : "Link"}
+            </button>
+          )}
+        </div>
+        {linkErr && <p className="mt-1.5 text-xs" style={{ color: C.coup }}>{linkErr}</p>}
 
         {err && <p className="mt-3 text-xs" style={{ color: C.coup }}>{err}</p>}
 
