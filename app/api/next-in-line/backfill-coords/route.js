@@ -1,21 +1,25 @@
 // ============================================================
 // One-time (or repeatable) backfill: finds next_in_line rows - across ALL
-// users, same as the thrones backfill - missing lat/lng (anything added
-// before geocode-on-save existed) and geocodes them via Nominatim, for
-// the Next in Line map view.
+// users, same as the thrones backfill - missing lat/lng and fills them in,
+// for the Next in Line map view.
 //
-// Bulk-imported entries (importToNextInLine) never get a street address
-// at all, only a neighbourhood - the import flow has no address field to
-// give them. Falls back to "name, neighbourhood, city" in that case,
-// which is less precise but still plots something rather than silently
-// skipping every imported row (which is most of them, in practice).
+// Two strategies, tried in order:
+// 1. Match the name against the local Toronto restaurants table (the
+//    match_restaurant() function - same one importToNextInLine now uses
+//    going forward). Free and instant, no rate limit, and more reliable
+//    than guessing since it's real curated data - covers most rows, since
+//    most entries here came from a bulk import with no address at all.
+// 2. Otherwise fall back to Nominatim: the row's own address if it has
+//    one, else "name, neighbourhood, city", less precise but still better
+//    than nothing.
 //
 // Not triggered by app code - visit this URL yourself with the same
 // secret used for the restaurant import. Nominatim's usage policy caps
 // requests at roughly 1/second, and Vercel's function has a 60s ceiling,
 // so this only processes a batch per visit (~45 rows) rather than
 // everything at once - safe to just revisit the same URL again, since it
-// only ever looks at rows still missing coordinates.
+// only ever looks at rows still missing coordinates. Rows resolved via
+// the local table skip the delay entirely, since they never call Nominatim.
 // ============================================================
 
 import { NextResponse } from "next/server";
@@ -32,8 +36,8 @@ function admin() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function geocode(address) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
+async function geocode(query) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
   const res = await fetch(url, { headers: { "User-Agent": "Nomarchy (nomarchy.ca)" } });
   if (!res.ok) return null;
   const results = await res.json();
@@ -52,21 +56,28 @@ export async function GET(request) {
     .from("next_in_line")
     .select("id, address, place_name, neighbourhood")
     .is("lat", null)
-    .or("address.not.is.null,neighbourhood.not.is.null")
     .limit(BATCH_SIZE);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   let updated = 0, failed = 0;
   for (const row of rows) {
-    const query = row.address || [row.place_name, row.neighbourhood, "Toronto"].filter(Boolean).join(", ");
-    const coords = await geocode(query);
+    const { data: matches, error: matchErr } = await supabase.rpc("match_restaurant", { search_name: row.place_name });
+    const match = matchErr ? null : matches?.[0];
+
+    let coords = match?.lat && match?.lng ? { lat: match.lat, lng: match.lng } : null;
+    if (!coords) {
+      const query = row.address || match?.address
+        || [row.place_name, row.neighbourhood, "Toronto"].filter(Boolean).join(", ");
+      coords = await geocode(query);
+      await sleep(DELAY_MS);
+    }
+
     if (coords) {
       const { error: updErr } = await supabase.from("next_in_line").update(coords).eq("id", row.id);
       if (updErr) failed += 1; else updated += 1;
     } else {
       failed += 1;
     }
-    await sleep(DELAY_MS);
   }
 
   return NextResponse.json({ updated, failed, remainingAtLeast: rows.length === BATCH_SIZE ? "more - revisit this URL" : 0 });

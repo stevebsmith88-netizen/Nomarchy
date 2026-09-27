@@ -341,6 +341,26 @@ alter table restaurants enable row level security;
 drop policy if exists "restaurants readable" on restaurants;
 create policy "restaurants readable" on restaurants for select using (true);
 
+-- Fuzzy name match against the local Toronto table, used both by the bulk
+-- import flow (importToNextInLine in lib/data.js - fills in a real
+-- address/coords at import time instead of leaving them blank) and the
+-- next_in_line backfill route (for older rows that were imported before
+-- this existed). Plain `language sql`, not `security definer` - it only
+-- reads a table that's already readable by anyone, so it runs fine under
+-- the caller's own normal permissions.
+create or replace function match_restaurant(search_name text)
+returns table (name text, address text, neighbourhood text, lat numeric, lng numeric)
+language sql
+stable
+as $$
+  select r.name, r.address, r.neighbourhood, r.lat, r.lng
+  from restaurants r
+  where r.city = 'Toronto'
+    and similarity(r.name, search_name) > 0.4
+  order by similarity(r.name, search_name) desc
+  limit 1;
+$$;
+
 -- ------------------------------------------------------------
 -- 7c. FEEDBACK
 -- One shared channel for beta testers instead of scattered DMs/texts.
