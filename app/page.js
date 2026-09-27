@@ -310,6 +310,28 @@ export default function Nomarchy() {
 
   const sharePick = async (cuisineName, r) => {
     const text = `My ${cuisineName} throne on Nomarchy: ${r.name}${r.area ? ` (${r.area})` : ""}\n\n"${r.decree}"`;
+    const params = new URLSearchParams({
+      cuisine: cuisineName, name: r.name, area: r.area || "",
+      rating: r.rating || "", decree: r.decree || "", username: profile?.username || "",
+    });
+    const cardUrl = `/api/card?${params.toString()}`;
+
+    // A native share sheet with the branded card image beats a clipboard
+    // copy every time - people can post straight to a story or DM it. Not
+    // every browser can share a file though (most desktop browsers can't),
+    // so this always has the old copy-the-text behaviour to fall back to.
+    try {
+      const res = await fetch(cardUrl);
+      const blob = await res.blob();
+      const file = new File([blob], "nomarchy-pick.png", { type: "image/png" });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Nomarchy", text });
+        return;
+      }
+    } catch (e) {
+      if (e?.name === "AbortError") return; // they closed the share sheet - not an error
+    }
+
     try {
       await navigator.clipboard.writeText(text);
       flash("Pick copied, paste it in the group chat");
