@@ -245,6 +245,11 @@ create table if not exists next_in_line (
 -- needs this - `create table if not exists` above is a no-op once the
 -- table is already there, so it never adds new columns on its own.
 alter table next_in_line add column if not exists visited_at timestamptz;
+-- For the "next in line" map view (want-to-go pins alongside crowned
+-- ones) - populated going forward on add, and backfilled for existing
+-- rows by app/api/next-in-line/backfill-coords, same pattern as thrones.
+alter table next_in_line add column if not exists lat numeric;
+alter table next_in_line add column if not exists lng numeric;
 
 create index if not exists nil_user_idx on next_in_line(user_id);
 
