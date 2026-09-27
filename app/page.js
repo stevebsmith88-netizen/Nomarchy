@@ -348,6 +348,29 @@ export default function Nomarchy() {
     }
   };
 
+  // Their own public kingdom link doubles as the invite - it's already a
+  // real, personal landing page (their crowns, their decrees), not a bare
+  // signup form, so whoever clicks it sees something worth joining for
+  // before they're ever asked to.
+  const handleInviteFriend = async () => {
+    const url = `https://nomarchy.ca/${profile?.username || ""}`;
+    const text = "Join me on Nomarchy - crown your favourite restaurant in every cuisine, and see what your friends swear by.";
+    try {
+      if (navigator.canShare?.({ text, url })) {
+        await navigator.share({ title: "Nomarchy", text, url });
+        return;
+      }
+    } catch (e) {
+      if (e?.name === "AbortError") return;
+    }
+    try {
+      await navigator.clipboard.writeText(`${text} ${url}`);
+      flash("Invite link copied");
+    } catch {
+      flash("Couldn't copy on this device");
+    }
+  };
+
   const handleAddCuisine = async () => {
     const v = newCuisine.trim();
     if (!v) return;
@@ -681,6 +704,10 @@ export default function Nomarchy() {
         {tab === "court" && (<div>
           <p className="mb-3 text-sm" style={{ color: C.muted }}>Your friends&apos; reigning picks. Endorse the good ones, or add them to your own shortlist.</p>
 
+          <button onClick={handleInviteFriend} className="mb-3 flex w-full items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>
+            <Share2 size={14} /> Invite a friend
+          </button>
+
           <form onSubmit={handleAddFollow} className="mb-4 flex gap-2">
             <input value={followInput} onChange={(e) => setFollowInput(e.target.value)} placeholder="Follow by username" className="w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
             <button type="submit" disabled={followBusy || !followInput.trim()} className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>
@@ -876,6 +903,14 @@ export default function Nomarchy() {
           defaultCity={profile?.city || "Toronto"}
           onClose={() => setAddPretender(false)}
           onSubmit={(cid, entry) => addToPretenders(cid, entry)}
+        />
+      )}
+
+      {profile && !profile.onboarded && (
+        <WelcomeModal
+          profile={profile}
+          onChangeAvatar={(avatar_url) => handleUpdateProfile({ avatar_url })}
+          onSubmit={(fields) => handleUpdateProfile({ ...fields, onboarded: true })}
         />
       )}
 
@@ -1386,6 +1421,73 @@ function SignInScreen() {
         </div>
       </div>
     </FontShell>
+  );
+}
+
+// One-time, non-dismissable first-run step - a brand new signup (email
+// or Google) lands with an auto-generated username like "steve-8f3a"
+// that reads fine internally but poorly to a cold Instagram contact.
+// Pre-filling the cleaned-up slug (stripping the random suffix the
+// handle_new_user() trigger appends) means most people can just tap
+// Continue, while anyone who cares can still change it right here.
+function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
+  const suggested = (profile?.username || "").replace(/-[0-9a-f]{4}$/, "");
+  const [username, setUsername] = useState(suggested);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const usernameValid = /^[a-z0-9-]{3,30}$/.test(username.trim().toLowerCase());
+
+  const save = async () => {
+    if (!usernameValid || busy) return;
+    setBusy(true); setErr("");
+    try {
+      await onSubmit({ username: username.trim().toLowerCase() });
+    } catch (e) {
+      setErr(e.message || "Couldn't save. Try again.");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-5" style={{ background: "rgba(10,5,16,0.92)" }}>
+      <div className="w-full max-w-sm rounded-2xl p-6 text-center" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+        <Crown size={30} className="mx-auto" style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
+        <h2 className="mt-2 text-xl" style={{ ...display, fontWeight: 900 }}>Welcome to Nomarchy</h2>
+        <p className="mt-1 text-sm" style={{ color: C.muted }}>Long live your favourites. First, make this yours.</p>
+
+        <div className="mt-4 flex justify-center">
+          <AvatarPicker userId={profile?.id} url={profile?.avatar_url} onChange={onChangeAvatar} />
+        </div>
+
+        <div className="mt-4 text-left">
+          <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Username</label>
+          <input
+            autoFocus
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="lowercase, letters/numbers/hyphens"
+            className="mt-1 w-full rounded-lg px-3 py-2.5 text-sm outline-none"
+            style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+          />
+          <div className="mt-1 text-xs" style={{ color: usernameValid || !username ? C.muted : C.coup }}>
+            This is what friends use to follow you (@{username.trim().toLowerCase() || "username"}).
+          </div>
+        </div>
+
+        {err && <p className="mt-3 text-xs" style={{ color: C.coup }}>{err}</p>}
+
+        <button
+          disabled={!usernameValid || busy}
+          onClick={save}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold"
+          style={usernameValid ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}
+        >
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+          Continue
+        </button>
+      </div>
+    </div>
   );
 }
 
