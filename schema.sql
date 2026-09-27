@@ -550,3 +550,51 @@ select
          join thrones t on t.id = e.throne_id where t.user_id = p.id) * 5
   ) as score
 from profiles p;
+
+-- ------------------------------------------------------------
+-- 10. ANTI-ABUSE WRITE-RATE LIMITS
+-- These live as RESTRICTIVE RLS policies rather than app-level checks
+-- deliberately: the browser talks to Supabase directly for these actions
+-- (no server route in between to gate them, unlike the AI routes' own
+-- hourly cap), so anything enforced only in app code could be bypassed by
+-- calling the API directly. A RESTRICTIVE policy is combined with AND
+-- against the existing permissive policy on the same table, so both must
+-- pass - it narrows what's already allowed rather than replacing it.
+--
+-- Thrones themselves don't need a plain insert cap: the one-throne-per-
+-- cuisine unique constraint already bounds a single user to (at most) the
+-- number of cuisines that exist. The real unbounded vector is repeated
+-- coups on the SAME cuisine - each one archives a row into `fallen`, so
+-- that's what's actually rate-limited below. A generous limit (a real
+-- person crowning/adding this much in an hour is implausible) that a
+-- script or someone being deliberately disruptive would hit fast.
+-- ------------------------------------------------------------
+drop policy if exists "thrones coup rate limit" on thrones;
+create policy "thrones coup rate limit" on thrones as restrictive for update
+  with check (
+    (select count(*) from fallen f where f.user_id = auth.uid() and f.dethroned_at > now() - interval '1 hour') < 50
+  );
+
+drop policy if exists "next in line insert rate limit" on next_in_line;
+create policy "next in line insert rate limit" on next_in_line as restrictive for insert
+  with check (
+    (select count(*) from next_in_line n where n.user_id = auth.uid() and n.added_at > now() - interval '1 hour') < 50
+  );
+
+-- Separate from the existing 3-photos-per-pick cap - this limits how many
+-- NEW photos get uploaded across all picks combined in an hour, so someone
+-- can't run up storage by spreading uploads across many different picks.
+-- Restrictive policies apply table-wide, so this only engages for the
+-- review-photos bucket specifically - the "bucket_id <> ..." branch leaves
+-- every other bucket (avatars) untouched.
+drop policy if exists "review photos insert rate limit" on storage.objects;
+create policy "review photos insert rate limit" on storage.objects as restrictive for insert
+  with check (
+    bucket_id <> 'review-photos'
+    or (
+      select count(*) from storage.objects o
+      where o.bucket_id = 'review-photos'
+        and (storage.foldername(o.name))[1] = auth.uid()::text
+        and o.created_at > now() - interval '1 hour'
+    ) < 30
+  );
