@@ -8,6 +8,11 @@
 // key) whenever you want to (re)populate or refresh it. Re-running is
 // safe: it upserts on (source, source_id), so it never duplicates.
 //
+// Pulls the dataset's own CSV export rather than paging through the CKAN
+// datastore JSON API - the same data as JSON (with field names repeated
+// on every row, plus response/parse overhead held across ~80 paginated
+// fetches) ran to ~470MB and crashed the function; as CSV it's ~44MB.
+//
 // Column names confirmed against a real run of the live dataset (2026-09):
 // estId, estName, address, typeDesc, latitude, longitude. findKey() still
 // checks a couple of alternate spellings first, purely so a future schema
@@ -22,8 +27,6 @@ export const maxDuration = 60;
 
 const CKAN_BASE = "https://ckan0.cf.opendata.inter.prod-toronto.ca";
 const PACKAGE_ID = "dinesafe";
-const PAGE_SIZE = 5000;
-const MAX_RECORDS = 400000;
 
 // Establishment types DineSafe inspects that aren't really "a restaurant
 // a friend would crown" - excluded by keyword rather than an exact type
@@ -37,39 +40,61 @@ function admin() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-function findKey(row, candidates) {
-  const keys = Object.keys(row);
+function findKey(headers, candidates) {
   for (const candidate of candidates) {
-    const match = keys.find((k) => k.toLowerCase() === candidate.toLowerCase());
+    const match = headers.find((h) => h.toLowerCase() === candidate.toLowerCase());
     if (match) return match;
   }
   return undefined;
 }
 
-async function fetchResourceId() {
+async function fetchCsvUrl() {
   const res = await fetch(`${CKAN_BASE}/api/3/action/package_show?id=${PACKAGE_ID}`);
   if (!res.ok) throw new Error(`CKAN package_show failed: ${res.status}`);
   const body = await res.json();
   const resources = body.result?.resources || [];
-  const active = resources.find((r) => r.datastore_active);
-  if (!active) throw new Error("No datastore-active resource found for the dinesafe package");
-  return active.id;
+  const csv = resources.find((r) => (r.format || "").toUpperCase() === "CSV");
+  if (!csv?.url) throw new Error("No CSV resource found for the dinesafe package");
+  return csv.url;
 }
 
-async function fetchAllRecords(resourceId) {
-  const records = [];
-  let offset = 0;
-  for (;;) {
-    const url = `${CKAN_BASE}/api/3/action/datastore_search?resource_id=${resourceId}&limit=${PAGE_SIZE}&offset=${offset}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`CKAN datastore_search failed: ${res.status}`);
-    const body = await res.json();
-    const batch = body.result?.records || [];
-    records.push(...batch);
-    if (batch.length < PAGE_SIZE || offset > MAX_RECORDS) break;
-    offset += PAGE_SIZE;
+// Minimal RFC4180 parser - handles quoted fields, embedded commas/newlines,
+// and doubled-quote escaping ("" inside a quoted field means a literal ").
+// Returns an array of rows, each row an array of raw string cells.
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; } else { inQuotes = false; }
+      } else {
+        field += c;
+      }
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === ",") {
+      row.push(field);
+      field = "";
+    } else if (c === "\r") {
+      // ignore - \n (handled below) ends the row
+    } else if (c === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else {
+      field += c;
+    }
   }
-  return records;
+  if (field.length > 0 || row.length > 0) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows;
 }
 
 export async function GET(request) {
@@ -78,54 +103,59 @@ export async function GET(request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let resourceId;
+  let csvUrl;
   try {
-    resourceId = await fetchResourceId();
+    csvUrl = await fetchCsvUrl();
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 502 });
   }
 
-  let records;
+  let text;
   try {
-    records = await fetchAllRecords(resourceId);
+    const res = await fetch(csvUrl);
+    if (!res.ok) throw new Error(`Failed to download CSV: ${res.status}`);
+    text = await res.text();
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 502 });
   }
-  if (records.length === 0) {
-    return NextResponse.json({ error: "No records returned from DineSafe" }, { status: 502 });
+
+  const allRows = parseCsv(text);
+  const headerRow = allRows[0];
+  const dataRows = allRows.slice(1).filter((r) => r.length > 1 || r[0] !== "");
+  if (!headerRow || dataRows.length === 0) {
+    return NextResponse.json({ error: "No rows found in the DineSafe CSV" }, { status: 502 });
   }
 
-  const sample = records[0];
-  const idKey = findKey(sample, ["estId", "establishmentId", "establishment_id"]);
-  const nameKey = findKey(sample, ["estName", "establishmentName", "establishment_name"]);
-  const typeKey = findKey(sample, ["typeDesc", "establishmentType", "establishment_type"]);
-  const addressKey = findKey(sample, ["address", "establishmentAddress", "establishment_address"]);
-  const latKey = findKey(sample, ["latitude"]);
-  const lngKey = findKey(sample, ["longitude"]);
+  const idIdx = headerRow.indexOf(findKey(headerRow, ["estId", "establishmentId", "establishment_id"]));
+  const nameIdx = headerRow.indexOf(findKey(headerRow, ["estName", "establishmentName", "establishment_name"]));
+  const typeIdx = headerRow.indexOf(findKey(headerRow, ["typeDesc", "establishmentType", "establishment_type"]));
+  const addressIdx = headerRow.indexOf(findKey(headerRow, ["address", "establishmentAddress", "establishment_address"]));
+  const latIdx = headerRow.indexOf(findKey(headerRow, ["latitude"]));
+  const lngIdx = headerRow.indexOf(findKey(headerRow, ["longitude"]));
 
-  if (!idKey || !nameKey || !addressKey) {
+  if (idIdx === -1 || nameIdx === -1 || addressIdx === -1) {
     return NextResponse.json(
-      { error: "Couldn't find expected columns in the DineSafe data", sampleColumns: Object.keys(sample) },
+      { error: "Couldn't find expected columns in the DineSafe CSV", sampleColumns: headerRow },
       { status: 500 }
     );
   }
 
   const byId = new Map();
-  for (const r of records) {
-    const type = ((typeKey ? r[typeKey] : "") || "").toLowerCase();
+  for (const cells of dataRows) {
+    const type = (typeIdx !== -1 ? cells[typeIdx] || "" : "").toLowerCase();
     if (EXCLUDE_KEYWORDS.some((kw) => type.includes(kw))) continue;
-    const id = r[idKey];
-    const name = r[nameKey];
+    const id = cells[idIdx];
+    const name = cells[nameIdx];
     if (!id || !name) continue;
     if (byId.has(id)) continue;
     byId.set(id, {
       source: "dinesafe",
       source_id: String(id),
       name: name.trim(),
-      address: (r[addressKey] || "").trim() || null,
+      address: (cells[addressIdx] || "").trim() || null,
       city: "Toronto",
-      lat: latKey && r[latKey] ? Number(r[latKey]) : null,
-      lng: lngKey && r[lngKey] ? Number(r[lngKey]) : null,
+      lat: latIdx !== -1 && cells[latIdx] ? Number(cells[latIdx]) : null,
+      lng: lngIdx !== -1 && cells[lngIdx] ? Number(cells[lngIdx]) : null,
       updated_at: new Date().toISOString(),
     });
   }
@@ -140,5 +170,5 @@ export async function GET(request) {
     imported += chunk.length;
   }
 
-  return NextResponse.json({ imported, totalRecordsSeen: records.length });
+  return NextResponse.json({ imported, totalRowsSeen: dataRows.length });
 }
