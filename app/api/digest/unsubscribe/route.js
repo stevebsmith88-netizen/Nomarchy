@@ -1,5 +1,5 @@
 // ============================================================
-// One-click unsubscribe from the weekly digest, reachable straight from
+// One-click unsubscribe from the monthly digest, reachable straight from
 // the email with no sign-in - the token is a random value distinct from
 // the person's actual account id, so the link can only ever do this one
 // thing (see schema.sql: profiles.unsubscribe_token).
@@ -29,5 +29,5 @@ export async function GET(request) {
     .eq("unsubscribe_token", token);
 
   if (error) return page("Something went wrong - try the toggle in your profile settings instead.");
-  return page("You're unsubscribed from the weekly digest. You can turn it back on any time from your profile in the app.");
+  return page("You're unsubscribed from the monthly digest. You can turn it back on any time from your profile in the app.");
 }

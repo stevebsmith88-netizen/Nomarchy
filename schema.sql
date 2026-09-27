@@ -29,7 +29,7 @@ create table if not exists profiles (
 alter table profiles add column if not exists is_owner boolean not null default false;
 alter table profiles add column if not exists is_public boolean not null default true;
 alter table profiles add column if not exists avatar_url text;
--- On by default (an explicit opt-out, not opt-in) - a weekly "most
+-- On by default (an explicit opt-out, not opt-in) - a monthly "most
 -- crowned near you" email is squarely within what someone who signed up
 -- for a restaurant-tracking app would expect, but it still needs a real
 -- off switch, not just "stop checking your email."

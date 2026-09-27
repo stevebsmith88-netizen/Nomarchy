@@ -1499,9 +1499,9 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
           <div className="flex items-start gap-2">
             <Mail size={16} className="mt-0.5 shrink-0" style={{ color: digestOn ? C.gold : C.muted }} />
             <div>
-              <div className="text-sm font-semibold">Weekly digest</div>
+              <div className="text-sm font-semibold">Monthly digest</div>
               <div className="mt-0.5 text-xs" style={{ color: C.muted }}>
-                Most-crowned picks near you, once a week. You can turn this off any time, here or from the email itself.
+                Most-crowned picks near you, once a month. You can turn this off any time, here or from the email itself.
               </div>
             </div>
           </div>

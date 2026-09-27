@@ -1,17 +1,19 @@
 // ============================================================
-// Weekly "most crowned near you" digest.
+// Monthly "most crowned near you" digest.
 //
-// Triggered by Vercel Cron (see vercel.json) once a week. Vercel signs
-// its own cron requests with the CRON_SECRET env var as a bearer token
-// when that var is set - this route just has to check it matches, so a
-// stranger can't trigger a mass email by guessing the URL.
+// Triggered by Vercel Cron (see vercel.json) on the 1st of each month -
+// changed from weekly since updates are slow enough right now that a
+// weekly email would often have nothing new to say. Vercel signs its own
+// cron requests with the CRON_SECRET env var as a bearer token when that
+// var is set - this route just has to check it matches, so a stranger
+// can't trigger a mass email by guessing the URL.
 //
 // City-scoped on purpose: someone in Calgary has no use for Toronto's
 // most-crowned list, so each recipient only ever sees crowns from other
 // users who share their own profile.city (exact, case-insensitive match -
 // there's no real geocoding in this app, see app/api/geocode for why).
 // Only pulls from public profiles, same privacy rule as everywhere else.
-// Sends nothing to a city with no new crowns that week rather than
+// Sends nothing to a city with no new crowns that month rather than
 // mailing an empty digest.
 // ============================================================
 
@@ -59,7 +61,7 @@ function renderEmail({ displayName, cityLabel, items, unsubscribeUrl }) {
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:24px;">
     <div style="font-size:20px;font-weight:900;letter-spacing:2px;color:#1C1326;">NOMARCHY</div>
-    <p style="font-size:14px;color:#666;margin-top:4px;">Most crowned in ${cityLabel} this week</p>
+    <p style="font-size:14px;color:#666;margin-top:4px;">Most crowned in ${cityLabel} this month</p>
     <p style="font-size:14px;color:#333;">Hi ${displayName},</p>
     <table style="width:100%;border-collapse:collapse;">${rows}</table>
     <p style="margin-top:24px;">
@@ -67,7 +69,7 @@ function renderEmail({ displayName, cityLabel, items, unsubscribeUrl }) {
     </p>
     <p style="margin-top:32px;font-size:11px;color:#999;">
       You're getting this because you're signed up for Nomarchy in ${cityLabel}.
-      <a href="${unsubscribeUrl}" style="color:#999;">Unsubscribe from this weekly email</a>.
+      <a href="${unsubscribeUrl}" style="color:#999;">Unsubscribe from this monthly email</a>.
     </p>
   </div>`;
 }
@@ -109,7 +111,7 @@ export async function GET(request) {
   if (profilesRes.error) throw profilesRes.error;
   const profiles = profilesRes.data;
 
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const { data: thrones, error: thronesErr } = await supabase
     .from("thrones")
     .select("user_id, place_name, address, neighbourhood, rating, maps_url, crowned_at")
@@ -151,7 +153,7 @@ export async function GET(request) {
             items,
             unsubscribeUrl: `${SITE_URL}/api/digest/unsubscribe?token=${p.unsubscribe_token}`,
           });
-          await sendEmail(email, `This week's most crowned in ${p.city}`, html);
+          await sendEmail(email, `This month's most crowned in ${p.city}`, html);
           sent += 1;
         } catch {
           failed += 1;
