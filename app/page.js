@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
@@ -1377,6 +1378,11 @@ function SignInScreen() {
               </form>
             </div>
           )}
+          <p className="mt-5 text-center text-xs" style={{ color: C.muted }}>
+            By continuing, you agree to our{" "}
+            <Link href="/terms" style={{ color: C.muted, textDecoration: "underline" }}>Terms</Link> and{" "}
+            <Link href="/privacy" style={{ color: C.muted, textDecoration: "underline" }}>Privacy Policy</Link>.
+          </p>
         </div>
       </div>
     </FontShell>
