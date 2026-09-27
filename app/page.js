@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
@@ -19,6 +20,11 @@ import {
   loadCourt, toggleEndorsement, followByUsername, loadStanding,
 } from "@/lib/data";
 import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell } from "./theme";
+
+// Leaflet touches window/document at load time, which breaks server-side
+// rendering - ssr:false defers loading it until the browser actually
+// needs it (i.e. someone switches the Kingdom tab to Map view).
+const KingdomMap = dynamic(() => import("./KingdomMap"), { ssr: false });
 
 const MIN_DECREE_LENGTH = 30;
 const MAX_IMPORT_CHARS = 20000;
@@ -72,6 +78,7 @@ export default function Nomarchy() {
   const [newCuisine, setNewCuisine] = useState("");
   const [addingCuisine, setAddingCuisine] = useState(false);
   const [onlyCrowned, setOnlyCrowned] = useState(false);
+  const [kingdomView, setKingdomView] = useState("grid");
   const [pretenderSearch, setPretenderSearch] = useState("");
   const [toast, setToast] = useState("");
 
@@ -466,6 +473,9 @@ export default function Nomarchy() {
   const nextRank = RANKS.find((r) => r.min > score);
   const fmt = (t) => new Date(t).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
   const shown = onlyCrowned ? cuisineNames.filter((c) => slots[c]?.current) : cuisineNames;
+  const kingdomPins = Object.entries(slots)
+    .filter(([, slot]) => slot.current?.lat && slot.current?.lng)
+    .map(([cuisineName, slot]) => ({ lat: slot.current.lat, lng: slot.current.lng, name: slot.current.name, cuisine: cuisineName }));
 
   const pretenderQuery = pretenderSearch.trim().toLowerCase();
   const filteredPretenders = pretenderQuery
@@ -613,13 +623,23 @@ export default function Nomarchy() {
             </div>
           )}
 
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex items-center justify-between gap-2">
             <p className="text-sm" style={{ color: C.muted }}>One throne per cuisine. Choose like it matters.</p>
-            <button onClick={() => setOnlyCrowned(!onlyCrowned)} className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold" style={{ background: onlyCrowned ? C.gold : C.card, color: onlyCrowned ? C.bg : C.muted, border: `1px solid ${C.cardEdge}` }}>
-              {onlyCrowned ? "Showing crowned" : "Show all"}
-            </button>
+            <div className="flex shrink-0 gap-2">
+              <button onClick={() => setKingdomView((v) => (v === "grid" ? "map" : "grid"))} className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: kingdomView === "map" ? C.gold : C.card, color: kingdomView === "map" ? C.bg : C.muted, border: `1px solid ${C.cardEdge}` }}>
+                {kingdomView === "map" ? "Map" : "Grid"}
+              </button>
+              {kingdomView === "grid" && (
+                <button onClick={() => setOnlyCrowned(!onlyCrowned)} className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: onlyCrowned ? C.gold : C.card, color: onlyCrowned ? C.bg : C.muted, border: `1px solid ${C.cardEdge}` }}>
+                  {onlyCrowned ? "Showing crowned" : "Show all"}
+                </button>
+              )}
+            </div>
           </div>
 
+          {kingdomView === "map" ? (
+            <KingdomMap pins={kingdomPins} />
+          ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {shown.map((cuisineName) => {
               const thisId = selectableCuisines.find((c) => c.name === cuisineName)?.id;
@@ -651,6 +671,7 @@ export default function Nomarchy() {
               </div>) : (<button onClick={() => setAddingCuisine(true)} className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: C.muted }}><Plus size={15} /> Add a cuisine</button>)}
             </div>)}
           </div>
+          )}
         </div>)}
 
         {/* PRETENDERS */}
