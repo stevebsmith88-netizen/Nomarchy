@@ -25,6 +25,7 @@ import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, Logo
 // rendering - ssr:false defers loading it until the browser actually
 // needs it (i.e. someone switches the Kingdom tab to Map view).
 const KingdomMap = dynamic(() => import("./KingdomMap"), { ssr: false });
+const NextInLineMap = dynamic(() => import("./NextInLineMap"), { ssr: false });
 
 const MIN_DECREE_LENGTH = 30;
 const MAX_IMPORT_CHARS = 20000;
@@ -79,6 +80,7 @@ export default function Nomarchy() {
   const [addingCuisine, setAddingCuisine] = useState(false);
   const [onlyCrowned, setOnlyCrowned] = useState(false);
   const [kingdomView, setKingdomView] = useState("grid");
+  const [nilView, setNilView] = useState("grid");
   const [pretenderSearch, setPretenderSearch] = useState("");
   const [toast, setToast] = useState("");
 
@@ -240,6 +242,8 @@ export default function Nomarchy() {
       rating: throne.rating,
       mapsUrl: throne.mapsUrl,
       photos: throne.photos,
+      lat: throne.lat,
+      lng: throne.lng,
       cuisineId,
     });
     await refreshKingdom();
@@ -476,6 +480,17 @@ export default function Nomarchy() {
   const kingdomPins = Object.entries(slots)
     .filter(([, slot]) => slot.current?.lat && slot.current?.lng)
     .map(([cuisineName, slot]) => ({ lat: slot.current.lat, lng: slot.current.lng, name: slot.current.name, cuisine: cuisineName }));
+  // Two buckets for the Next in Line map, matching "where I've been" vs
+  // "where I still want to go" - a crowned favourite counts as "been"
+  // alongside any next_in_line pick already marked visited, whether or
+  // not it ever became a throne.
+  const beenPins = [
+    ...kingdomPins,
+    ...pretenders.filter((p) => p.lat && p.lng && p.visitedAt).map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine || "Uncategorized" })),
+  ];
+  const wantPins = pretenders
+    .filter((p) => p.lat && p.lng && !p.visitedAt)
+    .map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine || "Uncategorized" }));
 
   const pretenderQuery = pretenderSearch.trim().toLowerCase();
   const filteredPretenders = pretenderQuery
@@ -688,6 +703,22 @@ export default function Nomarchy() {
           </div>
 
           {pretenders.length > 0 && (
+            <div className="mb-3 flex justify-end">
+              <div className="flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}` }}>
+                <button onClick={() => setNilView("grid")} className="px-3 py-1 text-xs font-semibold" style={{ background: nilView === "grid" ? C.gold : C.card, color: nilView === "grid" ? C.bg : C.muted }}>
+                  Grid
+                </button>
+                <button onClick={() => setNilView("map")} className="px-3 py-1 text-xs font-semibold" style={{ background: nilView === "map" ? C.gold : C.card, color: nilView === "map" ? C.bg : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
+                  Map
+                </button>
+              </div>
+            </div>
+          )}
+
+          {nilView === "map" && pretenders.length > 0 ? (
+            <NextInLineMap beenPins={beenPins} wantPins={wantPins} />
+          ) : (<>
+          {pretenders.length > 0 && (
             <div className="relative mb-4">
               <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" style={{ color: C.muted }} />
               <input
@@ -745,6 +776,7 @@ export default function Nomarchy() {
                 />
               ))}
             </>)}
+          </>)}
           </>)}
         </div>)}
 
