@@ -5,11 +5,11 @@ import {
   Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock,
-  MessageSquare, Bell, Trophy, Navigation, Camera, Mail,
+  MessageSquare, Bell, TrendingUp, Navigation, Camera,
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
-  loadDirectory, loadTopCrowned, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
+  loadDirectory, loadCrownedThrones, groupCrownedThrones, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderPhotos,
   moveThroneCuisine, updateThroneDecree, updateThronePhotos, unCrown,
@@ -20,6 +20,11 @@ import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, Logo
 
 const MIN_DECREE_LENGTH = 30;
 const MAX_IMPORT_CHARS = 20000;
+// Module scope, evaluated once when the page loads - not inside the
+// component, where calling Date.now() directly would be an impure render
+// (react-hooks/purity). A Trending range like "this week" doesn't need
+// to be precise to the second anyway, just roughly right for the session.
+const NOW = Date.now();
 
 // A reserved, shared cuisine row (seeded in schema.sql) that every user gets
 // their own throne on via the normal unique(user_id, cuisine_id) constraint.
@@ -79,6 +84,7 @@ export default function Nomarchy() {
   const [top25, setTop25] = useState(null);
   const [top25Error, setTop25Error] = useState("");
   const [top25City, setTop25City] = useState("");
+  const [top25Range, setTop25Range] = useState("all");
   const [top25Locating, setTop25Locating] = useState(false);
 
   useEffect(() => {
@@ -138,7 +144,7 @@ export default function Nomarchy() {
 
   useEffect(() => {
     if (tab !== "top25" || top25 !== null) return;
-    loadTopCrowned().then(setTop25).catch((e) => setTop25Error(e.message || "Couldn't load the leaderboard."));
+    loadCrownedThrones().then(setTop25).catch((e) => setTop25Error(e.message || "Couldn't load the leaderboard."));
   }, [tab, top25]);
 
   const handleNearMe = () => {
@@ -446,6 +452,14 @@ export default function Nomarchy() {
   const stillToTry = filteredPretenders.filter((p) => !p.visitedAt).sort(sortByName);
   const beenTo = filteredPretenders.filter((p) => p.visitedAt).sort(sortByName);
 
+  // NOW is a module-level constant (evaluated once at page load), not a
+  // fresh Date.now() call here - calling that directly in render is an
+  // impure render (react-hooks/purity), and a Trending range like "this
+  // week" doesn't need per-render precision anyway.
+  const RANGE_MS = { all: Infinity, year: 365 * 86400000, month: 30 * 86400000, week: 7 * 86400000 };
+  const trendingCutoff = NOW - RANGE_MS[top25Range];
+  const trendingList = top25 && groupCrownedThrones(top25.filter((t) => new Date(t.crowned_at).getTime() >= trendingCutoff));
+
   return (
     <FontShell>
       <header className="px-5 pt-7 pb-3 text-center">
@@ -519,7 +533,7 @@ export default function Nomarchy() {
       )}
 
       <nav className="flex flex-wrap justify-center gap-2 px-4 pb-5">
-        {[{ id: "kingdom", label: "Kingdom", icon: Crown }, { id: "pretenders", label: "Next in Line", icon: Bookmark }, { id: "court", label: "Court", icon: Users }, { id: "top25", label: "Top 25", icon: Trophy }].map(({ id, label, icon: Icon }) => (
+        {[{ id: "kingdom", label: "Kingdom", icon: Crown }, { id: "pretenders", label: "Next in Line", icon: Bookmark }, { id: "court", label: "Court", icon: Users }, { id: "top25", label: "Trending", icon: TrendingUp }].map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setTab(id)} className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold"
             style={tab === id ? { background: C.gold, color: C.bg } : { background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <Icon size={15} strokeWidth={2.2} />{label}
@@ -770,10 +784,21 @@ export default function Nomarchy() {
           })}
         </div>)}
 
-        {/* TOP 25 */}
+        {/* TRENDING */}
         {tab === "top25" && (<div>
           <p className="mb-3 text-sm" style={{ color: C.muted }}>The most-crowned restaurants across everyone&apos;s public kingdoms.</p>
           <div className="mb-2 flex gap-2">
+            <select
+              value={top25Range}
+              onChange={(e) => setTop25Range(e.target.value)}
+              className="rounded-lg px-3 py-2.5 text-sm outline-none"
+              style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+            >
+              <option value="all">All time</option>
+              <option value="year">This year</option>
+              <option value="month">This month</option>
+              <option value="week">This week</option>
+            </select>
             <input value={top25City} onChange={(e) => setTop25City(e.target.value)} placeholder="Filter by city or neighbourhood" className="w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
             <button onClick={handleNearMe} disabled={top25Locating} className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-bold" style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
               {top25Locating ? <Loader2 size={13} className="animate-spin" /> : <Navigation size={13} />} Near me
@@ -782,13 +807,13 @@ export default function Nomarchy() {
           {top25City && <button onClick={() => setTop25City("")} className="mb-3 text-xs font-semibold" style={{ color: C.muted }}>Clear filter</button>}
           {top25Error && <p className="mb-3 text-xs" style={{ color: C.coup }}>{top25Error}</p>}
           {!top25 && !top25Error && <p className="text-sm" style={{ color: C.muted }}>Loading...</p>}
-          {top25 && (() => {
+          {trendingList && (() => {
             const q = top25City.trim().toLowerCase();
             const filtered = q
-              ? top25.filter((p) => [p.area, p.address].filter(Boolean).some((f) => f.toLowerCase().includes(q)))
-              : top25;
+              ? trendingList.filter((p) => [p.area, p.address].filter(Boolean).some((f) => f.toLowerCase().includes(q)))
+              : trendingList;
             const shownPlaces = filtered.slice(0, 25);
-            if (shownPlaces.length === 0) return <p className="text-sm" style={{ color: C.muted }}>Nothing crowned there yet.</p>;
+            if (shownPlaces.length === 0) return <p className="text-sm" style={{ color: C.muted }}>Nothing crowned in that window yet.</p>;
             return shownPlaces.map((p, i) => (
               <div key={i} className="mb-2 flex items-center gap-3 rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold" style={{ background: i < 3 ? C.gold : C.bg, color: i < 3 ? C.bg : C.muted }}>{i + 1}</div>
@@ -1361,7 +1386,6 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
   const [username, setUsername] = useState(profile?.username || "");
   const [city, setCity] = useState(profile?.city || "");
   const [isPublic, setIsPublic] = useState(profile?.is_public ?? true);
-  const [digestOn, setDigestOn] = useState(!(profile?.digest_opt_out ?? false));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -1377,7 +1401,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
     if (!usernameValid || busy) return;
     setBusy(true); setErr("");
     try {
-      await onSubmit({ username: username.trim().toLowerCase(), city: city.trim() || null, is_public: isPublic, digest_opt_out: !digestOn });
+      await onSubmit({ username: username.trim().toLowerCase(), city: city.trim() || null, is_public: isPublic });
       onClose();
     } catch (e) {
       setErr(e.message || "Couldn't save. Try again.");
@@ -1491,31 +1515,6 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
             <span
               className="absolute top-0.5 h-5 w-5 rounded-full transition-transform"
               style={{ background: C.bg, transform: isPublic ? "translateX(22px)" : "translateX(2px)" }}
-            />
-          </button>
-        </div>
-
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
-          <div className="flex items-start gap-2">
-            <Mail size={16} className="mt-0.5 shrink-0" style={{ color: digestOn ? C.gold : C.muted }} />
-            <div>
-              <div className="text-sm font-semibold">Monthly digest</div>
-              <div className="mt-0.5 text-xs" style={{ color: C.muted }}>
-                Most-crowned picks near you, once a month. You can turn this off any time, here or from the email itself.
-              </div>
-            </div>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={digestOn}
-            onClick={() => setDigestOn((v) => !v)}
-            className="relative h-6 w-11 shrink-0 rounded-full transition-colors"
-            style={{ background: digestOn ? C.gold : C.cardEdge }}
-          >
-            <span
-              className="absolute top-0.5 h-5 w-5 rounded-full transition-transform"
-              style={{ background: C.bg, transform: digestOn ? "translateX(22px)" : "translateX(2px)" }}
             />
           </button>
         </div>

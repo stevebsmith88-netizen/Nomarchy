@@ -29,16 +29,12 @@ create table if not exists profiles (
 alter table profiles add column if not exists is_owner boolean not null default false;
 alter table profiles add column if not exists is_public boolean not null default true;
 alter table profiles add column if not exists avatar_url text;
--- On by default (an explicit opt-out, not opt-in) - a monthly "most
--- crowned near you" email is squarely within what someone who signed up
--- for a restaurant-tracking app would expect, but it still needs a real
--- off switch, not just "stop checking your email."
-alter table profiles add column if not exists digest_opt_out boolean not null default false;
--- A random, unguessable value (distinct from the profile's own id) is
--- what an unsubscribe link carries - so clicking it needs no sign-in,
--- and it can't be used to do anything but turn this one email off.
-alter table profiles add column if not exists unsubscribe_token uuid not null default gen_random_uuid();
-create unique index if not exists profiles_unsubscribe_token_idx on profiles(unsubscribe_token);
+-- The automated monthly digest (and its opt-out/unsubscribe-token columns)
+-- was tried and then removed in favor of Steve sending updates manually -
+-- these two lines undo it for anyone who already ran the version of this
+-- file that added them. Harmless no-op if you never ran that version.
+alter table profiles drop column if exists digest_opt_out;
+alter table profiles drop column if exists unsubscribe_token;
 -- Defaults to now() so existing follows/crowns from before this feature
 -- shipped don't all flood in as a backlog of "new" notifications.
 alter table profiles add column if not exists notifications_seen_at timestamptz not null default now();
