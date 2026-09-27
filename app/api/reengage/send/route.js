@@ -41,8 +41,9 @@ async function listAllUsers(supabase) {
 function renderEmail({ name, unsubscribeUrl }) {
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;border:1px solid #eee;border-radius:12px;overflow:hidden;">
-    <div style="background:#1C1326;padding:28px 24px;text-align:center;">
-      <div style="font-size:22px;font-weight:900;letter-spacing:3px;color:#E3B341;">&#128081; NOMARCHY</div>
+    <div style="background:#1C1326;padding:32px 24px;text-align:center;">
+      <img src="${SITE_URL}/icon-512.png" width="56" height="56" alt="Nomarchy" style="display:block;margin:0 auto;border-radius:12px;" />
+      <div style="font-size:20px;font-weight:900;letter-spacing:3px;color:#E3B341;margin-top:10px;">NOMARCHY</div>
     </div>
     <div style="padding:24px;">
       <p style="font-size:16px;color:#1C1326;margin-top:0;">Your kingdom&rsquo;s been quiet, ${name}.</p>
