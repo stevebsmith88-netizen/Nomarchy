@@ -1752,6 +1752,10 @@ function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
           {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
           Continue
         </button>
+
+        <Link href="/faq" className="mt-3 block text-center text-xs font-semibold" style={{ color: C.muted }}>
+          Curious how it all works? Read the FAQ
+        </Link>
       </div>
     </div>
   );
@@ -2007,6 +2011,10 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
           {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
           Save
         </button>
+
+        <Link href="/faq" className="mt-4 block text-center text-xs font-semibold" style={{ color: C.muted }}>
+          How Nomarchy works
+        </Link>
 
         <div className="mt-6 rounded-lg p-3" style={{ border: `1px solid ${C.coup}55` }}>
           {!confirmingDelete ? (
