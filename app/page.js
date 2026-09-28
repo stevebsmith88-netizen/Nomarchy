@@ -7,7 +7,7 @@ import {
   Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock,
-  MessageSquare, Bell, TrendingUp, Navigation, Camera, Mail, ShieldCheck, Instagram,
+  MessageSquare, Bell, TrendingUp, Navigation, Camera, Mail, ShieldCheck,
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
@@ -2038,7 +2038,12 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
           className="mt-2 flex items-center justify-center gap-1.5 text-xs font-semibold"
           style={{ color: C.muted }}
         >
-          <Instagram size={13} /> Follow @nomarchyapp
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+          </svg>
+          Follow @nomarchyapp
         </a>
 
         <div className="mt-6 rounded-lg p-3" style={{ border: `1px solid ${C.coup}55` }}>
