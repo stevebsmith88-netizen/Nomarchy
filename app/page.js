@@ -81,6 +81,7 @@ export default function Nomarchy() {
   const [addingCuisine, setAddingCuisine] = useState(false);
   const [onlyCrowned, setOnlyCrowned] = useState(false);
   const [kingdomView, setKingdomView] = useState("grid");
+  const [hiddenCuisinesOpen, setHiddenCuisinesOpen] = useState(false);
   const [nilView, setNilView] = useState("grid");
   const [nilCuisineFilter, setNilCuisineFilter] = useState("");
   const [adminData, setAdminData] = useState(null);
@@ -217,6 +218,8 @@ export default function Nomarchy() {
   // Kingdom cards and the Next in Line cuisine dropdowns display in.
   const selectableCuisines = Array.from(seenNames.values()).sort((a, b) => a.name.localeCompare(b.name));
   const cuisineNames = selectableCuisines.map((c) => c.name);
+  const hiddenCuisineIds = new Set(profile?.hidden_cuisine_ids || []);
+  const hiddenCuisines = selectableCuisines.filter((c) => hiddenCuisineIds.has(c.id));
 
   const crown = async (cuisineId, entry, fromPretenderId) => {
     const cuisineName = cuisineList.find((c) => c.id === cuisineId)?.name || "";
@@ -413,6 +416,15 @@ export default function Nomarchy() {
     setNewCuisine(""); setAddingCuisine(false);
   };
 
+  const handleHideCuisine = async (cuisineId) => {
+    if (!cuisineId || hiddenCuisineIds.has(cuisineId)) return;
+    await handleUpdateProfile({ hidden_cuisine_ids: [...hiddenCuisineIds, cuisineId] });
+  };
+
+  const handleUnhideCuisine = async (cuisineId) => {
+    await handleUpdateProfile({ hidden_cuisine_ids: [...hiddenCuisineIds].filter((id) => id !== cuisineId) });
+  };
+
   const handleEndorse = async (throneId, currentlyEndorsed) => {
     await toggleEndorsement(user.id, throneId, currentlyEndorsed);
     await refreshCourt();
@@ -485,7 +497,9 @@ export default function Nomarchy() {
   const title = getTitle(profile?.is_owner, score);
   const nextRank = RANKS.find((r) => r.min > score);
   const fmt = (t) => new Date(t).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
-  const shown = onlyCrowned ? cuisineNames.filter((c) => slots[c]?.current) : cuisineNames;
+  const shown = onlyCrowned
+    ? cuisineNames.filter((c) => slots[c]?.current)
+    : cuisineNames.filter((c) => slots[c]?.current || !hiddenCuisineIds.has(selectableCuisines.find((sc) => sc.name === c)?.id));
 
   // Cuisine filter for Next in Line (grid and map both) - "fancying pizza,
   // what are my options" - matched by cuisine NAME rather than id, since
@@ -666,11 +680,11 @@ export default function Nomarchy() {
             </div>
           )}
 
-          <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm" style={{ color: C.muted }}>One throne per cuisine. Choose like it matters.</p>
             <div className="flex shrink-0 gap-2">
               {kingdomView === "grid" && (
-                <button onClick={() => setOnlyCrowned(!onlyCrowned)} className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: onlyCrowned ? C.gold : C.card, color: onlyCrowned ? C.bg : C.muted, border: `1px solid ${C.cardEdge}` }}>
+                <button onClick={() => setOnlyCrowned(!onlyCrowned)} className="min-w-[124px] rounded-full px-3 py-1 text-center text-xs font-semibold" style={{ background: onlyCrowned ? C.gold : C.card, color: onlyCrowned ? C.bg : C.muted, border: `1px solid ${C.cardEdge}` }}>
                   {onlyCrowned ? "Showing crowned" : "Show all"}
                 </button>
               )}
@@ -684,6 +698,28 @@ export default function Nomarchy() {
               </div>
             </div>
           </div>
+
+          {!onlyCrowned && hiddenCuisines.length > 0 && (
+            <div className="mb-3">
+              <button onClick={() => setHiddenCuisinesOpen((v) => !v)} className="text-xs font-semibold" style={{ color: C.muted }}>
+                {hiddenCuisinesOpen ? "Hide" : "Show"} hidden cuisines ({hiddenCuisines.length})
+              </button>
+              {hiddenCuisinesOpen && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {hiddenCuisines.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => handleUnhideCuisine(c.id)}
+                      className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+                      style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}
+                    >
+                      {c.name} <X size={11} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {kingdomView === "map" ? (
             <KingdomMap pins={kingdomPins} />
@@ -707,6 +743,7 @@ export default function Nomarchy() {
                   onUnCrown={() => handleUnCrown(thisId, slots[cuisineName]?.current)}
                   onEditDecree={(decree) => handleEditDecree(slots[cuisineName]?.current?.id, decree)}
                   onEditPhotos={(photos) => handleEditThronePhotos(slots[cuisineName]?.current?.id, photos)}
+                  onHide={() => handleHideCuisine(thisId)}
                   userId={user.id}
                 />
               );
@@ -1333,7 +1370,7 @@ function PhotoPicker({ userId, photos, onChange }) {
   );
 }
 
-function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown, onEditDecree, onEditPhotos, userId }) {
+function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown, onEditDecree, onEditPhotos, onHide, userId }) {
   const r = slot?.current;
   const fallenList = slot?.fallen || [];
   const open = historyOpen[cuisineName];
@@ -1461,7 +1498,12 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
           </div>))}
       </div>) : (<div className="mt-2">
         <p className="text-sm italic" style={{ color: C.muted }}>{featured ? "No overall favourite crowned yet." : "This throne sits empty."}</p>
-        <button onClick={() => setModal({ cuisineId, cuisineName, mode: "claim" })} className="mt-3 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}><Crown size={13} /> {featured ? "Crown your favourite" : "Crown a spot"}</button>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button onClick={() => setModal({ cuisineId, cuisineName, mode: "claim" })} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}><Crown size={13} /> {featured ? "Crown your favourite" : "Crown a spot"}</button>
+          {onHide && (
+            <button onClick={onHide} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><X size={13} /> Hide this cuisine</button>
+          )}
+        </div>
       </div>)}
     </div>
   );

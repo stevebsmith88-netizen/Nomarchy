@@ -70,6 +70,12 @@ alter table profiles add column if not exists notify_follows boolean not null de
 alter table profiles add column if not exists notify_crowns boolean not null default true;
 alter table profiles add column if not exists notify_reviews boolean not null default true;
 alter table profiles add column if not exists notify_endorsements boolean not null default true;
+-- Cuisines the user has chosen to hide from their Kingdom grid (empty
+-- thrones only - a cuisine currently holding a crowned favourite is never
+-- actually hidden, since a throne with a real pick in it isn't clutter).
+-- Just an id list on the profile row, not a join table - simplest thing
+-- that works for a per-user preference this small.
+alter table profiles add column if not exists hidden_cuisine_ids uuid[] not null default '{}';
 
 -- Auto-create a profile whenever someone signs up.
 -- Username is always the email prefix plus a random suffix, so it can never collide.
