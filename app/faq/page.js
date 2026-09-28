@@ -107,6 +107,8 @@ export default function FAQ() {
           <Link href="/terms" style={{ color: C.gold }}>Terms</Link>
           {" · "}
           <Link href="/privacy" style={{ color: C.gold }}>Privacy Policy</Link>
+          {" · "}
+          <a href="https://www.instagram.com/nomarchyapp" target="_blank" rel="noopener noreferrer" style={{ color: C.gold }}>Instagram</a>
         </p>
       </div>
     </FontShell>

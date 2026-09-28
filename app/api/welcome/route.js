@@ -58,6 +58,7 @@ function renderEmail() {
       </div>
       <p style="margin-top:20px;font-size:13px;color:#333;">Got feedback, or found something broken? Just reply to this email - it comes straight to me.</p>
       <p style="margin-top:8px;font-size:13px;color:#333;">Curious how it all works? <a href="${SITE_URL}/faq" style="color:#333;text-decoration:underline;">Read the FAQ</a>.</p>
+      <p style="margin-top:8px;font-size:13px;color:#333;">Follow along on Instagram: <a href="https://www.instagram.com/nomarchyapp" style="color:#333;text-decoration:underline;">@nomarchyapp</a>.</p>
     </div>
     <p style="font-size:11px;color:#999;padding:0 24px 24px;">
       Sent once, when you join. No recurring emails from us.${MAILING_ADDRESS ? `<br/>Nomarchy, ${MAILING_ADDRESS}` : ""}

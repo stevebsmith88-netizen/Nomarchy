@@ -7,7 +7,7 @@ import {
   Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock,
-  MessageSquare, Bell, TrendingUp, Navigation, Camera, Mail, ShieldCheck,
+  MessageSquare, Bell, TrendingUp, Navigation, Camera, Mail, ShieldCheck, Instagram,
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
@@ -2030,6 +2030,16 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
         <Link href="/faq" className="mt-4 block text-center text-xs font-semibold" style={{ color: C.muted }}>
           How Nomarchy works
         </Link>
+
+        <a
+          href="https://www.instagram.com/nomarchyapp"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 flex items-center justify-center gap-1.5 text-xs font-semibold"
+          style={{ color: C.muted }}
+        >
+          <Instagram size={13} /> Follow @nomarchyapp
+        </a>
 
         <div className="mt-6 rounded-lg p-3" style={{ border: `1px solid ${C.coup}55` }}>
           {!confirmingDelete ? (
