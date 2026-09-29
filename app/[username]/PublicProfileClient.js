@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Crown, MapPin, ExternalLink, Star, ScrollText, UserPlus, Loader2, Check, Lock } from "lucide-react";
+import { Crown, MapPin, ExternalLink, Star, ScrollText, UserPlus, Loader2, Check, Lock, X } from "lucide-react";
 import { getUser, loadPublicKingdom, followByUsername } from "@/lib/data";
 import { C, display, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell, useTheme } from "../theme";
 
@@ -19,16 +19,26 @@ function Avatar({ url, size = 28 }) {
 }
 
 function PhotoStrip({ photos }) {
+  const [viewing, setViewing] = useState(null);
   if (!photos || photos.length === 0) return null;
   return (
-    <div className="mt-2 flex gap-2">
-      {photos.map((url) => (
-        <div key={url} className="h-16 w-16 shrink-0 overflow-hidden rounded-lg" style={{ border: `1px solid ${C.cardEdge}` }}>
+    <>
+      <div className="mt-2 flex gap-2">
+        {photos.map((url) => (
+          <div key={url} className="h-16 w-16 shrink-0 overflow-hidden rounded-lg" style={{ border: `1px solid ${C.cardEdge}` }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt="" onClick={() => setViewing(url)} className="h-full w-full cursor-pointer object-cover" />
+          </div>
+        ))}
+      </div>
+      {viewing && (
+        <div className="fixed inset-0 z-[1300] flex items-center justify-center p-5" style={{ background: "rgba(10,5,16,0.92)" }} onClick={() => setViewing(null)}>
+          <button onClick={() => setViewing(null)} aria-label="Close" className="absolute right-4 top-4" style={{ color: C.cream }}><X size={24} /></button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={url} alt="" className="h-full w-full object-cover" />
+          <img src={viewing} alt="" className="max-h-full max-w-full rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
         </div>
-      ))}
-    </div>
+      )}
+    </>
   );
 }
 
