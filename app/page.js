@@ -279,7 +279,7 @@ export default function Nomarchy() {
 
   const addToPretenders = async (cuisineId, entry) => {
     if (pretenders.some((p) => sameRestaurant(p.name, entry.name))) {
-      throw new Error("Already on your shortlist");
+      throw new Error("Already on your Next in Line");
     }
     await addToNextInLine(user.id, { ...entry, cuisineId });
     await refreshPretenders();
