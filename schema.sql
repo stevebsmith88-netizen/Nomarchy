@@ -384,7 +384,10 @@ $$;
 -- place", not "close enough to suggest"), and up to 3 candidates instead
 -- of just the best one, so a typo'd name can still surface real matches
 -- from the local Toronto dataset before ever falling through to an AI
--- web search.
+-- web search. 0.2 rather than 0.25 - a couple of transposed or missing
+-- letters in a real name shouldn't be enough to miss the cutoff and fall
+-- through to a slow AI search when the right answer was sitting right
+-- there locally.
 create or replace function search_restaurants_fuzzy(search_name text)
 returns table (name text, address text, neighbourhood text)
 language sql
@@ -393,7 +396,7 @@ as $$
   select r.name, r.address, r.neighbourhood
   from restaurants r
   where r.city = 'Toronto'
-    and similarity(r.name, search_name) > 0.25
+    and similarity(r.name, search_name) > 0.2
   order by similarity(r.name, search_name) desc
   limit 3;
 $$;
