@@ -1409,45 +1409,34 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
   const fallenList = slot?.fallen || [];
   const open = historyOpen[cuisineName];
 
-  const [changingCuisine, setChangingCuisine] = useState(false);
-  const [targetCuisineId, setTargetCuisineId] = useState("");
-  const [moving, setMoving] = useState(false);
-  const [moveErr, setMoveErr] = useState("");
-
-  const [editingDecree, setEditingDecree] = useState(false);
+  // One edit panel covers both the decree text and the cuisine it's filed
+  // under - these used to be two separate buttons ("Edit review" and "Wrong
+  // category?"), which just meant hunting for the right one. A pencil icon
+  // reads as "edit" on its own, so there's no need to spell it out either.
+  const [editing, setEditing] = useState(false);
   const [decreeText, setDecreeText] = useState("");
-  const [savingDecree, setSavingDecree] = useState(false);
-  const [decreeErr, setDecreeErr] = useState("");
+  const [targetCuisineId, setTargetCuisineId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveErr, setSaveErr] = useState("");
 
-  const confirmMove = async () => {
-    if (!targetCuisineId || moving) return;
-    setMoving(true); setMoveErr("");
-    try {
-      await onMoveCuisine(targetCuisineId);
-      setChangingCuisine(false);
-      setTargetCuisineId("");
-    } catch (e) {
-      setMoveErr(e.message || "Couldn't move it.");
-    }
-    setMoving(false);
-  };
-
-  const startEditDecree = () => {
+  const startEdit = () => {
     setDecreeText(r.decree);
-    setDecreeErr("");
-    setEditingDecree(true);
+    setTargetCuisineId(cuisineId || "");
+    setSaveErr("");
+    setEditing(true);
   };
 
-  const confirmEditDecree = async () => {
-    if (decreeText.trim().length < 30 || savingDecree) return;
-    setSavingDecree(true); setDecreeErr("");
+  const confirmEdit = async () => {
+    if (decreeText.trim().length < 30 || saving) return;
+    setSaving(true); setSaveErr("");
     try {
-      await onEditDecree(decreeText.trim());
-      setEditingDecree(false);
+      if (onEditDecree && decreeText.trim() !== r.decree) await onEditDecree(decreeText.trim());
+      if (onMoveCuisine && targetCuisineId && targetCuisineId !== cuisineId) await onMoveCuisine(targetCuisineId);
+      setEditing(false);
     } catch (e) {
-      setDecreeErr(e.message || "Couldn't save that.");
+      setSaveErr(e.message || "Couldn't save that.");
     }
-    setSavingDecree(false);
+    setSaving(false);
   };
 
   return (
@@ -1471,7 +1460,7 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
           crowned {fmt(r.crownedAt)}
           {r.mapsUrl && <a href={r.mapsUrl} target="_blank" rel="noreferrer" className="ml-1 flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
         </div>
-        {editingDecree ? (
+        {editing ? (
           <div className="mt-2">
             <textarea
               autoFocus
@@ -1482,11 +1471,20 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
               style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
             />
             <div className="mt-1 text-xs" style={{ color: decreeText.trim().length < 30 ? C.coup : C.muted }}>{decreeText.trim().length}/30 minimum</div>
-            {decreeErr && <p className="mt-1 text-xs" style={{ color: C.coup }}>{decreeErr}</p>}
+            {onMoveCuisine && (
+              <div className="mt-2">
+                <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Cuisine</label>
+                <select value={targetCuisineId} onChange={(e) => setTargetCuisineId(e.target.value)} className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}>
+                  <option value={cuisineId}>{cuisineName} (current)</option>
+                  {(emptyCuisines || []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            )}
+            {saveErr && <p className="mt-1 text-xs" style={{ color: C.coup }}>{saveErr}</p>}
             <div className="mt-2 flex gap-2">
-              <button onClick={() => setEditingDecree(false)} className="rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>Cancel</button>
-              <button disabled={decreeText.trim().length < 30 || savingDecree} onClick={confirmEditDecree} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={decreeText.trim().length >= 30 ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}>
-                {savingDecree ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Save
+              <button onClick={() => setEditing(false)} className="rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>Cancel</button>
+              <button disabled={decreeText.trim().length < 30 || saving} onClick={confirmEdit} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={decreeText.trim().length >= 30 ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}>
+                {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Save
               </button>
             </div>
           </div>
@@ -1499,32 +1497,14 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
           <button onClick={() => sharePick(cuisineName, r)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Share2 size={13} /> Share</button>
-          {onEditDecree && !editingDecree && (
-            <button onClick={startEditDecree} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Pencil size={13} /> Edit review</button>
-          )}
-          {onMoveCuisine && (
-            <button onClick={() => setChangingCuisine((v) => !v)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Pencil size={13} /> Wrong category?</button>
+          {(onEditDecree || onMoveCuisine) && !editing && (
+            <button onClick={startEdit} aria-label="Edit" className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Pencil size={13} /> Edit</button>
           )}
           {onUnCrown && (
             <button onClick={onUnCrown} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><RotateCcw size={13} /> Un-crown</button>
           )}
           {fallenList.length > 0 && <button onClick={() => setHistoryOpen((p) => ({ ...p, [cuisineName]: !p[cuisineName] }))} className="flex items-center gap-1 px-1 text-xs font-semibold" style={{ color: C.muted }}>{fallenList.length} fallen {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</button>}
         </div>
-        {changingCuisine && (
-          <div className="mt-2 rounded-lg p-2.5" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
-            <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Move to</label>
-            <select value={targetCuisineId} onChange={(e) => setTargetCuisineId(e.target.value)} className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}>
-              <option value="">Choose a cuisine...</option>
-              {(emptyCuisines || []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            {(emptyCuisines || []).length === 0 && <p className="mt-1 text-xs" style={{ color: C.muted }}>Every other cuisine already has a ruler.</p>}
-            {moveErr && <p className="mt-1 text-xs" style={{ color: C.coup }}>{moveErr}</p>}
-            <div className="mt-2 flex gap-2">
-              <button onClick={() => setChangingCuisine(false)} className="rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>Cancel</button>
-              <button disabled={!targetCuisineId || moving} onClick={confirmMove} className="rounded-lg px-3 py-1.5 text-xs font-bold" style={targetCuisineId ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}>Move</button>
-            </div>
-          </div>
-        )}
         {open && fallenList.map((f, i) => (
           <div key={i} className="mt-2 rounded-lg p-3 text-xs" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
             <div className="font-bold" style={{ color: C.muted }}>{f.name} <span className="font-normal">· reigned until {fmt(f.dethronedAt)}</span></div>
