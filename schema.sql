@@ -643,6 +643,11 @@ create policy "own conquests writable" on conquests for insert
 -- into everyone's score regardless of the is_public policies above. With
 -- it, the view's subqueries obey RLS for whoever is actually asking.
 -- ------------------------------------------------------------
+-- Column order matters here in a way it normally wouldn't: CREATE OR
+-- REPLACE VIEW can only append new columns at the end of the list, never
+-- insert them in the middle (Postgres error 42P16) - so thrones_with_photos
+-- and conquest_points go after score, not grouped with their fellow
+-- subqueries above it, even though that reads slightly out of order.
 create or replace view standings
 with (security_invoker = true)
 as
@@ -655,8 +660,6 @@ select
   (select coalesce(avg(char_length(t.decree)), 0) from thrones t where t.user_id = p.id) as avg_decree,
   (select count(*) from endorsements e
      join thrones t on t.id = e.throne_id where t.user_id = p.id)        as endorsements_received,
-  (select count(*) from thrones t where t.user_id = p.id and cardinality(t.photos) > 0) as thrones_with_photos,
-  (select coalesce(sum(c.points), 0) from conquests c where c.user_id = p.id) as conquest_points,
   round(
       (select count(*) from thrones t where t.user_id = p.id) * 12
     + (select count(*) from fallen f where f.user_id = p.id) * 8
@@ -665,7 +668,9 @@ select
          join thrones t on t.id = e.throne_id where t.user_id = p.id) * 5
     + least((select count(*) from thrones t where t.user_id = p.id and cardinality(t.photos) > 0) * 3, 30)
     + least((select coalesce(sum(c.points), 0) from conquests c where c.user_id = p.id), 60)
-  ) as score
+  ) as score,
+  (select count(*) from thrones t where t.user_id = p.id and cardinality(t.photos) > 0) as thrones_with_photos,
+  (select coalesce(sum(c.points), 0) from conquests c where c.user_id = p.id) as conquest_points
 from profiles p;
 
 -- ------------------------------------------------------------
