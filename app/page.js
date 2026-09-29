@@ -682,6 +682,16 @@ export default function Nomarchy() {
           <button onClick={() => setShowFeedback(true)} aria-label="Feedback" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <MessageSquare size={12} /> <span className="hidden sm:inline">Feedback</span>
           </button>
+          {profile?.is_owner && (
+            <button
+              onClick={() => setTab("admin")}
+              aria-label="Admin"
+              className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3"
+              style={tab === "admin" ? { background: C.gold, color: C.bg } : { color: C.muted, border: `1px solid ${C.cardEdge}` }}
+            >
+              <ShieldCheck size={12} /> <span className="hidden sm:inline">Admin</span>
+            </button>
+          )}
           <button onClick={signOut} aria-label="Sign out" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <LogOut size={12} /> <span className="hidden sm:inline">Sign out</span>
           </button>
@@ -700,7 +710,6 @@ export default function Nomarchy() {
           { id: "pretenders", label: "Next in Line", icon: Bookmark },
           { id: "court", label: "Court", icon: Users },
           { id: "top25", label: "Best in the Land", icon: TrendingUp },
-          ...(profile?.is_owner ? [{ id: "admin", label: "Admin", icon: ShieldCheck }] : []),
         ].map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setTab(id)} className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold"
             style={tab === id ? { background: C.gold, color: C.bg } : { background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
