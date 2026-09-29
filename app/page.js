@@ -2208,6 +2208,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
   const [linkErr, setLinkErr] = useState("");
 
   const [conquests, setConquests] = useState(null);
+  const [conquestsError, setConquestsError] = useState("");
 
   useEffect(() => {
     getLinkedProviders().then(setProviders).catch(() => setProviders([]));
@@ -2215,7 +2216,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
 
   useEffect(() => {
     if (!profile?.id) return;
-    loadConquestProgress(profile.id).then(setConquests).catch(() => setConquests([]));
+    loadConquestProgress(profile.id).then(setConquests).catch((e) => setConquestsError(e.message || "Couldn't load these."));
   }, [profile?.id]);
   const googleLinked = providers?.includes("google");
 
@@ -2314,7 +2315,8 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
               <span className="text-xs" style={{ color: C.muted }}>{conquests.filter((c) => c.completed).length}/{conquests.length}</span>
             )}
           </div>
-          {!conquests && <p className="text-xs" style={{ color: C.muted }}>Loading...</p>}
+          {!conquests && !conquestsError && <p className="text-xs" style={{ color: C.muted }}>Loading...</p>}
+          {conquestsError && <p className="text-xs" style={{ color: C.coup }}>{conquestsError}</p>}
           {conquests && conquests.map((c) => (
             <div key={c.key} className="flex items-center gap-2.5 py-1.5">
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style={{ background: c.completed ? C.gold : C.bg, border: `1px solid ${c.completed ? C.gold : C.cardEdge}` }}>
