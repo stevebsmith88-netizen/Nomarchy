@@ -379,6 +379,25 @@ as $$
   limit 1;
 $$;
 
+-- "Did you mean?" suggestions for the place lookup - a looser threshold
+-- than match_restaurant's 0.4 (which is tuned for "confidently the same
+-- place", not "close enough to suggest"), and up to 3 candidates instead
+-- of just the best one, so a typo'd name can still surface real matches
+-- from the local Toronto dataset before ever falling through to an AI
+-- web search.
+create or replace function search_restaurants_fuzzy(search_name text)
+returns table (name text, address text, neighbourhood text)
+language sql
+stable
+as $$
+  select r.name, r.address, r.neighbourhood
+  from restaurants r
+  where r.city = 'Toronto'
+    and similarity(r.name, search_name) > 0.25
+  order by similarity(r.name, search_name) desc
+  limit 3;
+$$;
+
 -- ------------------------------------------------------------
 -- 7c. FEEDBACK
 -- One shared channel for beta testers instead of scattered DMs/texts.

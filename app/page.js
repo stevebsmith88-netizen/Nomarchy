@@ -2387,6 +2387,7 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
   const [query, setQuery] = useState(prefill?.name || "");
   const [city, setCity] = useState(defaultCity || "Toronto");
   const [results, setResults] = useState([]);
+  const [fuzzy, setFuzzy] = useState(false);
   const [searching, setSearching] = useState(false);
   const [err, setErr] = useState("");
   const [sel, setSel] = useState(prefill?.mapsUrl ? prefill : null);
@@ -2412,7 +2413,7 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
 
   const find = async () => {
     if (!query.trim() || searching) return;
-    setSearching(true); setErr(""); setResults([]); setSel(null);
+    setSearching(true); setErr(""); setResults([]); setFuzzy(false); setSel(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/ai", {
@@ -2427,15 +2428,19 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
         throw new Error("The lookup didn't finish properly. Try again.");
       }
       if (!res.ok) throw new Error(data.error || "Lookup failed");
-      if (Array.isArray(data.results) && data.results.length) setResults(data.results.slice(0, 3));
-      else setErr("No matches found. Fill in the details manually below.");
+      if (Array.isArray(data.results) && data.results.length) {
+        setResults(data.results.slice(0, 3));
+        setFuzzy(!!data.fuzzy);
+      } else {
+        setErr("No matches found. Fill in the details manually below.");
+      }
     } catch (e) {
       setErr(e.message || "Lookup didn't work. Fill in the details manually below.");
     }
     setSearching(false);
   };
 
-  const choose = (r) => { setSel(r); setName(r.name || ""); setArea(r.neighbourhood || ""); setResults([]); };
+  const choose = (r) => { setSel(r); setName(r.name || ""); setArea(r.neighbourhood || ""); setResults([]); setFuzzy(false); };
 
   return (
     <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
@@ -2470,6 +2475,9 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
             {searching ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}{searching ? "Searching the realm..." : "Look it up"}
           </button>
           {err && <p className="mt-2 text-xs" style={{ color: C.coup }}>{err}</p>}
+          {fuzzy && results.length > 0 && (
+            <p className="mt-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>Did you mean?</p>
+          )}
           {results.map((r, i) => (
             <button key={i} onClick={() => choose(r)} className="mt-2 w-full rounded-lg p-2.5 text-left" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
               <div className="flex items-center justify-between"><span className="text-sm font-bold">{r.name}</span>

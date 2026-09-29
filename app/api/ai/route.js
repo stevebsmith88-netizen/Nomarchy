@@ -135,28 +135,44 @@ function lookupCacheKey(query, city) {
 // for Claude's web search at all. Empty for any other city, or if the
 // import hasn't been run yet, in which case this always falls through
 // to the AI path exactly as before.
+function toLocalResult(r) {
+  return {
+    name: r.name,
+    address: r.address || "",
+    neighbourhood: r.neighbourhood || "",
+    rating: "",
+    mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${r.name} ${r.address || ""}`)}`,
+  };
+}
+
 async function searchLocalRestaurants(supabase, query, city) {
-  if ((city || "Toronto").trim().toLowerCase() !== "toronto") return [];
+  if ((city || "Toronto").trim().toLowerCase() !== "toronto") return { results: [], fuzzy: false };
   const { data, error } = await supabase
     .from("restaurants")
     .select("name, address, neighbourhood")
     .eq("city", "Toronto")
     .ilike("name", `%${query.trim()}%`)
     .limit(3);
-  if (error || !data?.length) return [];
-  return data.map((r) => ({
-    name: r.name,
-    address: r.address || "",
-    neighbourhood: r.neighbourhood || "",
-    rating: "",
-    mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${r.name} ${r.address || ""}`)}`,
-  }));
+  if (!error && data?.length) {
+    return { results: data.map(toLocalResult), fuzzy: false };
+  }
+
+  // Nothing matched as a straight substring - a typo (e.g. "Mizunar" for
+  // "Mizunara") wouldn't, so try a fuzzy name match before giving up on
+  // the local dataset and paying for a slower AI web search.
+  const { data: fuzzyData, error: fuzzyError } = await supabase.rpc("search_restaurants_fuzzy", {
+    search_name: query.trim(),
+  });
+  if (!fuzzyError && fuzzyData?.length) {
+    return { results: fuzzyData.map(toLocalResult), fuzzy: true };
+  }
+  return { results: [], fuzzy: false };
 }
 
 async function handleLookup(supabase, query, city) {
   const local = await searchLocalRestaurants(supabase, query, city);
-  if (local.length > 0) {
-    return { result: { results: local }, cached: true };
+  if (local.results.length > 0) {
+    return { result: { results: local.results, fuzzy: local.fuzzy }, cached: true };
   }
 
   const queryKey = lookupCacheKey(query, city);
