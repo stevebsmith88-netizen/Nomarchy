@@ -554,7 +554,6 @@ export default function Nomarchy() {
   const endorseCount = court.reduce((n, f) => n + f.picks.filter((p) => p.endorsedByMe).length, 0);
   const visitedCount = pretenders.filter((p) => p.visitedAt).length;
   const reviewCount = pretenders.filter((p) => p.visitedAt && p.note).length;
-  const unvisitedCount = pretenders.length - visitedCount;
   const score = standing?.score ?? 0;
   const rank = getRank(score);
   const title = getTitle(profile?.is_owner, score);
@@ -731,7 +730,6 @@ export default function Nomarchy() {
           <button key={id} onClick={() => setTab(id)} className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold"
             style={tab === id ? { background: C.gold, color: C.bg } : { background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <Icon size={15} strokeWidth={2.2} />{label}
-            {id === "pretenders" && unvisitedCount > 0 && <span className="text-xs font-semibold" style={{ color: tab === id ? C.bg : C.muted }}>{unvisitedCount}</span>}
           </button>
         ))}
       </nav>
