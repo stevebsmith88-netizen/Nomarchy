@@ -384,10 +384,14 @@ $$;
 -- place", not "close enough to suggest"), and up to 3 candidates instead
 -- of just the best one, so a typo'd name can still surface real matches
 -- from the local Toronto dataset before ever falling through to an AI
--- web search. 0.2 rather than 0.25 - a couple of transposed or missing
--- letters in a real name shouldn't be enough to miss the cutoff and fall
--- through to a slow AI search when the right answer was sitting right
--- there locally.
+-- web search. 0.3, not lower: a real typo (a letter swapped or dropped)
+-- scores ~0.5+ against the correct name, but going much below 0.3 starts
+-- matching on nothing but a shared short prefix (e.g. "Mizanara" typo'd
+-- for "Mizunara" was scoring a coincidental 0.23 against the unrelated
+-- "Miznon" chain, just from both starting "Miz") - genuinely misleading
+-- rather than helpful, since at that point the honest answer is "not in
+-- the local dataset" and it should fall through to the AI search instead
+-- of confidently suggesting the wrong place.
 create or replace function search_restaurants_fuzzy(search_name text)
 returns table (name text, address text, neighbourhood text)
 language sql
@@ -396,7 +400,7 @@ as $$
   select r.name, r.address, r.neighbourhood
   from restaurants r
   where r.city = 'Toronto'
-    and similarity(r.name, search_name) > 0.2
+    and similarity(r.name, search_name) > 0.3
   order by similarity(r.name, search_name) desc
   limit 3;
 $$;
