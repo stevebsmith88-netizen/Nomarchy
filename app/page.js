@@ -12,7 +12,7 @@ import {
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
   linkGoogle, unlinkGoogle, getLinkedProviders,
-  loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, placeKey, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
+  loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, placeKey, loadRestaurantProfile, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderVerdict, updatePretenderPhotos,
   moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
@@ -119,6 +119,8 @@ export default function Nomarchy() {
   const [top25City, setTop25City] = useState("");
   const [top25Range, setTop25Range] = useState("all");
   const [top25Locating, setTop25Locating] = useState(false);
+  const [restaurantSearch, setRestaurantSearch] = useState("");
+  const [openRestaurant, setOpenRestaurant] = useState(null);
 
   useEffect(() => {
     getUser().then((u) => { setUser(u); setAuthChecked(true); });
@@ -611,6 +613,13 @@ export default function Nomarchy() {
   const RANGE_MS = { all: Infinity, year: 365 * 86400000, month: 30 * 86400000, week: 7 * 86400000 };
   const trendingCutoff = NOW - RANGE_MS[top25Range];
   const trendingList = top25 && groupCrownedThrones(top25.filter((t) => new Date(t.crowned_at).getTime() >= trendingCutoff));
+  // Search ignores the range/rank window entirely - "find any restaurant
+  // anyone's crowned" shouldn't be limited to the top 25 most-crowned or
+  // to whatever time range happens to be selected.
+  const restaurantSearchQuery = restaurantSearch.trim().toLowerCase();
+  const restaurantSearchResults = top25 && restaurantSearchQuery
+    ? groupCrownedThrones(top25).filter((p) => p.name.toLowerCase().includes(restaurantSearchQuery))
+    : null;
 
   return (
     <FontShell>
@@ -690,7 +699,7 @@ export default function Nomarchy() {
           { id: "kingdom", label: "Kingdom", icon: Crown },
           { id: "pretenders", label: "Next in Line", icon: Bookmark },
           { id: "court", label: "Court", icon: Users },
-          { id: "top25", label: "Trending", icon: TrendingUp },
+          { id: "top25", label: "Best in the Land", icon: TrendingUp },
           ...(profile?.is_owner ? [{ id: "admin", label: "Admin", icon: ShieldCheck }] : []),
         ].map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setTab(id)} className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold"
@@ -997,10 +1006,20 @@ export default function Nomarchy() {
           ))}
         </div>)}
 
-        {/* TRENDING */}
+        {/* BEST IN THE LAND (restaurants: the trending leaderboard, plus search across every crown app-wide) */}
         {tab === "top25" && (<div>
-          <p className="mb-3 text-sm" style={{ color: C.muted }}>The most-crowned restaurants across everyone&apos;s public kingdoms.</p>
-          <div className="mb-2 flex gap-2">
+          <p className="mb-3 text-sm" style={{ color: C.muted }}>The most-crowned restaurants across everyone&apos;s public kingdoms - or search for any of them.</p>
+          <div className="relative mb-3">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: C.muted }} />
+            <input
+              value={restaurantSearch}
+              onChange={(e) => setRestaurantSearch(e.target.value)}
+              placeholder="Search every crowned restaurant"
+              className="w-full rounded-lg py-2.5 pl-9 pr-3 text-sm outline-none"
+              style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+            />
+          </div>
+          {!restaurantSearchResults && (<div className="mb-2 flex gap-2">
             <select
               value={top25Range}
               onChange={(e) => setTop25Range(e.target.value)}
@@ -1016,36 +1035,28 @@ export default function Nomarchy() {
             <button onClick={handleNearMe} disabled={top25Locating} className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-bold" style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
               {top25Locating ? <Loader2 size={13} className="animate-spin" /> : <Navigation size={13} />} Near me
             </button>
-          </div>
-          {top25City && <button onClick={() => setTop25City("")} className="mb-3 text-xs font-semibold" style={{ color: C.muted }}>Clear filter</button>}
+          </div>)}
+          {!restaurantSearchResults && top25City && <button onClick={() => setTop25City("")} className="mb-3 text-xs font-semibold" style={{ color: C.muted }}>Clear filter</button>}
           {top25Error && <p className="mb-3 text-xs" style={{ color: C.coup }}>{top25Error}</p>}
           {!top25 && !top25Error && <p className="text-sm" style={{ color: C.muted }}>Loading...</p>}
-          {trendingList && (() => {
+          {restaurantSearchResults ? (
+            restaurantSearchResults.length === 0
+              ? <p className="text-sm" style={{ color: C.muted }}>No crowned restaurant matches that yet.</p>
+              : restaurantSearchResults.map((p, i) => <RestaurantRow key={i} p={p} onOpen={() => setOpenRestaurant(p)} />)
+          ) : trendingList && (() => {
             const q = top25City.trim().toLowerCase();
             const filtered = q
               ? trendingList.filter((p) => [p.area, p.address].filter(Boolean).some((f) => f.toLowerCase().includes(q)))
               : trendingList;
             const shownPlaces = filtered.slice(0, 25);
             if (shownPlaces.length === 0) return <p className="text-sm" style={{ color: C.muted }}>Nothing crowned in that window yet.</p>;
-            return shownPlaces.map((p, i) => (
-              <div key={i} className="mb-2 flex items-center gap-3 rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold" style={{ background: i < 3 ? C.gold : C.bg, color: i < 3 ? C.bg : C.muted }}>{i + 1}</div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-semibold">{p.name}</span>
-                    {p.rating && <span className="flex shrink-0 items-center gap-0.5 text-xs" style={{ color: C.gold }}><Star size={11} fill={C.gold} /> {p.rating}</span>}
-                  </div>
-                  <div className="truncate text-xs" style={{ color: C.muted }}>{[p.area, p.address].filter(Boolean).join(" · ")}</div>
-                </div>
-                <div className="shrink-0 text-right">
-                  {p.mapsUrl && <a href={p.mapsUrl} target="_blank" rel="noreferrer" className="mb-0.5 flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
-                  <div className="text-lg" style={{ ...display, fontWeight: 700, color: C.gold }}>{p.count}</div>
-                  <div className="text-[10px] uppercase" style={{ color: C.muted, letterSpacing: "0.08em" }}>{p.count === 1 ? "crown" : "crowns"}</div>
-                </div>
-              </div>
-            ));
+            return shownPlaces.map((p, i) => <RestaurantRow key={i} p={p} rank={i} onOpen={() => setOpenRestaurant(p)} />);
           })()}
         </div>)}
+
+        {openRestaurant && (
+          <RestaurantProfileModal restaurant={openRestaurant} onClose={() => setOpenRestaurant(null)} />
+        )}
 
         {/* ADMIN (owner-only tab - see loadAdminOverview in lib/data.js) */}
         {tab === "admin" && (<div>
@@ -1396,6 +1407,97 @@ function AvatarPicker({ userId, url, onChange }) {
         <input type="file" accept="image/*" onChange={handleFile} disabled={uploading} className="hidden" />
       </label>
       {err && <p className="mt-1 text-xs" style={{ color: C.coup }}>{err}</p>}
+    </div>
+  );
+}
+
+// One row on the Best in the Land leaderboard or in restaurant search
+// results - tapping it opens that restaurant's own page (RestaurantProfileModal).
+function RestaurantRow({ p, rank, onOpen }) {
+  return (
+    <div
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpen(); }}
+      className="mb-2 flex cursor-pointer items-center gap-3 rounded-xl p-3"
+      style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}
+    >
+      {rank !== undefined && (
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold" style={{ background: rank < 3 ? C.gold : C.bg, color: rank < 3 ? C.bg : C.muted }}>{rank + 1}</div>
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm font-semibold">{p.name}</span>
+          {p.rating && <span className="flex shrink-0 items-center gap-0.5 text-xs" style={{ color: C.gold }}><Star size={11} fill={C.gold} /> {p.rating}</span>}
+        </div>
+        <div className="truncate text-xs" style={{ color: C.muted }}>{[p.area, p.address].filter(Boolean).join(" · ")}</div>
+      </div>
+      <div className="shrink-0 text-right">
+        {p.mapsUrl && (
+          <a href={p.mapsUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="mb-0.5 flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.gold }}>
+            Map <ExternalLink size={10} />
+          </a>
+        )}
+        <div className="text-lg" style={{ ...display, fontWeight: 700, color: C.gold }}>{p.count}</div>
+        <div className="text-[10px] uppercase" style={{ color: C.muted, letterSpacing: "0.08em" }}>{p.count === 1 ? "crown" : "crowns"}</div>
+      </div>
+    </div>
+  );
+}
+
+// A restaurant's own page - every public crown on it app-wide, opened by
+// tapping a RestaurantRow. Same "profile pop up" shell used everywhere
+// else in the app (header + scrollable body), per Steve's request that
+// this feel like the existing pop-ups rather than a new pattern.
+function RestaurantProfileModal({ restaurant, onClose }) {
+  const [entries, setEntries] = useState(null);
+  const [err, setErr] = useState("");
+  const fmt = (t) => new Date(t).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
+
+  useEffect(() => {
+    let cancelled = false;
+    loadRestaurantProfile(restaurant.name, restaurant.address, restaurant.area)
+      .then((data) => { if (!cancelled) setEntries(data); })
+      .catch((e) => { if (!cancelled) setErr(e.message || "Couldn't load this restaurant."); });
+    return () => { cancelled = true; };
+  }, [restaurant.name, restaurant.address, restaurant.area]);
+
+  return (
+    <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+      <div className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex shrink-0 items-center justify-between gap-2 px-5 pt-5 pb-3" style={{ background: C.card, borderBottom: `1px solid ${C.cardEdge}` }}>
+          <div className="min-w-0">
+            <h3 className="truncate text-lg" style={{ ...display, fontWeight: 700 }}>{restaurant.name}</h3>
+            <p className="truncate text-xs" style={{ color: C.muted }}>{[restaurant.area, restaurant.address].filter(Boolean).join(" · ")}</p>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center" style={{ color: C.muted }}><X size={18} /></button>
+        </div>
+
+        <div className="overflow-y-auto px-5 py-4">
+          {err && <p className="text-sm" style={{ color: C.coup }}>{err}</p>}
+          {!entries && !err && <p className="text-sm" style={{ color: C.muted }}>Loading...</p>}
+          {entries && entries.length === 0 && <p className="text-sm" style={{ color: C.muted }}>No public crowns found for this one.</p>}
+          {entries && entries.map((e) => (
+            <div key={e.id} className="mb-4 border-b pb-4 last:mb-0 last:border-0 last:pb-0" style={{ borderColor: C.cardEdge }}>
+              <div className="flex items-center gap-2">
+                <Avatar url={e.avatarUrl} size={28} />
+                <div className="min-w-0 flex-1">
+                  <span className="truncate text-sm font-semibold">{e.displayName || (e.username ? `@${e.username}` : "Someone")}</span>
+                  {e.cuisine && <span className="ml-1.5 text-xs" style={{ color: C.muted }}>crowned it {e.cuisine}</span>}
+                </div>
+                {e.rating && <span className="flex shrink-0 items-center gap-0.5 text-xs" style={{ color: C.gold }}><Star size={11} fill={C.gold} /> {e.rating}</span>}
+              </div>
+              {e.decree && <p className="mt-1.5 text-sm leading-relaxed">{e.decree}</p>}
+              <PhotoStrip photos={e.photos} />
+              <div className="mt-1.5 flex items-center gap-3 text-xs" style={{ color: C.muted }}>
+                <span>crowned {fmt(e.crownedAt)}</span>
+                {e.mapsUrl && <a href={e.mapsUrl} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
