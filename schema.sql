@@ -638,11 +638,25 @@ create policy "thrones coup rate limit" on thrones as restrictive for update
     (select count(*) from fallen f where f.user_id = auth.uid() and f.dethroned_at > now() - interval '1 hour') < 50
   );
 
+-- A policy's check can't safely query its OWN table directly - Postgres
+-- has to apply next_in_line's row security to evaluate that subquery too,
+-- which means re-running this very policy, which recurses forever
+-- ("infinite recursion detected in policy for relation next_in_line").
+-- A security definer function breaks the loop: it runs with the
+-- function owner's privileges rather than the caller's row security, so
+-- its internal count query never re-triggers this policy.
+create or replace function next_in_line_recent_count(uid uuid)
+returns bigint
+language sql
+stable
+security definer set search_path = public
+as $$
+  select count(*) from next_in_line where user_id = uid and added_at > now() - interval '1 hour';
+$$;
+
 drop policy if exists "next in line insert rate limit" on next_in_line;
 create policy "next in line insert rate limit" on next_in_line as restrictive for insert
-  with check (
-    (select count(*) from next_in_line n where n.user_id = auth.uid() and n.added_at > now() - interval '1 hour') < 50
-  );
+  with check (next_in_line_recent_count(auth.uid()) < 50);
 
 -- Separate from the existing 3-photos-per-pick cap - this limits how many
 -- NEW photos get uploaded across all picks combined in an hour, so someone
@@ -650,14 +664,24 @@ create policy "next in line insert rate limit" on next_in_line as restrictive fo
 -- Restrictive policies apply table-wide, so this only engages for the
 -- review-photos bucket specifically - the "bucket_id <> ..." branch leaves
 -- every other bucket (avatars) untouched.
+-- Same self-referencing-policy trap as next_in_line above, just against
+-- storage.objects instead - wrapped in a security definer function for
+-- the same reason (breaks the recursive RLS re-check).
+create or replace function review_photos_recent_count(uid uuid)
+returns bigint
+language sql
+stable
+security definer set search_path = public
+as $$
+  select count(*) from storage.objects
+  where bucket_id = 'review-photos'
+    and (storage.foldername(name))[1] = uid::text
+    and created_at > now() - interval '1 hour';
+$$;
+
 drop policy if exists "review photos insert rate limit" on storage.objects;
 create policy "review photos insert rate limit" on storage.objects as restrictive for insert
   with check (
     bucket_id <> 'review-photos'
-    or (
-      select count(*) from storage.objects o
-      where o.bucket_id = 'review-photos'
-        and (storage.foldername(o.name))[1] = auth.uid()::text
-        and o.created_at > now() - interval '1 hour'
-    ) < 30
+    or review_photos_recent_count(auth.uid()) < 30
   );
