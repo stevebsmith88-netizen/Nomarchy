@@ -14,7 +14,7 @@ import {
   linkGoogle, unlinkGoogle, getLinkedProviders,
   loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, placeKey, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
-  crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderPhotos,
+  crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderVerdict, updatePretenderPhotos,
   moveThroneCuisine, updateThroneDecree, updateThronePhotos, unCrown,
   uploadReviewPhoto, deleteReviewPhoto, uploadAvatar, MAX_REVIEW_PHOTOS,
   loadCourt, toggleEndorsement, followByUsername, loadStanding,
@@ -290,6 +290,11 @@ export default function Nomarchy() {
     await refreshPretenders();
   };
 
+  const handleChangePretenderVerdict = async (id, verdict) => {
+    await updatePretenderVerdict(id, verdict);
+    await refreshPretenders();
+  };
+
   const handleChangePretenderPhotos = async (id, photos) => {
     await updatePretenderPhotos(id, photos);
     await refreshPretenders();
@@ -550,10 +555,10 @@ export default function Nomarchy() {
       friendActivityByPlace.get(key).push({ friend: f.name, crowned: true, cuisine: p.cuisine, text: p.decree });
     }
     for (const r of f.reviews) {
-      if (!r.note) continue;
+      if (!r.note && !r.verdict) continue;
       const key = placeKey(r.name, r.address, r.area);
       if (!friendActivityByPlace.has(key)) friendActivityByPlace.set(key, []);
-      friendActivityByPlace.get(key).push({ friend: f.name, crowned: false, cuisine: r.cuisine, text: r.note });
+      friendActivityByPlace.get(key).push({ friend: f.name, crowned: false, cuisine: r.cuisine, text: r.note, verdict: r.verdict });
     }
   }
 
@@ -682,13 +687,13 @@ export default function Nomarchy() {
 
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm" style={{ color: C.muted }}>One throne per cuisine. Choose like it matters.</p>
-            <div className="flex shrink-0 gap-2">
+            <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
               {kingdomView === "grid" && (
                 <button onClick={() => setOnlyCrowned(!onlyCrowned)} className="min-w-[124px] rounded-full px-3 py-1 text-center text-xs font-semibold" style={{ background: onlyCrowned ? C.gold : C.card, color: onlyCrowned ? C.bg : C.muted, border: `1px solid ${C.cardEdge}` }}>
                   {onlyCrowned ? "Showing crowned" : "Show all"}
                 </button>
               )}
-              <div className="flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}` }}>
+              <div className="ml-auto flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}` }}>
                 <button onClick={() => setKingdomView("grid")} className="px-3 py-1 text-xs font-semibold" style={{ background: kingdomView === "grid" ? C.gold : C.card, color: kingdomView === "grid" ? C.bg : C.muted }}>
                   Grid
                 </button>
@@ -826,6 +831,7 @@ export default function Nomarchy() {
                   friendMatches={friendActivityByPlace.get(placeKey(p.name, p.address, p.area))}
                   onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
                   onChangeCuisine={handleChangePretenderCuisine} onChangePhotos={handleChangePretenderPhotos} onToggleVisited={handleToggleVisited}
+                  onChangeVerdict={handleChangePretenderVerdict}
                   onCrown={(prefill) => setModal({
                     cuisineId: prefill.cuisineId || "",
                     cuisineName: prefill.cuisine || "",
@@ -843,6 +849,7 @@ export default function Nomarchy() {
                   friendMatches={friendActivityByPlace.get(placeKey(p.name, p.address, p.area))}
                   onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
                   onChangeCuisine={handleChangePretenderCuisine} onChangePhotos={handleChangePretenderPhotos} onToggleVisited={handleToggleVisited}
+                  onChangeVerdict={handleChangePretenderVerdict}
                   onCrown={(prefill) => setModal({
                     cuisineId: prefill.cuisineId || "",
                     cuisineName: prefill.cuisine || "",
@@ -1198,7 +1205,7 @@ function RankLadder({ score }) {
   );
 }
 
-function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onChangePhotos, onToggleVisited, onCrown, userId, friendMatches }) {
+function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onChangePhotos, onToggleVisited, onChangeVerdict, onCrown, userId, friendMatches }) {
   return (
     <div className="mb-3 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, opacity: p.visitedAt ? 0.7 : 1 }}>
       <div className="flex items-start justify-between gap-2">
@@ -1206,6 +1213,14 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
           <h3 className="flex items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
             {p.name}
             {p.visitedAt && <Check size={14} style={{ color: C.green }} />}
+            {p.verdict && (
+              <span
+                className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+                style={p.verdict === "worth_it" ? { background: C.green + "22", color: C.green } : { background: C.cardEdge, color: C.muted }}
+              >
+                {p.verdict === "worth_it" ? "Worth it" : "Not for me"}
+              </span>
+            )}
           </h3>
           <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
             {(p.area || p.address) && <><MapPin size={11} /> {p.area || p.address}</>}
@@ -1221,6 +1236,7 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
             <p key={i} className="text-xs leading-relaxed" style={{ color: C.cream + "CC" }}>
               {m.crowned ? <Crown size={11} className="mr-1 inline" style={{ color: C.gold }} /> : <Check size={11} className="mr-1 inline" style={{ color: C.green }} />}
               <strong>{m.friend}</strong>{m.crowned ? ` crowned this for ${m.cuisine}` : "'s been"}
+              {m.verdict && <> - <span style={{ color: m.verdict === "worth_it" ? C.green : C.muted, fontWeight: 700 }}>{m.verdict === "worth_it" ? "Worth it" : "Not for me"}</span></>}
               {m.text && <>: &ldquo;{m.text}&rdquo;</>}
             </p>
           ))}
@@ -1238,6 +1254,24 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
         className="mt-2 w-full rounded-lg px-3 py-2 text-sm italic outline-none"
         style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
       />
+      {p.visitedAt && onChangeVerdict && (
+        <div className="mt-2 flex gap-2">
+          <button
+            onClick={() => onChangeVerdict(p.id, p.verdict === "worth_it" ? null : "worth_it")}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
+            style={p.verdict === "worth_it" ? { background: C.green + "22", color: C.green, border: `1px solid ${C.green}66` } : { color: C.muted, border: `1px solid ${C.cardEdge}` }}
+          >
+            <Check size={13} /> Worth it
+          </button>
+          <button
+            onClick={() => onChangeVerdict(p.id, p.verdict === "not_for_me" ? null : "not_for_me")}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
+            style={p.verdict === "not_for_me" ? { background: C.cardEdge, color: C.cream, border: `1px solid ${C.cardEdge}` } : { color: C.muted, border: `1px solid ${C.cardEdge}` }}
+          >
+            <X size={13} /> Not for me
+          </button>
+        </div>
+      )}
       <select
         value={p.cuisineId || ""}
         onChange={(e) => onChangeCuisine(p.id, e.target.value)}
@@ -2220,7 +2254,17 @@ function FriendKingdomModal({ friend: f, onClose, onEndorse, onAddToList }) {
         {f.reviews.map((r) => (
           <div key={r.id} className="mt-2 rounded-lg p-3" style={{ background: C.bg, border: `1px dashed ${C.cardEdge}` }}>
             <div className="flex items-center justify-between gap-2">
-              <span style={{ ...display, fontWeight: 700 }} className="text-sm">{r.name}</span>
+              <span className="flex items-center gap-1.5" style={{ ...display, fontWeight: 700 }}>
+                <span className="text-sm">{r.name}</span>
+                {r.verdict && (
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+                    style={r.verdict === "worth_it" ? { background: C.green + "22", color: C.green } : { background: C.cardEdge, color: C.muted }}
+                  >
+                    {r.verdict === "worth_it" ? "Worth it" : "Not for me"}
+                  </span>
+                )}
+              </span>
               <span className="text-xs" style={{ color: C.muted }}>{[r.cuisine, r.area].filter(Boolean).join(" · ")}</span>
             </div>
             {r.note && <p className="mt-1 text-sm italic leading-relaxed" style={{ color: C.cream + "CC" }}>&ldquo;{r.note}&rdquo;</p>}

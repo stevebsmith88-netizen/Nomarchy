@@ -263,6 +263,11 @@ alter table next_in_line add column if not exists visited_at timestamptz;
 -- rows by app/api/next-in-line/backfill-coords, same pattern as thrones.
 alter table next_in_line add column if not exists lat numeric;
 alter table next_in_line add column if not exists lng numeric;
+-- A quick, deliberately non-negative sentiment on a review - keeps this a
+-- "did this work for you" signal rather than a place to rate/roast a
+-- restaurant. Null means no opinion given.
+alter table next_in_line add column if not exists verdict text
+  check (verdict in ('worth_it', 'not_for_me'));
 
 create index if not exists nil_user_idx on next_in_line(user_id);
 

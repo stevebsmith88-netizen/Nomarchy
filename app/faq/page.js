@@ -39,7 +39,9 @@ export default function FAQ() {
         <Section title="Next in Line - your shortlist">
           <p className="text-sm leading-relaxed" style={{ color: C.cream + "CC" }}>
             Places you keep meaning to try, or have been to but aren&apos;t ready to crown. Mark one as
-            &ldquo;been&rdquo; to leave a note - visible to people who follow you once you have. Already keep
+            &ldquo;been&rdquo; to leave a note and tag it <strong>Worth it</strong> or <strong>Not for me</strong> -
+            visible to people who follow you once you have. This is meant to stay a quick personal take, not a
+            public rating system - there&apos;s no star scores or public rankings of a place. Already keep
             a list somewhere else (Notes, a spreadsheet)? Paste the whole thing into <strong>Import a list</strong> and
             it&apos;ll sort out the names, cuisines, and notes for you - no need to add them one at a time.
           </p>
