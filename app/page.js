@@ -291,8 +291,9 @@ export default function Nomarchy() {
     if (alreadyCrowned) {
       throw new Error("Already crowned in your Kingdom");
     }
-    if (pretenders.some((p) => sameRestaurant(p.name, entry.name))) {
-      throw new Error("Already Next in Line");
+    const existingMatch = pretenders.find((p) => sameRestaurant(p.name, entry.name));
+    if (existingMatch) {
+      throw new Error(existingMatch.visitedAt ? "Already visited" : "Already Next in Line");
     }
     await addToNextInLine(user.id, { ...entry, cuisineId });
     await refreshPretenders();
@@ -504,12 +505,20 @@ export default function Nomarchy() {
   // opinion - this note has no live link back to the friend's throne, so
   // "swears by this one" would age into a false statement the moment they
   // change their mind.
-  const addFriendPickToPretenders = (friendName, pick) =>
-    addToPretenders(pick.cuisineId, {
-      name: pick.name,
-      area: pick.area,
-      note: `Added from ${friendName}'s picks.`,
-    });
+  const addFriendPickToPretenders = async (friendName, pick) => {
+    try {
+      await addToPretenders(pick.cuisineId, {
+        name: pick.name,
+        area: pick.area,
+        note: `Added from ${friendName}'s picks.`,
+      });
+    } catch (e) {
+      // This button has no error UI of its own (unlike the Add a place
+      // modal, which shows failures inline) - the toast is the only
+      // feedback here, and it now renders above any open modal.
+      flash(e.message || "Couldn't add that.");
+    }
+  };
 
   if (!authChecked) {
     return <FontShell><div className="flex min-h-screen items-center justify-center" style={{ color: C.muted, ...body }}>Loading...</div></FontShell>;
