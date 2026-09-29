@@ -6,8 +6,8 @@
 import { Crown, Sparkles } from "lucide-react";
 
 export const C = {
-  bg: "#1C1326", card: "#2A1D38", cardEdge: "#41305A",
-  gold: "#E3B341", cream: "#F4ECDD", muted: "#A795BD",
+  bg: "#1D1326", card: "#2A1E38", cardEdge: "#41305A",
+  gold: "#E2B340", cream: "#F5ECDE", muted: "#A795BD",
   coup: "#E85D4A", green: "#7FB069",
 };
 // Matches the real brand pairing: Raleway for the wordmark/headings, and

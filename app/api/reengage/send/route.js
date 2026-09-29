@@ -41,18 +41,18 @@ async function listAllUsers(supabase) {
 function renderEmail({ name, unsubscribeUrl }) {
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;border:1px solid #eee;border-radius:12px;overflow:hidden;">
-    <div style="background:#1C1326;padding:32px 24px;text-align:center;">
+    <div style="background:#1D1326;padding:32px 24px;text-align:center;">
       <img src="${SITE_URL}/icon-512.png" width="56" height="56" alt="Nomarchy" style="display:block;margin:0 auto;border-radius:12px;" />
-      <div style="font-size:20px;font-weight:900;letter-spacing:3px;color:#E3B341;margin-top:10px;">NOMARCHY</div>
+      <div style="font-size:20px;font-weight:900;letter-spacing:3px;color:#E2B340;margin-top:10px;">NOMARCHY</div>
     </div>
     <div style="padding:24px;">
-      <p style="font-size:16px;color:#1C1326;margin-top:0;">Your kingdom&rsquo;s been quiet, ${name}.</p>
+      <p style="font-size:16px;color:#1D1326;margin-top:0;">Your kingdom&rsquo;s been quiet, ${name}.</p>
       <p style="font-size:14px;color:#333;line-height:1.6;">
         It's been a while since you signed in or crowned somewhere new. Your friends' picks are still
         waiting to be endorsed, and there's probably a new favourite spot worth adding.
       </p>
       <p style="margin-top:24px;">
-        <a href="${SITE_URL}" style="background:#E3B341;color:#1C1326;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:700;font-size:14px;">Open Nomarchy</a>
+        <a href="${SITE_URL}" style="background:#E2B340;color:#1D1326;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:700;font-size:14px;">Open Nomarchy</a>
       </p>
     </div>
     <p style="font-size:11px;color:#999;padding:0 24px 24px;">

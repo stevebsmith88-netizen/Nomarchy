@@ -15,8 +15,8 @@ import { ImageResponse } from "next/og";
 export const runtime = "nodejs";
 
 const C = {
-  bg: "#1C1326", card: "#2A1D38", cardEdge: "#41305A",
-  gold: "#E3B341", cream: "#F4ECDD", muted: "#A795BD",
+  bg: "#1D1326", card: "#2A1E38", cardEdge: "#41305A",
+  gold: "#E2B340", cream: "#F5ECDE", muted: "#A795BD",
 };
 
 export async function GET(request) {

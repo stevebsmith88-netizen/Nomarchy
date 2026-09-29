@@ -5,8 +5,8 @@ export default function manifest() {
     description: "A kingdom of your favorite restaurants, one cuisine at a time.",
     start_url: "/",
     display: "standalone",
-    background_color: "#1C1326",
-    theme_color: "#1C1326",
+    background_color: "#1D1326",
+    theme_color: "#1D1326",
     icons: [
       {
         src: "/icon-512.png",

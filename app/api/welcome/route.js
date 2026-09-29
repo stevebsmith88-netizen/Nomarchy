@@ -29,18 +29,18 @@ function admin() {
 function renderEmail() {
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;border:1px solid #eee;border-radius:12px;overflow:hidden;">
-    <div style="background:#1C1326;padding:32px 24px;text-align:center;">
+    <div style="background:#1D1326;padding:32px 24px;text-align:center;">
       <img src="${SITE_URL}/icon-512.png" width="56" height="56" alt="Nomarchy" style="display:block;margin:0 auto;border-radius:12px;" />
-      <div style="font-size:20px;font-weight:900;letter-spacing:3px;color:#E3B341;margin-top:10px;">NOMARCHY</div>
+      <div style="font-size:20px;font-weight:900;letter-spacing:3px;color:#E2B340;margin-top:10px;">NOMARCHY</div>
     </div>
     <div style="padding:24px;">
-      <p style="font-size:18px;font-weight:700;color:#1C1326;margin-top:0;">Your kingdom awaits.</p>
+      <p style="font-size:18px;font-weight:700;color:#1D1326;margin-top:0;">Your kingdom awaits.</p>
       <p style="font-size:14px;color:#333;line-height:1.6;">
         Nomarchy is where you crown your favourite restaurant in every cuisine, stage a coup when
         something better comes along, and compare your kingdom with friends.
       </p>
       <p style="margin-top:20px;">
-        <a href="${SITE_URL}" style="background:#E3B341;color:#1C1326;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:700;font-size:14px;">Open Nomarchy</a>
+        <a href="${SITE_URL}" style="background:#E2B340;color:#1D1326;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:700;font-size:14px;">Open Nomarchy</a>
       </p>
       <p style="font-size:14px;color:#333;line-height:1.6;margin-top:24px;">Once you're in, a few things to try:</p>
       <ul style="font-size:14px;color:#333;line-height:1.8;padding-left:20px;">
@@ -50,7 +50,7 @@ function renderEmail() {
         <li>Already keep a list of favourites in Notes or a spreadsheet? Paste the whole thing into <strong>Next in Line</strong>'s Import a list and it'll sort it out.</li>
       </ul>
       <div style="margin-top:20px;padding-top:20px;border-top:1px solid #eee;">
-        <p style="font-size:13px;font-weight:700;color:#1C1326;margin-bottom:6px;">Nomarchy works best added to your home screen</p>
+        <p style="font-size:13px;font-weight:700;color:#1D1326;margin-bottom:6px;">Nomarchy works best added to your home screen</p>
         <p style="font-size:13px;color:#333;line-height:1.7;margin-top:0;">
           <strong>iPhone:</strong> open this in Safari, tap the Share icon, then "Add to Home Screen".<br/>
           <strong>Android:</strong> open this in Chrome, tap the &#8942; menu, then "Add to Home screen" (or "Install app").

@@ -10,7 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 function page(message) {
   return new Response(
     `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-     <body style="font-family:Arial,Helvetica,sans-serif;max-width:420px;margin:80px auto;padding:0 20px;text-align:center;color:#1C1326;">
+     <body style="font-family:Arial,Helvetica,sans-serif;max-width:420px;margin:80px auto;padding:0 20px;text-align:center;color:#1D1326;">
        <div style="font-size:18px;font-weight:900;letter-spacing:2px;">NOMARCHY</div>
        <p style="margin-top:16px;">${message}</p>
      </body></html>`,
