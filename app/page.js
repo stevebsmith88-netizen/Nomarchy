@@ -282,6 +282,15 @@ export default function Nomarchy() {
   };
 
   const addToPretenders = async (cuisineId, entry) => {
+    // Crowning removes a place from `pretenders`, so a restaurant already
+    // holding a throne wouldn't show up in the check below on its own -
+    // this is what let a friend's pick of something you'd already crowned
+    // get added back as if it were new (e.g. via "Add to my list" on a
+    // friend's pick that happens to be your own crowned place).
+    const alreadyCrowned = Object.values(slots).some((s) => s.current && sameRestaurant(s.current.name, entry.name));
+    if (alreadyCrowned) {
+      throw new Error("Already crowned in your Kingdom");
+    }
     if (pretenders.some((p) => sameRestaurant(p.name, entry.name))) {
       throw new Error("Already Next in Line");
     }
@@ -330,7 +339,11 @@ export default function Nomarchy() {
   // new cuisine must not both try to create it.
   const importMany = async (rows) => {
     let added = 0, skipped = 0;
-    const existingNames = pretenders.map((p) => p.name);
+    // Same blind spot as addToPretenders - a crowned place isn't in
+    // `pretenders` anymore, so it needs its own check here too or a
+    // re-import of an old list would re-add anything already crowned.
+    const crownedNames = Object.values(slots).filter((s) => s.current).map((s) => s.current.name);
+    const existingNames = [...pretenders.map((p) => p.name), ...crownedNames];
     let localCuisines = cuisineList;
     const resolved = [];
     for (const r of rows) {
