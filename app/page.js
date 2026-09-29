@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
-  Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp,
+  Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock,
   MessageSquare, Bell, TrendingUp, Navigation, Camera, Mail, ShieldCheck,
@@ -1395,15 +1395,17 @@ function AvatarPicker({ userId, url, onChange }) {
 // with PhotoPicker below) and for reading a friend's or a public profile's
 // photos, where no remove button applies.
 function PhotoStrip({ photos, onRemove }) {
-  const [viewing, setViewing] = useState(null);
+  const [viewingIndex, setViewingIndex] = useState(null);
   if (!photos || photos.length === 0) return null;
+  const prev = () => setViewingIndex((i) => (i - 1 + photos.length) % photos.length);
+  const next = () => setViewingIndex((i) => (i + 1) % photos.length);
   return (
     <>
       <div className="mt-2 flex gap-2">
         {photos.map((url, i) => (
           <div key={url} className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg" style={{ border: `1px solid ${C.cardEdge}` }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt="" onClick={() => setViewing(url)} className="h-full w-full cursor-pointer object-cover" />
+            <img src={url} alt="" onClick={() => setViewingIndex(i)} className="h-full w-full cursor-pointer object-cover" />
             {onRemove && (
               <button onClick={() => onRemove(i)} aria-label="Remove photo" className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full" style={{ background: "rgba(0,0,0,0.6)", color: "#fff" }}>
                 <X size={10} />
@@ -1412,13 +1414,28 @@ function PhotoStrip({ photos, onRemove }) {
           </div>
         ))}
       </div>
-      {viewing && (
-        <div className="fixed inset-0 z-[1300] flex items-center justify-center p-5" style={{ background: "rgba(10,5,16,0.92)" }} onClick={() => setViewing(null)}>
-          {/* Fixed white, not C.cream - this backdrop stays dark in both
-              themes, so the close icon must too, or it vanishes in light mode. */}
-          <button onClick={() => setViewing(null)} aria-label="Close" className="absolute right-4 top-4" style={{ color: "#fff" }}><X size={24} /></button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={viewing} alt="" className="max-h-full max-w-full rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
+      {viewingIndex !== null && (
+        <div className="fixed inset-0 z-[1300] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={() => setViewingIndex(null)}>
+          <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex shrink-0 items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${C.cardEdge}` }}>
+              <span className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>
+                {photos.length > 1 ? `Photo ${viewingIndex + 1} of ${photos.length}` : "Photo"}
+              </span>
+              <button onClick={() => setViewingIndex(null)} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
+            </div>
+            <div className="relative flex-1 overflow-y-auto" style={{ background: C.bg }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photos[viewingIndex]} alt="" className="mx-auto max-h-[70vh] w-full object-contain" />
+              {photos.length > 1 && (<>
+                <button onClick={prev} aria-label="Previous photo" className="absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full" style={{ background: "rgba(10,5,16,0.6)", color: "#fff" }}>
+                  <ChevronLeft size={18} />
+                </button>
+                <button onClick={next} aria-label="Next photo" className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full" style={{ background: "rgba(10,5,16,0.6)", color: "#fff" }}>
+                  <ChevronRight size={18} />
+                </button>
+              </>)}
+            </div>
+          </div>
         </div>
       )}
     </>
