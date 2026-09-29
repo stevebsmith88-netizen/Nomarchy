@@ -15,7 +15,7 @@ import {
   loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, placeKey, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderVerdict, updatePretenderPhotos,
-  moveThroneCuisine, updateThroneDecree, updateThronePhotos, unCrown,
+  moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
   uploadReviewPhoto, deleteReviewPhoto, uploadAvatar, MAX_REVIEW_PHOTOS,
   loadCourt, toggleEndorsement, followByUsername, loadStanding,
   loadAdminOverview,
@@ -255,6 +255,11 @@ export default function Nomarchy() {
 
   const handleEditDecree = async (throneId, decree) => {
     await updateThroneDecree(throneId, decree);
+    await refreshKingdom();
+  };
+
+  const handleEditThroneLocation = async (throneId, location) => {
+    await updateThroneLocation(throneId, location);
     await refreshKingdom();
   };
 
@@ -716,6 +721,7 @@ export default function Nomarchy() {
                 fmt={fmt}
                 onUnCrown={() => handleUnCrown(overallCuisine.id, slots[OVERALL_FAVOURITE_NAME]?.current)}
                 onEditDecree={(decree) => handleEditDecree(slots[OVERALL_FAVOURITE_NAME]?.current?.id, decree)}
+                onEditLocation={(location) => handleEditThroneLocation(slots[OVERALL_FAVOURITE_NAME]?.current?.id, location)}
                 onEditPhotos={(photos) => handleEditThronePhotos(slots[OVERALL_FAVOURITE_NAME]?.current?.id, photos)}
                 userId={user.id}
               />
@@ -784,6 +790,7 @@ export default function Nomarchy() {
                   onMoveCuisine={(newCuisineId) => handleMoveCuisine(slots[cuisineName]?.current?.id, newCuisineId)}
                   onUnCrown={() => handleUnCrown(thisId, slots[cuisineName]?.current)}
                   onEditDecree={(decree) => handleEditDecree(slots[cuisineName]?.current?.id, decree)}
+                  onEditLocation={(location) => handleEditThroneLocation(slots[cuisineName]?.current?.id, location)}
                   onEditPhotos={(photos) => handleEditThronePhotos(slots[cuisineName]?.current?.id, photos)}
                   onHide={() => handleHideCuisine(thisId)}
                   userId={user.id}
@@ -1484,7 +1491,7 @@ function PhotoPicker({ userId, photos, onChange }) {
   );
 }
 
-function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown, onEditDecree, onEditPhotos, onHide, userId }) {
+function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown, onEditDecree, onEditLocation, onEditPhotos, onHide, userId }) {
   const r = slot?.current;
   const fallenList = slot?.fallen || [];
   const open = historyOpen[cuisineName];
@@ -1496,12 +1503,16 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
   const [editing, setEditing] = useState(false);
   const [decreeText, setDecreeText] = useState("");
   const [targetCuisineId, setTargetCuisineId] = useState("");
+  const [addressText, setAddressText] = useState("");
+  const [areaText, setAreaText] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState("");
 
   const startEdit = () => {
     setDecreeText(r.decree);
     setTargetCuisineId(cuisineId || "");
+    setAddressText(r.address || "");
+    setAreaText(r.area || "");
     setSaveErr("");
     setEditing(true);
   };
@@ -1512,6 +1523,9 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
     try {
       if (onEditDecree && decreeText.trim() !== r.decree) await onEditDecree(decreeText.trim());
       if (onMoveCuisine && targetCuisineId && targetCuisineId !== cuisineId) await onMoveCuisine(targetCuisineId);
+      if (onEditLocation && (addressText.trim() !== (r.address || "") || areaText.trim() !== (r.area || ""))) {
+        await onEditLocation({ address: addressText.trim(), neighbourhood: areaText.trim() });
+      }
       setEditing(false);
     } catch (e) {
       setSaveErr(e.message || "Couldn't save that.");
@@ -1560,6 +1574,18 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
                 </select>
               </div>
             )}
+            {onEditLocation && (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Address</label>
+                  <input value={addressText} onChange={(e) => setAddressText(e.target.value)} placeholder="Street address" className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Neighbourhood</label>
+                  <input value={areaText} onChange={(e) => setAreaText(e.target.value)} placeholder="Neighbourhood" className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+                </div>
+              </div>
+            )}
             {saveErr && <p className="mt-1 text-xs" style={{ color: C.coup }}>{saveErr}</p>}
             <div className="mt-2 flex gap-2">
               <button onClick={() => setEditing(false)} className="rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>Cancel</button>
@@ -1571,7 +1597,7 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
         ) : (
           <p className="mt-2 text-sm leading-relaxed" style={{ color: C.cream + "E6" }}>
             <ScrollText size={13} className="mr-1 inline" style={{ color: C.gold }} />{r.decree}
-            {(onEditDecree || onMoveCuisine) && (
+            {(onEditDecree || onMoveCuisine || onEditLocation) && (
               <button onClick={startEdit} aria-label="Edit" title="Edit" className="ml-1.5 inline-flex align-middle rounded p-1" style={{ color: C.muted }}>
                 <Pencil size={12} />
               </button>
