@@ -58,8 +58,8 @@ export default function FaqContent() {
           <p className="text-sm leading-relaxed" style={{ color: C.cream + "CC" }}>
             Follow people by username to see their kingdoms and endorse picks you agree with. Endorsements
             feed into their credibility score, alongside how many thrones they hold, how many coups
-            they&apos;ve staged, and how much thought goes into their decrees - it&apos;s meant to reward
-            genuine taste, not just volume.
+            they&apos;ve staged, how much thought goes into their decrees, and whether they bothered to add
+            photos - it&apos;s meant to reward genuine taste, not just volume.
           </p>
         </Section>
 

@@ -598,6 +598,12 @@ create policy "users read their own ai calls" on ai_calls for select
 -- Computed on read so it can never drift out of sync with reality.
 -- Endorsements received are weighted heaviest: trust from others beats volume.
 --
+-- Photos are a flat per-throne bonus for bothering to document the visit
+-- at all, not per-photo - cardinality > 0 rather than counting each of
+-- the (max 3) photos, so this rewards the habit rather than volume, and
+-- is capped in aggregate so it can only ever be a modest boost, never a
+-- second decree-length-sized axis to grind.
+--
 -- security_invoker matters here: without it, a view created from the SQL
 -- Editor runs as the postgres role, which bypasses row-level security
 -- entirely - so a private profile's real thrones/coups counts would leak
@@ -616,12 +622,14 @@ select
   (select coalesce(avg(char_length(t.decree)), 0) from thrones t where t.user_id = p.id) as avg_decree,
   (select count(*) from endorsements e
      join thrones t on t.id = e.throne_id where t.user_id = p.id)        as endorsements_received,
+  (select count(*) from thrones t where t.user_id = p.id and cardinality(t.photos) > 0) as thrones_with_photos,
   round(
       (select count(*) from thrones t where t.user_id = p.id) * 12
     + (select count(*) from fallen f where f.user_id = p.id) * 8
     + least((select coalesce(avg(char_length(t.decree)), 0) from thrones t where t.user_id = p.id), 240) / 4
     + (select count(*) from endorsements e
          join thrones t on t.id = e.throne_id where t.user_id = p.id) * 5
+    + least((select count(*) from thrones t where t.user_id = p.id and cardinality(t.photos) > 0) * 3, 30)
   ) as score
 from profiles p;
 

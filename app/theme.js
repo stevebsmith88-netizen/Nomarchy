@@ -85,16 +85,24 @@ export const body = { fontFamily: "'Work Sans', sans-serif" };
 
 // The gap to the next tier widens as you climb - the first promotion is
 // quick (you just need to try the app), the last one is a real reign.
+// Gaps between tiers were already increasing (+10 each step) but stayed
+// linear all the way up - fine while score only came from crowns, coups,
+// decrees and endorsements, but each new scoring input (photos now, quests
+// later) makes the top of the ladder easier to reach without anyone
+// actually playing "better." The bottom five tiers are untouched - early
+// progress should stay quick, that's what hooks a new user - but Earl and
+// up now grow much faster than linear, so the ceiling keeps meaning
+// something as more ways to earn points get added underneath it.
 export const RANKS = [
   { min: 0, title: "Peckish Peasant", note: "Everyone starts hungry." },
   { min: 30, title: "Court Taster", note: "Your palate is earning trust." },
   { min: 70, title: "Kitchen Knight", note: "You've earned your spurs at the table." },
   { min: 120, title: "Baron of the Bites", note: "A modest but real domain of taste." },
   { min: 180, title: "Viscount of Victuals", note: "Your picks are getting harder to ignore." },
-  { min: 250, title: "Earl of Eats", note: "A serious reputation at the table." },
-  { min: 330, title: "Duke of Dinner", note: "Your word carries weight at the table." },
-  { min: 420, title: "Prince/Princess of the Palate", note: "One reign away from the throne." },
-  { min: 520, title: "Monarch of Taste", note: "Long may you reign." },
+  { min: 270, title: "Earl of Eats", note: "A serious reputation at the table." },
+  { min: 400, title: "Duke of Dinner", note: "Your word carries weight at the table." },
+  { min: 580, title: "Prince/Princess of the Palate", note: "One reign away from the throne." },
+  { min: 820, title: "Monarch of Taste", note: "Long may you reign." },
 ];
 
 export function getRank(score) {
