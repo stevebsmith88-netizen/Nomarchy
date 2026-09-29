@@ -344,7 +344,7 @@ export default function Nomarchy() {
           match = null;
         }
       }
-      resolved.push({ name: r.name, area: r.area || null, note: r.note || null, cuisineId: match?.id || null });
+      resolved.push({ name: r.name.toUpperCase(), area: r.area || null, note: r.note || null, cuisineId: match?.id || null });
       added++;
     }
     if (resolved.length) await importToNextInLine(user.id, resolved);
@@ -2426,7 +2426,7 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
     if (!valid || submitting) return;
     setSubmitting(true); setErr("");
     try {
-      await onSubmit(cz, { name: name.trim(), area: area.trim(), ...(isPretender ? { note: text.trim() } : { decree: text.trim(), photos }), address: sel?.address || "", rating: sel?.rating || "", mapsUrl: sel?.mapsUrl || "" });
+      await onSubmit(cz, { name: name.trim().toUpperCase(), area: area.trim(), ...(isPretender ? { note: text.trim() } : { decree: text.trim(), photos }), address: sel?.address || "", rating: sel?.rating || "", mapsUrl: sel?.mapsUrl || "" });
     } catch (e) {
       setErr(e.message || "That didn't save - try again.");
     }
