@@ -3,13 +3,78 @@
 // profile page (app/[username]/page.js) so a signed-out visitor's kingdom
 // view looks identical to the owner's, with no duplicated palette to drift.
 
+"use client";
+
+import { createContext, useContext, useEffect, useState } from "react";
 import { Crown, Sparkles } from "lucide-react";
 
-export const C = {
+const DARK = {
   bg: "#1D1326", card: "#2A1E38", cardEdge: "#41305A",
   gold: "#E2B340", cream: "#F5ECDE", muted: "#A795BD",
   coup: "#E85D4A", green: "#7FB069",
 };
+
+// Same brand hues, re-tuned for a light background rather than a dark one -
+// the dark-mode gold and muted purple are both light, warm-ish tones
+// themselves, so reused as text straight against a cream page they'd have
+// almost no contrast. "cream" keeps its key name (every component already
+// reads C.cream as "primary text colour") even though it's now the dark
+// text tone, not literally cream - the role stays the same, the hex
+// underneath just serves whichever theme is active.
+const LIGHT = {
+  bg: "#F5ECDE", card: "#FFFFFF", cardEdge: "#E4D6BE",
+  gold: "#A67C1E", cream: "#2A1E38", muted: "#6B5C7D",
+  coup: "#E85D4A", green: "#7FB069",
+};
+
+// A real object, not a lookup - every existing `C.gold`/`C.bg`/etc. call
+// site across the app (there are hundreds) keeps working completely
+// unchanged. Switching themes mutates THIS object's properties in place
+// rather than swapping in a new one, so every file's existing static
+// `import { C } from "./theme"` still points at live, current values -
+// no per-component rewiring needed, just something that re-renders each
+// page's own tree after the mutation so those values get re-read.
+export const C = { ...DARK };
+
+const STORAGE_KEY = "nomarchy-theme";
+
+const ThemeContext = createContext({ theme: "dark", toggleTheme: () => {} });
+
+export function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState("dark");
+
+  // Runs once, after the page's own default-dark render - a user who
+  // picked light on a previous visit sees a brief flash of dark before
+  // this kicks in, a known, acceptable tradeoff for how much simpler this
+  // keeps the setup (no blocking inline script in the document head).
+  useEffect(() => {
+    let saved;
+    try { saved = localStorage.getItem(STORAGE_KEY); } catch { saved = null; }
+    if (saved === "light" || saved === "dark") {
+      Object.assign(C, saved === "light" ? LIGHT : DARK);
+      setTheme(saved);
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    Object.assign(C, next === "light" ? LIGHT : DARK);
+    try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+    setTheme(next);
+  };
+
+  return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
+}
+
+// Call this once near the top of each separately-rendered page (the main
+// app, the public profile page, the FAQ/terms/privacy pages) - that one
+// call is what makes that page's whole component tree re-render (and so
+// re-read C's now-current values) when the theme changes. A component
+// deeper in the tree that just reads C.xyz directly, with no hook call of
+// its own, still updates for free as part of that cascading re-render.
+export function useTheme() {
+  return useContext(ThemeContext);
+}
 // Matches the real brand pairing: Raleway for the wordmark/headings, and
 // Work Sans standing in for Proxima Nova (the logo's actual sub-font,
 // which is a paid Adobe Fonts typeface, not available to load for free) -

@@ -1,4 +1,5 @@
 import "./globals.css";
+import { ThemeProvider } from "./theme";
 
 const description = "Crown your favourite restaurant in every cuisine, stage a coup when something better comes along, and compare your kingdom with friends.";
 

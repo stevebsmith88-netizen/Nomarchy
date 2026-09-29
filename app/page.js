@@ -20,7 +20,7 @@ import {
   loadCourt, toggleEndorsement, followByUsername, loadStanding,
   loadAdminOverview,
 } from "@/lib/data";
-import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell } from "./theme";
+import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell, useTheme } from "./theme";
 
 // Leaflet touches window/document at load time, which breaks server-side
 // rendering - ssr:false defers loading it until the browser actually
@@ -66,6 +66,10 @@ const sameRestaurant = (a, b) => {
 };
 
 export default function Nomarchy() {
+  // No return value used here - just subscribing this whole page to theme
+  // changes so it (and everything under it) re-renders and picks up C's
+  // current values when the toggle in Profile is used. See theme.js.
+  useTheme();
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [profile, setProfile] = useState(null);
@@ -1820,6 +1824,7 @@ function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
 }
 
 function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, onSubmit, onChangeAvatar, onDeleteAccount }) {
+  const { theme, toggleTheme } = useTheme();
   const [username, setUsername] = useState(profile?.username || "");
   const [city, setCity] = useState(profile?.city || "");
   const [isPublic, setIsPublic] = useState(profile?.is_public ?? true);
@@ -2065,6 +2070,26 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
               </button>
             </div>
           ))}
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+          <div>
+            <div className="text-sm font-semibold">Appearance</div>
+            <div className="mt-0.5 text-xs" style={{ color: C.muted }}>{theme === "light" ? "Light" : "Dark"} mode</div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={theme === "light"}
+            onClick={toggleTheme}
+            className="relative h-6 w-11 shrink-0 overflow-hidden rounded-full transition-colors"
+            style={{ background: theme === "light" ? C.gold : C.cardEdge }}
+          >
+            <span
+              className="absolute left-0 top-0.5 h-5 w-5 rounded-full transition-transform"
+              style={{ background: C.bg, transform: theme === "light" ? "translateX(22px)" : "translateX(2px)" }}
+            />
+          </button>
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>

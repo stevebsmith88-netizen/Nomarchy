@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Crown, MapPin, ExternalLink, Star, ScrollText, UserPlus, Loader2, Check, Lock } from "lucide-react";
 import { getUser, loadPublicKingdom, followByUsername } from "@/lib/data";
-import { C, display, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell } from "../theme";
+import { C, display, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell, useTheme } from "../theme";
 
 // Matches the reserved cuisine name seeded in schema.sql - see app/page.js
 // for the fuller explanation of why the overall favourite piggybacks on
@@ -33,6 +33,10 @@ function PhotoStrip({ photos }) {
 }
 
 export default function PublicProfileClient({ username }) {
+  // Subscribes this page to theme changes so a visitor who's already set a
+  // light/dark preference in the main app (saved in their browser) sees it
+  // respected here too - see theme.js.
+  useTheme();
 
   const [viewer, setViewer] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
