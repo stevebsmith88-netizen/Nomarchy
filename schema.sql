@@ -594,6 +594,39 @@ create policy "users read their own ai calls" on ai_calls for select
   using (auth.uid() = user_id);
 
 -- ------------------------------------------------------------
+-- 8b. CONQUESTS (one-time achievements)
+-- Checked live against data already on hand (thrones, fallen, follows,
+-- endorsements) rather than fired by a trigger the instant something
+-- happens - "have you ever held two different cuisines" is answerable
+-- at any time, not an event that needs catching in the moment. Recorded
+-- once true so it stays won even if the underlying fact later changes
+-- (e.g. un-crowning something after "First Blood" was already earned).
+-- The points value is written by the app at insert time (see
+-- loadConquestProgress in lib/data.js) rather than looked up here, so
+-- rebalancing a conquest's weight never needs a migration.
+-- ------------------------------------------------------------
+create table if not exists conquests (
+  user_id      uuid not null references profiles(id) on delete cascade,
+  key          text not null,
+  points       integer not null default 0,
+  completed_at timestamptz not null default now(),
+  primary key (user_id, key)
+);
+
+alter table conquests enable row level security;
+
+drop policy if exists "conquests readable" on conquests;
+create policy "conquests readable" on conquests for select
+  using (
+    auth.uid() = user_id
+    or exists (select 1 from profiles p where p.id = conquests.user_id and p.is_public)
+  );
+
+drop policy if exists "own conquests writable" on conquests;
+create policy "own conquests writable" on conquests for insert
+  with check (auth.uid() = user_id);
+
+-- ------------------------------------------------------------
 -- 9. CREDIBILITY SCORE
 -- Computed on read so it can never drift out of sync with reality.
 -- Endorsements received are weighted heaviest: trust from others beats volume.
@@ -623,6 +656,7 @@ select
   (select count(*) from endorsements e
      join thrones t on t.id = e.throne_id where t.user_id = p.id)        as endorsements_received,
   (select count(*) from thrones t where t.user_id = p.id and cardinality(t.photos) > 0) as thrones_with_photos,
+  (select coalesce(sum(c.points), 0) from conquests c where c.user_id = p.id) as conquest_points,
   round(
       (select count(*) from thrones t where t.user_id = p.id) * 12
     + (select count(*) from fallen f where f.user_id = p.id) * 8
@@ -630,6 +664,7 @@ select
     + (select count(*) from endorsements e
          join thrones t on t.id = e.throne_id where t.user_id = p.id) * 5
     + least((select count(*) from thrones t where t.user_id = p.id and cardinality(t.photos) > 0) * 3, 30)
+    + least((select coalesce(sum(c.points), 0) from conquests c where c.user_id = p.id), 60)
   ) as score
 from profiles p;
 

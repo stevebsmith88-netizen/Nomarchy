@@ -17,7 +17,7 @@ import {
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderVerdict, updatePretenderPhotos,
   moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
   uploadReviewPhoto, deleteReviewPhoto, uploadAvatar, MAX_REVIEW_PHOTOS,
-  loadCourt, toggleEndorsement, followByUsername, loadStanding,
+  loadCourt, toggleEndorsement, followByUsername, loadStanding, loadConquestProgress,
   loadAdminOverview,
 } from "@/lib/data";
 import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell, useTheme } from "./theme";
@@ -2207,9 +2207,16 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkErr, setLinkErr] = useState("");
 
+  const [conquests, setConquests] = useState(null);
+
   useEffect(() => {
     getLinkedProviders().then(setProviders).catch(() => setProviders([]));
   }, []);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    loadConquestProgress(profile.id).then(setConquests).catch(() => setConquests([]));
+  }, [profile?.id]);
   const googleLinked = providers?.includes("google");
 
   const toggleGoogle = async () => {
@@ -2299,6 +2306,28 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
         <p className="mt-4 text-xs leading-relaxed" style={{ color: C.muted }}>
           Credibility rewards conviction and depth, not hype. Honest write ups about real favourites outrank trendy picks with lazy decrees.
         </p>
+
+        <div className="mt-5 border-t pt-4 text-left" style={{ borderColor: C.cardEdge }}>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Conquests</label>
+            {conquests && (
+              <span className="text-xs" style={{ color: C.muted }}>{conquests.filter((c) => c.completed).length}/{conquests.length}</span>
+            )}
+          </div>
+          {!conquests && <p className="text-xs" style={{ color: C.muted }}>Loading...</p>}
+          {conquests && conquests.map((c) => (
+            <div key={c.key} className="flex items-center gap-2.5 py-1.5">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style={{ background: c.completed ? C.gold : C.bg, border: `1px solid ${c.completed ? C.gold : C.cardEdge}` }}>
+                {c.completed ? <Check size={13} style={{ color: C.bg }} /> : <Lock size={11} style={{ color: C.muted }} />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold" style={{ color: c.completed ? C.cream : C.muted }}>{c.title}</div>
+                <div className="truncate text-xs" style={{ color: C.muted }}>{c.desc}</div>
+              </div>
+              <span className="shrink-0 text-xs font-bold" style={{ color: c.completed ? C.gold : C.muted }}>+{c.points}</span>
+            </div>
+          ))}
+        </div>
 
         <div className="mt-6 border-t pt-4" style={{ borderColor: C.cardEdge }}>
           <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Username</label>

@@ -63,6 +63,14 @@ export default function FaqContent() {
           </p>
         </Section>
 
+        <Section title="Conquests">
+          <p className="text-sm leading-relaxed" style={{ color: C.cream + "CC" }}>
+            One-time achievements for things like crowning your first place, holding two different
+            cuisines, or filling every slot in your Kingdom - see the full checklist, and how much each
+            is worth, in your profile. Each one only ever pays out once.
+          </p>
+        </Section>
+
         <Section title="Trending">
           The most-crowned restaurants across everyone&apos;s public kingdoms, filterable by time range and
           location. A quick way to see what&apos;s actually earning thrones across the whole Court right now.
