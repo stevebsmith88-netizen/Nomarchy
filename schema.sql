@@ -229,11 +229,15 @@ begin
 end;
 $$;
 
+-- lower(...) on both sides, not a plain comparison: a same-restaurant
+-- case change (like the CAPS LOCK sweep uppercasing every existing name)
+-- must never look like a coup, or it wrongly archives every throne as if
+-- it had just been dethroned.
 drop trigger if exists on_throne_replaced on thrones;
 create trigger on_throne_replaced
   before update on thrones
   for each row
-  when (old.place_name is distinct from new.place_name)
+  when (lower(old.place_name) is distinct from lower(new.place_name))
   execute function archive_dethroned();
 
 -- ------------------------------------------------------------
