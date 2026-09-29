@@ -1066,6 +1066,8 @@ export default function Nomarchy() {
               ))}
             </div>
 
+            <FixThroneTool cuisines={selectableCuisines} />
+
             <h3 className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>All users ({adminData.users.length})</h3>
             <div className="max-h-96 overflow-y-auto rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
               {adminData.users.map((u) => (
@@ -1487,6 +1489,130 @@ function PhotoPicker({ userId, photos, onChange }) {
         </label>
       )}
       {err && <p className="mt-1 text-xs" style={{ color: C.coup }}>{err}</p>}
+    </div>
+  );
+}
+
+// Owner-only tool, rendered inside the Admin tab - corrects address,
+// neighbourhood, or cuisine on ANY user's crown, never their decree or
+// photos (see app/api/admin/fix-throne, which enforces that server-side
+// regardless of what this sends). For fixing a bad match from the local
+// dataset or lookup that the person who crowned it can't see or isn't
+// around to fix themselves.
+function FixThroneTool({ cuisines }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [err, setErr] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [addressText, setAddressText] = useState("");
+  const [areaText, setAreaText] = useState("");
+  const [cuisineId, setCuisineId] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const search = async () => {
+    if (!query.trim() || searching) return;
+    setSearching(true); setErr(""); setResults(null); setEditingId(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/admin/fix-throne?q=${encodeURIComponent(query.trim())}`, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Search failed");
+      setResults(data.results);
+    } catch (e) {
+      setErr(e.message || "Couldn't search.");
+    }
+    setSearching(false);
+  };
+
+  const startEdit = (r) => {
+    setEditingId(r.id);
+    setAddressText(r.address || "");
+    setAreaText(r.neighbourhood || "");
+    setCuisineId("");
+  };
+
+  const save = async (r) => {
+    setSaving(true); setErr("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/fix-throne", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ throneId: r.id, address: addressText.trim(), neighbourhood: areaText.trim(), cuisineId: cuisineId || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Couldn't save that.");
+      setResults((rs) => rs.map((x) => x.id === r.id
+        ? { ...x, address: data.throne.address, neighbourhood: data.throne.neighbourhood, cuisineName: data.throne.cuisines?.name || x.cuisineName, cuisineId: cuisineId || x.cuisineId }
+        : x));
+      setEditingId(null);
+    } catch (e) {
+      setErr(e.message || "Couldn't save that.");
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="mb-5">
+      <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Fix a restaurant</h3>
+      <p className="mb-2 text-xs" style={{ color: C.muted }}>Corrects address, neighbourhood, or cuisine on anyone&apos;s crown - never their review text or photos.</p>
+      <div className="flex gap-2">
+        <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="Search by restaurant name..." className="w-full rounded-lg px-3 py-2 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+        <button onClick={search} disabled={searching || !query.trim()} className="flex shrink-0 items-center justify-center rounded-lg px-3" style={{ background: C.gold, color: C.bg }}>
+          {searching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+        </button>
+      </div>
+      {err && <p className="mt-2 text-xs" style={{ color: C.coup }}>{err}</p>}
+      {results && results.length === 0 && <p className="mt-2 text-sm" style={{ color: C.muted }}>No matches.</p>}
+      {results && results.length > 0 && (
+        <div className="mt-2 rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+          {results.map((r, i) => (
+            <div key={r.id} className="px-3 py-2.5" style={i > 0 ? { borderTop: `1px solid ${C.cardEdge}` } : undefined}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold">{r.placeName}</div>
+                  <div className="truncate text-xs" style={{ color: C.muted }}>
+                    @{r.username || "unknown"} · {r.cuisineName || "Uncategorized"} · {[r.neighbourhood, r.address].filter(Boolean).join(" · ") || "no location on file"}
+                  </div>
+                </div>
+                <button onClick={() => (editingId === r.id ? setEditingId(null) : startEdit(r))} aria-label="Edit" className="shrink-0 rounded-lg p-1.5" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
+                  <Pencil size={13} />
+                </button>
+              </div>
+              {editingId === r.id && (
+                <div className="mt-2 rounded-lg p-2.5" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Address</label>
+                      <input value={addressText} onChange={(e) => setAddressText(e.target.value)} className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Neighbourhood</label>
+                      <input value={areaText} onChange={(e) => setAreaText(e.target.value)} className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Cuisine</label>
+                    <select value={cuisineId} onChange={(e) => setCuisineId(e.target.value)} className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}>
+                      <option value="">Leave as is ({r.cuisineName || "Uncategorized"})</option>
+                      {cuisines.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    <button onClick={() => setEditingId(null)} className="rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>Cancel</button>
+                    <button disabled={saving} onClick={() => save(r)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>
+                      {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Save
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
