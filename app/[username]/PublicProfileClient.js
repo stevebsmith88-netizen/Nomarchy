@@ -42,9 +42,13 @@ function PhotoStrip({ photos }) {
               </span>
               <button onClick={() => setViewingIndex(null)} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
             </div>
-            <div className="relative flex-1 overflow-y-auto" style={{ background: C.bg }}>
+            {/* Fixed-height stage, not sized to each image - otherwise the
+                modal itself grows or shrinks depending on whether the
+                current photo happens to be wide or tall. object-contain
+                still shows the whole photo, just letterboxed if needed. */}
+            <div className="relative flex h-[65vh] items-center justify-center overflow-hidden" style={{ background: C.bg }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photos[viewingIndex]} alt="" className="mx-auto max-h-[70vh] w-full object-contain" />
+              <img src={photos[viewingIndex]} alt="" className="h-full w-full object-contain" />
               {photos.length > 1 && (<>
                 <button onClick={prev} aria-label="Previous photo" className="absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full" style={{ background: "rgba(10,5,16,0.6)", color: "#fff" }}>
                   <ChevronLeft size={18} />
