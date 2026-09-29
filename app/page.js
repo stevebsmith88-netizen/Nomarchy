@@ -74,6 +74,7 @@ export default function Nomarchy() {
 
   const [modal, setModal] = useState(null);
   const [addPretender, setAddPretender] = useState(false);
+  const [addPretenderPrefillName, setAddPretenderPrefillName] = useState("");
   const [importing, setImporting] = useState(false);
   const [historyOpen, setHistoryOpen] = useState({});
   const [courtModalFriendId, setCourtModalFriendId] = useState(null);
@@ -767,7 +768,7 @@ export default function Nomarchy() {
         {tab === "pretenders" && (<div>
           <p className="mb-3 text-sm" style={{ color: C.muted }}>The places waiting for their shot at a throne. Go, eat, then decide.</p>
           <div className="mb-3 flex gap-2">
-            <button onClick={() => setAddPretender(true)} className="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold" style={{ background: C.gold, color: C.bg }}><Plus size={16} /> Add a place</button>
+            <button onClick={() => { setAddPretenderPrefillName(""); setAddPretender(true); }} className="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold" style={{ background: C.gold, color: C.bg }}><Plus size={16} /> Add a place</button>
             <button onClick={() => setImporting(true)} className="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold" style={{ border: `1px solid ${C.gold}66`, color: C.gold }}><ClipboardPaste size={16} /> Import a list</button>
           </div>
 
@@ -821,6 +822,15 @@ export default function Nomarchy() {
               <p className="text-sm" style={{ color: C.muted }}>
                 {pretenderSearch ? <>Nothing matches &ldquo;{pretenderSearch}&rdquo;.</> : "Nothing in that cuisine yet."}
               </p>
+              {pretenderSearch && (
+                <button
+                  onClick={() => { setAddPretenderPrefillName(pretenderSearch); setAddPretender(true); }}
+                  className="mx-auto mt-2 flex items-center gap-1.5 text-sm font-semibold"
+                  style={{ color: C.gold }}
+                >
+                  <Plus size={14} /> Add &ldquo;{pretenderSearch}&rdquo; to your list
+                </button>
+              )}
             </div>
           ) : (<>
             {stillToTry.length > 0 && (<>
@@ -1124,8 +1134,9 @@ export default function Nomarchy() {
           cuisineId={selectableCuisines[0]?.id}
           cuisineName={selectableCuisines[0]?.name}
           cuisines={selectableCuisines}
+          prefill={addPretenderPrefillName ? { name: addPretenderPrefillName } : null}
           defaultCity={profile?.city || "Toronto"}
-          onClose={() => setAddPretender(false)}
+          onClose={() => { setAddPretender(false); setAddPretenderPrefillName(""); }}
           onSubmit={(cid, entry) => addToPretenders(cid, entry)}
         />
       )}
