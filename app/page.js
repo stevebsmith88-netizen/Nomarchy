@@ -12,7 +12,7 @@ import {
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
   linkGoogle, unlinkGoogle, getLinkedProviders,
-  loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, placeKey, loadRestaurantProfile, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
+  loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, placeKey, loadRestaurantProfile, searchAllRestaurants, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderVerdict, updatePretenderPhotos,
   moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
@@ -121,6 +121,20 @@ export default function Nomarchy() {
   const [top25Locating, setTop25Locating] = useState(false);
   const [restaurantSearch, setRestaurantSearch] = useState("");
   const [openRestaurant, setOpenRestaurant] = useState(null);
+  const [uncrownedMatches, setUncrownedMatches] = useState([]);
+
+  // Debounced so typing doesn't fire a query per keystroke - this hits
+  // the restaurants table directly rather than anything already loaded
+  // client-side, since an uncrowned place has no throne row to search.
+  useEffect(() => {
+    const q = restaurantSearch.trim();
+    if (!q) { setUncrownedMatches([]); return; }
+    let cancelled = false;
+    const t = setTimeout(() => {
+      searchAllRestaurants(q).then((rows) => { if (!cancelled) setUncrownedMatches(rows); }).catch(() => { if (!cancelled) setUncrownedMatches([]); });
+    }, 300);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [restaurantSearch]);
 
   useEffect(() => {
     getUser().then((u) => { setUser(u); setAuthChecked(true); });
@@ -620,6 +634,12 @@ export default function Nomarchy() {
   const restaurantSearchResults = top25 && restaurantSearchQuery
     ? groupCrownedThrones(top25).filter((p) => p.name.toLowerCase().includes(restaurantSearchQuery))
     : null;
+  // A restaurant already showing up above (someone's crowned it) shouldn't
+  // also show up down here as "not yet crowned".
+  const crownedKeys = new Set((restaurantSearchResults || []).map((p) => placeKey(p.name, p.address, p.area)));
+  const uncrownedResults = restaurantSearchQuery
+    ? uncrownedMatches.filter((r) => !crownedKeys.has(placeKey(r.name, r.address, r.area)))
+    : [];
 
   return (
     <FontShell>
@@ -1049,8 +1069,8 @@ export default function Nomarchy() {
           {top25Error && <p className="mb-3 text-xs" style={{ color: C.coup }}>{top25Error}</p>}
           {!top25 && !top25Error && <p className="text-sm" style={{ color: C.muted }}>Loading...</p>}
           {restaurantSearchResults ? (
-            restaurantSearchResults.length === 0
-              ? <p className="text-sm" style={{ color: C.muted }}>No crowned restaurant matches that yet.</p>
+            restaurantSearchResults.length === 0 && uncrownedResults.length === 0
+              ? <p className="text-sm" style={{ color: C.muted }}>No restaurant matches that yet.</p>
               : restaurantSearchResults.map((p, i) => <RestaurantRow key={i} p={p} onOpen={() => setOpenRestaurant(p)} />)
           ) : trendingList && (() => {
             const q = top25City.trim().toLowerCase();
@@ -1061,6 +1081,28 @@ export default function Nomarchy() {
             if (shownPlaces.length === 0) return <p className="text-sm" style={{ color: C.muted }}>Nothing crowned in that window yet.</p>;
             return shownPlaces.map((p, i) => <RestaurantRow key={i} p={p} rank={i} onOpen={() => setOpenRestaurant(p)} />);
           })()}
+          {uncrownedResults.length > 0 && (
+            <div className="mt-4">
+              <h4 className="mb-2 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Not yet crowned - be the first</h4>
+              {uncrownedResults.map((r, i) => (
+                <div
+                  key={i}
+                  onClick={() => { setAddPretenderPrefillName(r.name); setAddPretender(true); }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { setAddPretenderPrefillName(r.name); setAddPretender(true); } }}
+                  className="mb-2 flex cursor-pointer items-center gap-3 rounded-xl p-3"
+                  style={{ background: C.card, border: `1px dashed ${C.cardEdge}` }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <span className="truncate text-sm font-semibold">{r.name}</span>
+                    <div className="truncate text-xs" style={{ color: C.muted }}>{[r.area, r.address].filter(Boolean).join(" · ")}</div>
+                  </div>
+                  <span className="flex shrink-0 items-center gap-0.5 text-xs font-bold" style={{ color: C.gold }}><Plus size={12} /> Add</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>)}
 
         {openRestaurant && (
