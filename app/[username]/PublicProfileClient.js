@@ -33,7 +33,9 @@ function PhotoStrip({ photos }) {
       </div>
       {viewing && (
         <div className="fixed inset-0 z-[1300] flex items-center justify-center p-5" style={{ background: "rgba(10,5,16,0.92)" }} onClick={() => setViewing(null)}>
-          <button onClick={() => setViewing(null)} aria-label="Close" className="absolute right-4 top-4" style={{ color: C.cream }}><X size={24} /></button>
+          {/* Fixed white, not C.cream - this backdrop stays dark in both
+              themes, so the close icon must too, or it vanishes in light mode. */}
+          <button onClick={() => setViewing(null)} aria-label="Close" className="absolute right-4 top-4" style={{ color: "#fff" }}><X size={24} /></button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={viewing} alt="" className="max-h-full max-w-full rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
         </div>
