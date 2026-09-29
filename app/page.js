@@ -1498,7 +1498,7 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
           <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
           <button onClick={() => sharePick(cuisineName, r)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Share2 size={13} /> Share</button>
           {(onEditDecree || onMoveCuisine) && !editing && (
-            <button onClick={startEdit} aria-label="Edit" className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Pencil size={13} /> Edit</button>
+            <button onClick={startEdit} aria-label="Edit" title="Edit" className="flex items-center justify-center rounded-lg p-2" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Pencil size={13} /></button>
           )}
           {onUnCrown && (
             <button onClick={onUnCrown} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><RotateCcw size={13} /> Un-crown</button>
