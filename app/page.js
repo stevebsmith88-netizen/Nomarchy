@@ -696,9 +696,6 @@ export default function Nomarchy() {
               </>
             )}
           </span>
-          <button onClick={() => setShowMembers(true)} aria-label="Find people" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
-            <Users size={12} /> <span className="hidden sm:inline">Find people</span>
-          </button>
           <button onClick={() => setShowFeedback(true)} aria-label="Feedback" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <MessageSquare size={12} /> <span className="hidden sm:inline">Feedback</span>
           </button>
@@ -734,7 +731,7 @@ export default function Nomarchy() {
           <button key={id} onClick={() => setTab(id)} className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold"
             style={tab === id ? { background: C.gold, color: C.bg } : { background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <Icon size={15} strokeWidth={2.2} />{label}
-            {id === "pretenders" && unvisitedCount > 0 && <span className="rounded-full px-1.5 text-xs" style={{ background: tab === id ? C.bg : C.cardEdge, color: tab === id ? C.gold : C.cream }}>{unvisitedCount}</span>}
+            {id === "pretenders" && unvisitedCount > 0 && <span className="text-xs font-semibold" style={{ color: tab === id ? C.bg : C.muted }}>{unvisitedCount}</span>}
           </button>
         ))}
       </nav>
@@ -959,8 +956,12 @@ export default function Nomarchy() {
         {tab === "court" && (<div>
           <p className="mb-3 text-sm" style={{ color: C.muted }}>Your friends&apos; reigning picks. Endorse the good ones, or add them to your own shortlist.</p>
 
-          <button onClick={handleInviteFriend} className="mb-3 flex w-full items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>
+          <button onClick={handleInviteFriend} className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>
             <Share2 size={14} /> Invite a friend
+          </button>
+
+          <button onClick={() => setShowMembers(true)} className="mb-3 flex w-full items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-bold" style={{ background: C.card, color: C.cream, border: `1px solid ${C.cardEdge}` }}>
+            <Users size={14} /> Find people
           </button>
 
           <form onSubmit={handleAddFollow} className="mb-4 flex gap-2">
