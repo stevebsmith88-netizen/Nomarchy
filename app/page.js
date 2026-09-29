@@ -1516,15 +1516,17 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
         ) : (
           <p className="mt-2 text-sm leading-relaxed" style={{ color: C.cream + "E6" }}>
             <ScrollText size={13} className="mr-1 inline" style={{ color: C.gold }} />{r.decree}
+            {(onEditDecree || onMoveCuisine) && (
+              <button onClick={startEdit} aria-label="Edit" title="Edit" className="ml-1.5 inline-flex align-middle rounded p-1" style={{ color: C.muted }}>
+                <Pencil size={12} />
+              </button>
+            )}
           </p>
         )}
         {onEditPhotos && <PhotoPicker userId={userId} photos={r.photos || []} onChange={(photos) => onEditPhotos(photos)} />}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
           <button onClick={() => sharePick(cuisineName, r)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Share2 size={13} /> Share</button>
-          {(onEditDecree || onMoveCuisine) && !editing && (
-            <button onClick={startEdit} aria-label="Edit" title="Edit" className="flex items-center justify-center rounded-lg p-2" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Pencil size={13} /></button>
-          )}
           {onUnCrown && (
             <button onClick={onUnCrown} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><RotateCcw size={13} /> Un-crown</button>
           )}
