@@ -1079,7 +1079,7 @@ export default function Nomarchy() {
       </main>
 
       {toast && (
-        <div className="fixed bottom-5 left-1/2 z-[1100] -translate-x-1/2 rounded-full px-4 py-2 text-sm font-semibold shadow-lg" style={{ background: C.gold, color: C.bg }}>
+        <div className="fixed bottom-5 left-1/2 z-[1200] -translate-x-1/2 rounded-full px-4 py-2 text-sm font-semibold shadow-lg" style={{ background: C.gold, color: C.bg }}>
           <Check size={14} className="mr-1 inline" />{toast}
         </div>)}
 
