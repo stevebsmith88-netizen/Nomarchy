@@ -266,8 +266,7 @@ export default function Nomarchy() {
 
   const addToPretenders = async (cuisineId, entry) => {
     if (pretenders.some((p) => normalizeName(p.name) === normalizeName(entry.name))) {
-      flash("Already on your shortlist");
-      return;
+      throw new Error("Already on your shortlist");
     }
     await addToNextInLine(user.id, { ...entry, cuisineId });
     await refreshPretenders();
@@ -2395,9 +2394,21 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
   const [area, setArea] = useState(prefill?.area || "");
   const [text, setText] = useState("");
   const [photos, setPhotos] = useState(prefill?.photos || []);
+  const [submitting, setSubmitting] = useState(false);
   const minLen = isPretender ? 0 : MIN_DECREE_LENGTH;
   const valid = name.trim().length > 1 && text.trim().length >= minLen && !!cz;
   const czName = cuisines.find((c) => c.id === cz)?.name || cuisineName;
+
+  const handleSubmit = async () => {
+    if (!valid || submitting) return;
+    setSubmitting(true); setErr("");
+    try {
+      await onSubmit(cz, { name: name.trim(), area: area.trim(), ...(isPretender ? { note: text.trim() } : { decree: text.trim(), photos }), address: sel?.address || "", rating: sel?.rating || "", mapsUrl: sel?.mapsUrl || "" });
+    } catch (e) {
+      setErr(e.message || "That didn't save - try again.");
+    }
+    setSubmitting(false);
+  };
 
   const find = async () => {
     if (!query.trim() || searching) return;
@@ -2482,11 +2493,11 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
         </div>)}
         {!isPretender && <PhotoPicker userId={userId} photos={photos} onChange={setPhotos} />}
 
-        <button disabled={!valid} onClick={() => onSubmit(cz, { name: name.trim(), area: area.trim(), ...(isPretender ? { note: text.trim() } : { decree: text.trim(), photos }), address: sel?.address || "", rating: sel?.rating || "", mapsUrl: sel?.mapsUrl || "" })}
+        <button disabled={!valid || submitting} onClick={handleSubmit}
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold"
-          style={valid ? { background: isCoup ? C.coup : C.gold, color: isCoup ? C.cream : C.bg } : { background: C.cardEdge, color: C.muted }}>
-          {isPretender ? <Bookmark size={15} /> : isCoup ? <Swords size={15} /> : <Crown size={15} />}
-          {isPretender ? "Add to Next in Line" : isCoup ? "Dethrone and crown" : "Crown this spot"}
+          style={valid && !submitting ? { background: isCoup ? C.coup : C.gold, color: isCoup ? C.cream : C.bg } : { background: C.cardEdge, color: C.muted }}>
+          {submitting ? <Loader2 size={15} className="animate-spin" /> : isPretender ? <Bookmark size={15} /> : isCoup ? <Swords size={15} /> : <Crown size={15} />}
+          {submitting ? "Saving..." : isPretender ? "Add to Next in Line" : isCoup ? "Dethrone and crown" : "Crown this spot"}
         </button>
       </div>
     </div>);
