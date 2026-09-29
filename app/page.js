@@ -53,6 +53,18 @@ const normalizeName = (name) =>
     .replace(/[\s\-–—:,.]+$/, "")
     .replace(/\s+/g, " ");
 
+// A plain, manually-typed "Mizunara" and a looked-up "Mizunara Japanese
+// Whisky Experience" are the same real place, not a coincidence - one
+// name sitting inside the other is a much stronger signal than an exact
+// match requires. The length floor keeps a short generic word (say
+// "Bar") from falsely matching everything that happens to contain it.
+const sameRestaurant = (a, b) => {
+  const na = normalizeName(a), nb = normalizeName(b);
+  if (na === nb) return true;
+  const [shorter, longer] = na.length <= nb.length ? [na, nb] : [nb, na];
+  return shorter.length >= 5 && longer.includes(shorter);
+};
+
 export default function Nomarchy() {
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -266,7 +278,7 @@ export default function Nomarchy() {
   };
 
   const addToPretenders = async (cuisineId, entry) => {
-    if (pretenders.some((p) => normalizeName(p.name) === normalizeName(entry.name))) {
+    if (pretenders.some((p) => sameRestaurant(p.name, entry.name))) {
       throw new Error("Already on your shortlist");
     }
     await addToNextInLine(user.id, { ...entry, cuisineId });
@@ -314,13 +326,12 @@ export default function Nomarchy() {
   // new cuisine must not both try to create it.
   const importMany = async (rows) => {
     let added = 0, skipped = 0;
-    const existingNames = new Set(pretenders.map((p) => normalizeName(p.name)));
+    const existingNames = pretenders.map((p) => p.name);
     let localCuisines = cuisineList;
     const resolved = [];
     for (const r of rows) {
-      const key = normalizeName(r.name);
-      if (existingNames.has(key)) { skipped++; continue; }
-      existingNames.add(key);
+      if (existingNames.some((n) => sameRestaurant(n, r.name))) { skipped++; continue; }
+      existingNames.push(r.name);
       let match = localCuisines.find(
         (c) => !(c.is_default && c.name === OVERALL_FAVOURITE_NAME) &&
           c.name.toLowerCase() === (r.cuisine || "").toLowerCase().trim()
