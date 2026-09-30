@@ -164,6 +164,12 @@ update cuisines set name = 'Shawarma and Middle Eastern' where name = 'Shawarma'
 update cuisines set name = 'Japanese and Ramen' where name = 'Ramen' and is_default = true;
 update cuisines set name = 'Dessert and Bakery' where name = 'Dessert' and is_default = true;
 
+-- Added after the initial seed list above, so it's its own insert rather
+-- than an edit to that array - same pattern as Overall Favourite below.
+insert into cuisines (name, is_default)
+values ('Vegan and Vegetarian', true)
+on conflict (name, coalesce(created_by, '00000000-0000-0000-0000-000000000000'::uuid)) do nothing;
+
 -- A reserved, shared cuisine every user gets exactly one throne on (via the
 -- normal unique(user_id, cuisine_id) constraint below) - the app treats it
 -- as "Overall Favourite" rather than a real cuisine, and hides it from the
