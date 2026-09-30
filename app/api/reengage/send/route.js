@@ -154,13 +154,12 @@ export async function GET(request) {
           const friendCrownCount = thronesRes.data.filter(
             (t) => followedIds.has(t.user_id) && new Date(t.crowned_at).getTime() > lastSignInMs
           ).length;
-          // Everything shipped since they were last active, capped so the
-          // list can't grow unbounded for someone gone a very long time.
-          // Falls back to the latest few regardless if they're "quiet" only
-          // by the no-new-content signal (lastSignInMs is recent) so the
-          // section is never empty.
-          const sinceLastSeen = CHANGELOG.filter((c) => new Date(c.at).getTime() > lastSignInMs);
-          const changes = (sinceLastSeen.length ? sinceLastSeen : CHANGELOG.slice(-3)).slice(-6);
+          // A highlights reel, not a full changelog - someone gone a year
+          // doesn't need every single thing that shipped since, just enough
+          // to feel like "oh, it's changed" and want to look. Always the
+          // 4 most recent entries, regardless of how long they've been
+          // away or whether all of them postdate their last visit.
+          const changes = CHANGELOG.slice(-4);
           const html = renderEmail({
             name: p.display_name || p.username,
             unsubscribeUrl: `${SITE_URL}/api/reengage/unsubscribe?token=${p.unsubscribe_token}`,
