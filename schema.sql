@@ -314,6 +314,20 @@ create table if not exists follows (
   check (follower_id <> followee_id)
 );
 
+-- Blocking is about the social graph, not app-wide public content -
+-- Best in the Land and a public profile stay exactly as visible as they
+-- were, since is_public is a broadcast setting, not a per-relationship
+-- one. What a block actually does: removes any existing follow between
+-- the two people (both directions - see the two follows policies below),
+-- and stops a new one forming in either direction going forward.
+create table if not exists blocks (
+  blocker_id uuid not null references profiles(id) on delete cascade,
+  blocked_id uuid not null references profiles(id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  primary key (blocker_id, blocked_id),
+  check (blocker_id <> blocked_id)
+);
+
 -- ------------------------------------------------------------
 -- 7. AI_CALLS
 -- One row per call to /api/ai, used to enforce a per-user hourly rate
@@ -528,6 +542,7 @@ alter table fallen       enable row level security;
 alter table next_in_line enable row level security;
 alter table endorsements enable row level security;
 alter table follows      enable row level security;
+alter table blocks       enable row level security;
 alter table ai_calls     enable row level security;
 
 -- Profiles: everyone can read, you can only edit your own
@@ -609,6 +624,40 @@ create policy "follows readable" on follows for select using (true);
 drop policy if exists "own follows writable" on follows;
 create policy "own follows writable" on follows for all
   using (auth.uid() = follower_id) with check (auth.uid() = follower_id);
+-- The permissive policy above only ever lets you touch a row where
+-- YOU'RE the follower - it can't remove someone else's follow of you,
+-- which is exactly what blocking someone who already follows you needs.
+-- A second permissive delete policy (Postgres OR's them together) adds
+-- that one specific extra case without loosening anything else.
+drop policy if exists "remove an incoming follow you've blocked" on follows;
+create policy "remove an incoming follow you've blocked" on follows for delete
+  using (
+    auth.uid() = followee_id
+    and exists (select 1 from blocks b where b.blocker_id = auth.uid() and b.blocked_id = follows.follower_id)
+  );
+-- Restrictive: combined with AND against the permissive insert policy
+-- above, so a follow can never be created in either direction while a
+-- block exists between the two people - enforced here, not just in app
+-- code, so it can't be bypassed by calling the API directly.
+drop policy if exists "no follows across a block" on follows;
+create policy "no follows across a block" on follows as restrictive for insert
+  with check (
+    not exists (
+      select 1 from blocks b
+      where (b.blocker_id = follows.follower_id and b.blocked_id = follows.followee_id)
+         or (b.blocker_id = follows.followee_id and b.blocked_id = follows.follower_id)
+    )
+  );
+
+-- Blocks: you can see and manage only your own block list. Deliberately
+-- not readable by the blocked person - "who's blocked you" isn't
+-- information they need, same reasoning most platforms use.
+drop policy if exists "own blocks readable" on blocks;
+create policy "own blocks readable" on blocks for select
+  using (auth.uid() = blocker_id);
+drop policy if exists "own blocks writable" on blocks;
+create policy "own blocks writable" on blocks for all
+  using (auth.uid() = blocker_id) with check (auth.uid() = blocker_id);
 
 -- AI calls: private, insert/read your own only
 drop policy if exists "users log their own ai calls" on ai_calls;

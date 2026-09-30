@@ -17,7 +17,7 @@ import {
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderVerdict, updatePretenderPhotos,
   moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
   uploadReviewPhoto, deleteReviewPhoto, uploadAvatar, MAX_REVIEW_PHOTOS,
-  loadCourt, toggleEndorsement, followByUsername, loadStanding, loadConquestProgress,
+  loadCourt, toggleEndorsement, followByUsername, loadStanding, loadConquestProgress, blockUser, unblockUser, loadBlockedUsers,
   loadAdminOverview,
 } from "@/lib/data";
 import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell, useTheme } from "./theme";
@@ -523,6 +523,23 @@ export default function Nomarchy() {
   const handleEndorse = async (throneId, currentlyEndorsed) => {
     await toggleEndorsement(user.id, throneId, currentlyEndorsed);
     await refreshCourt();
+  };
+
+  // Blocking removes the follow relationship both ways (enforced in
+  // blockUser itself), so both Court and "following you" need refreshing,
+  // not just Court.
+  const handleBlockFriend = async (blockedId) => {
+    await blockUser(user.id, blockedId);
+    await Promise.all([refreshCourt(), loadFollowers(user.id).then(setFollowers)]);
+    flash("Blocked");
+  };
+
+  // Reuses the existing feedback inbox (private, goes straight to the
+  // owner) rather than a separate reports table and admin view - a
+  // report is exactly the same shape of thing a bug report is: someone
+  // telling the owner something needs their attention.
+  const handleReportFriend = async (friend, reason) => {
+    await submitFeedback(user.id, `Report on @${friend.username || friend.name}: ${reason?.trim() || "(no reason given)"}`, "court");
   };
 
   const handleAddFollow = async (e) => {
@@ -1310,6 +1327,8 @@ export default function Nomarchy() {
             onClose={() => setCourtModalFriendId(null)}
             onEndorse={handleEndorse}
             onAddToList={addFriendPickToPretenders}
+            onBlock={() => { handleBlockFriend(f.id); setCourtModalFriendId(null); }}
+            onReport={(reason) => handleReportFriend(f, reason)}
           />
         );
       })()}
@@ -2330,6 +2349,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
 
   const [conquests, setConquests] = useState(null);
   const [conquestsError, setConquestsError] = useState("");
+  const [blockedUsers, setBlockedUsers] = useState(null);
 
   useEffect(() => {
     getLinkedProviders().then(setProviders).catch(() => setProviders([]));
@@ -2338,8 +2358,14 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
   useEffect(() => {
     if (!profile?.id) return;
     loadConquestProgress(profile.id).then(setConquests).catch((e) => setConquestsError(e.message || "Couldn't load these."));
+    loadBlockedUsers(profile.id).then(setBlockedUsers).catch(() => setBlockedUsers([]));
   }, [profile?.id]);
   const googleLinked = providers?.includes("google");
+
+  const handleUnblock = async (blockedId) => {
+    await unblockUser(profile.id, blockedId);
+    setBlockedUsers((list) => list.filter((b) => b.id !== blockedId));
+  };
 
   const toggleGoogle = async () => {
     setLinkBusy(true); setLinkErr("");
@@ -2630,6 +2656,18 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
         </div>
         {linkErr && <p className="mt-1.5 text-xs" style={{ color: C.coup }}>{linkErr}</p>}
 
+        {blockedUsers && blockedUsers.length > 0 && (
+          <div className="mt-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+            <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Blocked users</div>
+            {blockedUsers.map((b) => (
+              <div key={b.id} className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-sm">{b.name}</span>
+                <button onClick={() => handleUnblock(b.id)} className="text-xs font-semibold" style={{ color: C.gold }}>Unblock</button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {err && <p className="mt-3 text-xs" style={{ color: C.coup }}>{err}</p>}
 
         <button
@@ -2746,7 +2784,19 @@ function PersonRow({ p, onFollow, busy, hint }) {
 // of thrones, but someone with a long history of picks and reviews would
 // turn the whole Court tab into one giant scroll, burying every other
 // friend below them.
-function FriendKingdomModal({ friend: f, onClose, onEndorse, onAddToList }) {
+function FriendKingdomModal({ friend: f, onClose, onEndorse, onAddToList, onBlock, onReport }) {
+  const [reporting, setReporting] = useState(false);
+  const [reportText, setReportText] = useState("");
+  const [reportSent, setReportSent] = useState(false);
+  const [confirmingBlock, setConfirmingBlock] = useState(false);
+
+  const submitReport = async () => {
+    await onReport(reportText);
+    setReportText("");
+    setReporting(false);
+    setReportSent(true);
+  };
+
   return (
     <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
       <div className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
@@ -2810,6 +2860,42 @@ function FriendKingdomModal({ friend: f, onClose, onEndorse, onAddToList }) {
             <PhotoStrip photos={r.photos} />
           </div>
         ))}
+
+        <div className="mt-5 border-t pt-4" style={{ borderColor: C.cardEdge }}>
+          {reportSent ? (
+            <p className="text-xs" style={{ color: C.muted }}>Report sent - thanks for flagging it.</p>
+          ) : reporting ? (
+            <div>
+              <textarea
+                value={reportText}
+                onChange={(e) => setReportText(e.target.value)}
+                placeholder="What's wrong? (optional)"
+                rows={2}
+                className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+                style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+              />
+              <div className="mt-2 flex gap-2">
+                <button onClick={() => setReporting(false)} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ border: `1px solid ${C.cardEdge}`, color: C.muted }}>Cancel</button>
+                <button onClick={submitReport} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ background: C.coup, color: C.cream }}>Send report</button>
+              </div>
+            </div>
+          ) : confirmingBlock ? (
+            <div>
+              <p className="text-xs leading-relaxed" style={{ color: C.coup }}>
+                Block {f.name}? You&apos;ll unfollow each other and won&apos;t be able to follow again unless you unblock them later (Profile &rarr; Blocked users).
+              </p>
+              <div className="mt-2 flex gap-2">
+                <button onClick={() => setConfirmingBlock(false)} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ border: `1px solid ${C.cardEdge}`, color: C.muted }}>Cancel</button>
+                <button onClick={onBlock} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ background: C.coup, color: C.cream }}>Block</button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button onClick={() => setReporting(true)} className="flex-1 rounded-lg py-2 text-xs font-semibold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>Report</button>
+              <button onClick={() => setConfirmingBlock(true)} className="flex-1 rounded-lg py-2 text-xs font-semibold" style={{ color: C.coup, border: `1px solid ${C.coup}55` }}>Block</button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
