@@ -691,7 +691,12 @@ export default function Nomarchy() {
   // loaded on every page load (not lazily per-tab), so this needs no new
   // query. Uncrowned search results (below, in the render) aren't scoped
   // this way - there's no "whose" to attribute an uncrowned restaurant to.
-  const followedIds = new Set(court.map((f) => f.id));
+  // Includes your own id, not just people you follow - your own crowns
+  // are as much "your Court" as a friend's, and without this a place you
+  // and a friend both crowned would show a lower count here than on its
+  // own restaurant page (which counts everyone), reading as if it had
+  // quietly lost a crown rather than just being scoped down.
+  const followedIds = new Set([...court.map((f) => f.id), user.id]);
   const scopedTop25 = top25 && (top25Scope === "friends" ? top25.filter((t) => followedIds.has(t.user_id)) : top25);
   const trendingList = scopedTop25 && groupCrownedThrones(scopedTop25.filter((t) => new Date(t.crowned_at).getTime() >= trendingCutoff));
   // Search ignores the range/rank window entirely - "find any restaurant
@@ -1096,6 +1101,9 @@ export default function Nomarchy() {
                   <h3 className="flex items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
                     {f.name} <RankBadge score={f.score} /> {f.isOwner && <OwnerBadge />}
                   </h3>
+                  {f.username && f.name !== f.username && (
+                    <p className="text-xs" style={{ color: C.muted }}>@{f.username}</p>
+                  )}
                   <span
                     className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
                     style={{ background: C.bg, color: C.gold, letterSpacing: "0.06em" }}
@@ -2287,6 +2295,7 @@ function SignInScreen() {
 // Continue, while anyone who cares can still change it right here.
 function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
   const suggested = (profile?.username || "").replace(/-[0-9a-f]{4}$/, "");
+  const [displayName, setDisplayName] = useState(profile?.display_name || suggested);
   const [username, setUsername] = useState(suggested);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -2297,7 +2306,7 @@ function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
     if (!usernameValid || busy) return;
     setBusy(true); setErr("");
     try {
-      await onSubmit({ username: username.trim().toLowerCase() });
+      await onSubmit({ username: username.trim().toLowerCase(), display_name: displayName.trim() || null });
     } catch (e) {
       setErr(e.message || "Couldn't save. Try again.");
       setBusy(false);
@@ -2316,9 +2325,24 @@ function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
         </div>
 
         <div className="mt-4 text-left">
-          <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Username</label>
+          <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>What should we call you?</label>
           <input
             autoFocus
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="Your name"
+            maxLength={40}
+            className="mt-1 w-full rounded-lg px-3 py-2.5 text-sm outline-none"
+            style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+          />
+          <div className="mt-1 text-xs" style={{ color: C.muted }}>
+            What friends see on your picks, Court, and profile.
+          </div>
+        </div>
+
+        <div className="mt-3 text-left">
+          <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Pick a handle</label>
+          <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="lowercase, letters/numbers/hyphens"
@@ -2326,7 +2350,7 @@ function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
             style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
           />
           <div className="mt-1 text-xs" style={{ color: usernameValid || !username ? C.muted : C.coup }}>
-            This is what friends use to follow you (@{username.trim().toLowerCase() || "username"}).
+            What friends use to follow you (@{username.trim().toLowerCase() || "username"}).
           </div>
         </div>
 
@@ -2353,6 +2377,7 @@ function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
 function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, onSubmit, onChangeAvatar, onDeleteAccount }) {
   const { theme, toggleTheme } = useTheme();
   const [username, setUsername] = useState(profile?.username || "");
+  const [displayName, setDisplayName] = useState(profile?.display_name || "");
   const [city, setCity] = useState(profile?.city || "");
   const [isPublic, setIsPublic] = useState(profile?.is_public ?? true);
   const [discoverable, setDiscoverable] = useState(profile?.discoverable ?? false);
@@ -2416,7 +2441,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
     setBusy(true); setErr("");
     try {
       await onSubmit({
-        username: username.trim().toLowerCase(), city: city.trim() || null, is_public: isPublic, discoverable, reminders_opt_out: !remindersOn,
+        username: username.trim().toLowerCase(), display_name: displayName.trim() || null, city: city.trim() || null, is_public: isPublic, discoverable, reminders_opt_out: !remindersOn,
         notify_follows: notifyFollows, notify_crowns: notifyCrowns, notify_reviews: notifyReviews, notify_endorsements: notifyEndorsements,
       });
       onClose();
@@ -2505,6 +2530,21 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
         </div>
 
         <div className="mt-6 border-t pt-4" style={{ borderColor: C.cardEdge }}>
+          <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Display name</label>
+          <input
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="What should we call you?"
+            maxLength={40}
+            className="mt-1 w-full rounded-lg px-3 py-2.5 text-sm outline-none"
+            style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+          />
+          <div className="mt-1 text-xs" style={{ color: C.muted }}>
+            This is the name friends see on your picks, Court, and profile.
+          </div>
+        </div>
+
+        <div className="mt-3">
           <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Username</label>
           <input
             value={username}
@@ -2514,7 +2554,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
             style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
           />
           <div className="mt-1 text-xs" style={{ color: usernameValid || !username ? C.muted : C.coup }}>
-            This is what friends use to follow you (@{username.trim().toLowerCase() || "username"}) - 3+ characters, lowercase letters, numbers and hyphens only.
+            This is your handle - what friends use to follow you (@{username.trim().toLowerCase() || "username"}) - 3+ characters, lowercase letters, numbers and hyphens only.
           </div>
         </div>
 
