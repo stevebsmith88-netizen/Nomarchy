@@ -2597,7 +2597,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
           ) : (
             <div>
               <p className="text-xs leading-relaxed" style={{ color: C.coup }}>
-                This permanently deletes your account and everything in it - every throne, your history, next in line, and follows. This cannot be undone.
+                This removes your access, your name, and your Next in Line for good - you'll be signed out and unfollowed everywhere. Your crowns and reviews stay up for others, credited to &ldquo;No longer a user&rdquo; instead of you. This cannot be undone.
               </p>
               <p className="mt-2 text-xs" style={{ color: C.muted }}>
                 Type <span style={{ color: C.cream, fontWeight: 700 }}>{profile?.username}</span> to confirm.
@@ -2624,7 +2624,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
                   style={deleteConfirmed ? { background: C.coup, color: C.cream } : { background: C.cardEdge, color: C.muted }}
                 >
                   {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                  Delete everything
+                  Delete my account
                 </button>
               </div>
             </div>
