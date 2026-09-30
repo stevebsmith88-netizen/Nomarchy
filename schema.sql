@@ -856,3 +856,24 @@ as $$
       or (p_address is null and p_area is null)
     );
 $$;
+
+-- Same idea, other half of next_in_line: people who've added this place
+-- but haven't marked it visited yet - "X want to try this", a third stat
+-- alongside crowns and "been, not crowned" so a restaurant page isn't
+-- stuck at just two thin numbers.
+create or replace function restaurant_wanting_count(p_name text, p_address text, p_area text)
+returns integer
+language sql
+stable
+security definer set search_path = public
+as $$
+  select count(*)::integer
+  from next_in_line n
+  where n.visited_at is null
+    and lower(trim(n.place_name)) = lower(trim(p_name))
+    and (
+      (p_address is not null and n.address is not null and lower(trim(n.address)) = lower(trim(p_address)))
+      or (p_area is not null and n.neighbourhood is not null and lower(trim(n.neighbourhood)) = lower(trim(p_area)))
+      or (p_address is null and p_area is null)
+    );
+$$;

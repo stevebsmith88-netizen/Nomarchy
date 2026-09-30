@@ -12,7 +12,7 @@ import {
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
   linkGoogle, unlinkGoogle, getLinkedProviders,
-  loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, placeKey, loadRestaurantProfile, loadRestaurantVisitCount, searchAllRestaurants, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
+  loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, placeKey, loadRestaurantProfile, loadRestaurantVisitCount, loadRestaurantWantingCount, searchAllRestaurants, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderVerdict, updatePretenderPhotos,
   moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
@@ -1645,6 +1645,7 @@ function RestaurantProfileModal({ restaurant, onClose }) {
   const [entries, setEntries] = useState(null);
   const [err, setErr] = useState("");
   const [visitCount, setVisitCount] = useState(null);
+  const [wantingCount, setWantingCount] = useState(null);
   const fmt = (t) => new Date(t).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
 
   useEffect(() => {
@@ -1657,6 +1658,9 @@ function RestaurantProfileModal({ restaurant, onClose }) {
     loadRestaurantVisitCount(restaurant.name, restaurant.address, restaurant.area)
       .then((n) => { if (!cancelled) setVisitCount(n); })
       .catch(() => { if (!cancelled) setVisitCount(null); });
+    loadRestaurantWantingCount(restaurant.name, restaurant.address, restaurant.area)
+      .then((n) => { if (!cancelled) setWantingCount(n); })
+      .catch(() => { if (!cancelled) setWantingCount(null); });
     return () => { cancelled = true; };
   }, [restaurant.name, restaurant.address, restaurant.area]);
 
@@ -1673,10 +1677,14 @@ function RestaurantProfileModal({ restaurant, onClose }) {
 
         <div className="overflow-y-auto px-5 py-4">
           {entries && entries.length > 0 && (
-            <div className="mb-4 grid grid-cols-2 gap-2">
+            <div className="mb-4 grid grid-cols-3 gap-2">
               <div className="rounded-xl p-3 text-center" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
                 <div className="text-xl" style={{ ...display, fontWeight: 700, color: C.gold }}>{entries.length}</div>
                 <div className="text-xs" style={{ color: C.muted }}>{entries.length === 1 ? "crown" : "crowns"}</div>
+              </div>
+              <div className="rounded-xl p-3 text-center" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+                <div className="text-xl" style={{ ...display, fontWeight: 700, color: C.gold }}>{wantingCount === null ? "-" : wantingCount}</div>
+                <div className="text-xs" style={{ color: C.muted }}>want to try</div>
               </div>
               <div className="rounded-xl p-3 text-center" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
                 <div className="text-xl" style={{ ...display, fontWeight: 700, color: C.gold }}>{visitCount === null ? "-" : visitCount}</div>
