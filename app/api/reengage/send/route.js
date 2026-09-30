@@ -38,7 +38,18 @@ async function listAllUsers(supabase) {
   return users;
 }
 
-function renderEmail({ name, unsubscribeUrl }) {
+// Recent, notable features worth resurfacing to someone who's been away
+// long enough to have missed all of them - update this by hand as things
+// ship, same idea as ANNOUNCEMENTS in lib/data.js but kept separate since
+// this is a server-only route and that file spins up a client on import.
+const WHATS_NEW = [
+  { title: "Light mode", desc: "toggle it in your profile settings." },
+  { title: "Google Sign-In", desc: "one tap, no password to remember." },
+  { title: "Best in the Land", desc: "the most-crowned restaurants across everyone's kingdoms, or just your Court." },
+  { title: "The Map", desc: "your friends' picks laid out geographically." },
+];
+
+function renderEmail({ name, unsubscribeUrl, friendCrownCount }) {
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;border:1px solid #eee;border-radius:12px;overflow:hidden;">
     <div style="background:#1D1326;padding:32px 24px;text-align:center;">
@@ -47,13 +58,25 @@ function renderEmail({ name, unsubscribeUrl }) {
     </div>
     <div style="padding:24px;">
       <p style="font-size:16px;color:#1D1326;margin-top:0;">Your kingdom&rsquo;s been quiet, ${name}.</p>
-      <p style="font-size:14px;color:#333;line-height:1.6;">
+      ${friendCrownCount > 0 ? `
+      <div style="margin-top:14px;padding:14px 16px;background:#F5ECDE;border-radius:10px;">
+        <p style="font-size:14px;color:#1D1326;margin:0;">
+          <strong>${friendCrownCount} new pick${friendCrownCount === 1 ? "" : "s"}</strong> from your Court since you've been away.
+        </p>
+      </div>` : ""}
+      <p style="font-size:14px;color:#333;line-height:1.6;margin-top:16px;">
         It's been a while since you signed in or crowned somewhere new. Your friends' picks are still
         waiting to be endorsed, and there's probably a new favourite spot worth adding.
       </p>
       <p style="margin-top:24px;">
         <a href="${SITE_URL}" style="background:#E2B340;color:#1D1326;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:700;font-size:14px;">Open Nomarchy</a>
       </p>
+      <div style="margin-top:24px;padding-top:20px;border-top:1px solid #eee;">
+        <p style="font-size:13px;font-weight:700;color:#1D1326;margin-bottom:8px;">So much has changed since you last looked:</p>
+        <ul style="font-size:13px;color:#333;line-height:1.8;padding-left:20px;margin:0;">
+          ${WHATS_NEW.map((f) => `<li><strong>${f.title}</strong> - ${f.desc}</li>`).join("")}
+        </ul>
+      </div>
     </div>
     <p style="font-size:11px;color:#999;padding:0 24px 24px;">
       You're getting this because your Nomarchy account has been quiet for a while.
@@ -91,15 +114,26 @@ export async function GET(request) {
   const supabase = admin();
   const cutoff = new Date(Date.now() - QUIET_MS).toISOString();
 
-  const [profilesRes, users, thronesRes, nilRes] = await Promise.all([
+  const [profilesRes, users, thronesRes, nilRes, followsRes] = await Promise.all([
     supabase.from("profiles").select("id, username, display_name, created_at, reminders_opt_out, unsubscribe_token"),
     listAllUsers(supabase),
     supabase.from("thrones").select("user_id, crowned_at"),
     supabase.from("next_in_line").select("user_id, added_at"),
+    supabase.from("follows").select("follower_id, followee_id"),
   ]);
   if (profilesRes.error) throw profilesRes.error;
   if (thronesRes.error) throw thronesRes.error;
   if (nilRes.error) throw nilRes.error;
+  if (followsRes.error) throw followsRes.error;
+
+  // Who each person follows, so the "X new picks from your Court" line
+  // below can count only crowns from people they actually follow, not
+  // every crown app-wide.
+  const followingMap = new Map();
+  for (const f of followsRes.data) {
+    if (!followingMap.has(f.follower_id)) followingMap.set(f.follower_id, new Set());
+    followingMap.get(f.follower_id).add(f.followee_id);
+  }
 
   const lastActivity = new Map();
   const bump = (userId, at) => {
@@ -125,9 +159,14 @@ export async function GET(request) {
         if (!quiet) { skipped += 1; return; }
 
         try {
+          const followedIds = followingMap.get(p.id) || new Set();
+          const friendCrownCount = thronesRes.data.filter(
+            (t) => followedIds.has(t.user_id) && new Date(t.crowned_at).getTime() > lastSignInMs
+          ).length;
           const html = renderEmail({
             name: p.display_name || p.username,
             unsubscribeUrl: `${SITE_URL}/api/reengage/unsubscribe?token=${p.unsubscribe_token}`,
+            friendCrownCount,
           });
           await sendEmail(user.email, "Your kingdom's been quiet", html);
           sent += 1;
