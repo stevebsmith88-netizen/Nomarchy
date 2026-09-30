@@ -54,7 +54,7 @@ export async function GET(request) {
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", flex: 1, flexDirection: "column", justifyContent: "center" }}>
+        <div style={{ display: "flex", flex: 1, flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <svg width={40} height={46} viewBox="0 -8 100 116" fill="none" stroke={C.gold} strokeWidth={7}>
               <circle cx={50} cy={-2} r={5} fill={C.gold} stroke="none" />
@@ -71,10 +71,10 @@ export async function GET(request) {
           <div style={{ display: "flex", marginTop: considering ? 16 : 56, fontSize: 26, fontWeight: 700, color: C.gold, letterSpacing: 3, textTransform: "uppercase" }}>
             {cuisine}
           </div>
-          <div style={{ display: "flex", marginTop: 16, fontSize: 68, fontWeight: 800, color: C.cream, lineHeight: 1.1 }}>
+          <div style={{ display: "flex", marginTop: 16, fontSize: 68, fontWeight: 800, color: C.cream, lineHeight: 1.1, textAlign: "center" }}>
             {name}
           </div>
-          <div style={{ display: "flex", marginTop: 18, fontSize: 28, color: C.muted, gap: 14, alignItems: "center" }}>
+          <div style={{ display: "flex", marginTop: 18, fontSize: 28, color: C.muted, gap: 14, alignItems: "center", justifyContent: "center" }}>
             {area && <div style={{ display: "flex" }}>{area}</div>}
             {rating && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, color: C.gold }}>
@@ -87,13 +87,13 @@ export async function GET(request) {
           </div>
 
           {blurb && (
-            <div style={{ display: "flex", marginTop: 44, fontSize: 32, color: C.cream, lineHeight: 1.5, opacity: 0.9 }}>
+            <div style={{ display: "flex", marginTop: 44, fontSize: 32, color: C.cream, lineHeight: 1.5, opacity: 0.9, textAlign: "center", maxWidth: 850 }}>
               &ldquo;{blurb}&rdquo;
             </div>
           )}
         </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `2px solid ${C.cardEdge}`, paddingTop: 28 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, borderTop: `2px solid ${C.cardEdge}`, paddingTop: 28 }}>
           <div style={{ display: "flex", fontSize: 26, color: C.muted }}>
             {username ? `${considering ? "on" : "crowned by"} @${username}${considering ? "'s list" : ""}` : considering ? "on the list" : "crowned on Nomarchy"}
           </div>
