@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Crown, MapPin, ExternalLink, Star, ScrollText, UserPlus, Loader2, Check, Lock, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Crown, MapPin, ExternalLink, ScrollText, UserPlus, Loader2, Check, Lock, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { getUser, loadPublicKingdom, followByUsername } from "@/lib/data";
 import { C, display, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell, useTheme } from "../theme";
 
@@ -237,7 +237,6 @@ export default function PublicProfileClient({ username }) {
                   <h3 className="mt-2 text-xl" style={{ ...display, fontWeight: 700 }}>{r.name}</h3>
                   <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
                     {(r.area || r.address) && (<><MapPin size={11} /> {r.area || r.address}<span className="mx-1">·</span></>)}
-                    {r.rating && (<><Star size={11} style={{ color: C.gold }} fill={C.gold} /> {r.rating}<span className="mx-1">·</span></>)}
                     crowned {fmt(r.crownedAt)}
                     {r.mapsUrl && <a href={r.mapsUrl} target="_blank" rel="noreferrer" className="ml-1 flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
                   </div>
