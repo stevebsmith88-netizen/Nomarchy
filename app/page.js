@@ -1543,10 +1543,7 @@ function RestaurantRow({ p, rank, onOpen }) {
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold" style={{ background: rank < 3 ? C.gold : C.bg, color: rank < 3 ? C.bg : C.muted }}>{rank + 1}</div>
       )}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-semibold">{p.name}</span>
-          {p.rating && <span className="flex shrink-0 items-center gap-0.5 text-xs" style={{ color: C.gold }}><Star size={11} fill={C.gold} /> {p.rating}</span>}
-        </div>
+        <span className="truncate text-sm font-semibold">{p.name}</span>
         <div className="truncate text-xs" style={{ color: C.muted }}>{[p.area, p.address].filter(Boolean).join(" · ")}</div>
       </div>
       <div className="shrink-0 text-right">
