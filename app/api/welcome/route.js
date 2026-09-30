@@ -26,7 +26,7 @@ function admin() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-function renderEmail(username) {
+function renderEmail(name) {
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;border:1px solid #eee;border-radius:12px;overflow:hidden;">
     <div style="background:#1D1326;padding:32px 24px;text-align:center;">
@@ -34,7 +34,7 @@ function renderEmail(username) {
       <div style="font-size:20px;font-weight:900;letter-spacing:3px;color:#E2B340;margin-top:10px;">NOMARCHY</div>
     </div>
     <div style="padding:24px;">
-      <p style="font-size:18px;font-weight:700;color:#1D1326;margin-top:0;">Your kingdom awaits, @${username}.</p>
+      <p style="font-size:18px;font-weight:700;color:#1D1326;margin-top:0;">Your kingdom awaits, ${name}.</p>
       <p style="font-size:14px;color:#333;line-height:1.6;">
         Nomarchy is where you crown your favourite restaurant in every cuisine, stage a coup when
         something better comes along, and compare your kingdom with friends.
@@ -121,7 +121,7 @@ export async function POST(request) {
   await sendEmail(
     data.user.email,
     "Welcome to Nomarchy",
-    renderEmail(record.username)
+    renderEmail(record.display_name || `@${record.username}`)
   );
 
   return NextResponse.json({ sent: true });
