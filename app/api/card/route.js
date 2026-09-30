@@ -23,6 +23,7 @@
 // ============================================================
 
 import { ImageResponse } from "next/og";
+import QRCode from "qrcode";
 
 export const runtime = "nodejs";
 
@@ -30,6 +31,44 @@ const C = {
   bg: "#1D1326", card: "#2A1E38", cardEdge: "#41305A",
   gold: "#E2B340", cream: "#F5ECDE", muted: "#A795BD",
 };
+
+// A card with no way back to the app was just a nice-looking image - this
+// is what actually turns a share into a visit. Rendered as a plain grid
+// of SVG rects from the raw module matrix (QRCode.create is synchronous
+// and dependency-free, no canvas/DOM needed) rather than an <img>, since
+// Satori's Node renderer can't reliably fetch an external image mid-render.
+// Light modules on dark would look more on-brand, but real light-on-dark
+// QR codes scan noticeably worse in practice - correctness over branding
+// here, so it's a plain white square regardless of light/dark app theme.
+function QrCode({ text, size = 220 }) {
+  const qr = QRCode.create(text, { errorCorrectionLevel: "M" });
+  const count = qr.modules.size;
+  const quiet = 2;
+  const moduleSize = size / (count + quiet * 2);
+  const rects = [];
+  for (let row = 0; row < count; row++) {
+    for (let col = 0; col < count; col++) {
+      if (qr.modules.get(row, col)) {
+        rects.push(
+          <rect
+            key={`${row}-${col}`}
+            x={(col + quiet) * moduleSize}
+            y={(row + quiet) * moduleSize}
+            width={moduleSize}
+            height={moduleSize}
+            fill="#1D1326"
+          />
+        );
+      }
+    }
+  }
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ borderRadius: 12 }}>
+      <rect x={0} y={0} width={size} height={size} fill="#FFFFFF" />
+      {rects}
+    </svg>
+  );
+}
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -40,6 +79,10 @@ export async function GET(request) {
   const blurb = (searchParams.get("blurb") || "").slice(0, 220);
   const username = (searchParams.get("username") || "").slice(0, 40);
   const considering = searchParams.get("status") === "considering";
+  // A username lands the scanner on real social proof (this person's
+  // actual kingdom) before ever asking them to sign up - a bare homepage
+  // would be a colder landing for someone who's never seen the app.
+  const linkUrl = username ? `https://nomarchy.ca/${username}` : "https://nomarchy.ca";
 
   return new ImageResponse(
     (
@@ -91,6 +134,13 @@ export async function GET(request) {
               &ldquo;{blurb}&rdquo;
             </div>
           )}
+
+          <div style={{ display: "flex", marginTop: 64 }}>
+            <QrCode text={linkUrl} />
+          </div>
+          <div style={{ display: "flex", marginTop: 14, fontSize: 22, color: C.muted, letterSpacing: 1 }}>
+            {username ? `Scan for @${username}'s kingdom` : "Scan to open Nomarchy"}
+          </div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, borderTop: `2px solid ${C.cardEdge}`, paddingTop: 28 }}>
