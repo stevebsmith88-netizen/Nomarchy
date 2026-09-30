@@ -11,7 +11,18 @@ import { C, display, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell, useTh
 // the ordinary cuisine/throne machinery instead of its own table.
 const OVERALL_FAVOURITE_NAME = "Overall Favourite";
 
+// "emoji:<char>" is a chosen emoji avatar stored in the same avatar_url
+// column as a real photo URL - see AVATAR_EMOJI/Avatar in app/page.js.
+const EMOJI_PREFIX = "emoji:";
+
 function Avatar({ url, size = 28 }) {
+  if (url?.startsWith(EMOJI_PREFIX)) {
+    return (
+      <div className="mx-auto flex items-center justify-center rounded-full" style={{ width: size, height: size, background: C.card, border: `1px solid ${C.cardEdge}`, fontSize: Math.round(size * 0.55), lineHeight: 1 }}>
+        {url.slice(EMOJI_PREFIX.length)}
+      </div>
+    );
+  }
   return url ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={url} alt="" className="mx-auto rounded-full object-cover" style={{ width: size, height: size, border: `1px solid ${C.cardEdge}` }} />

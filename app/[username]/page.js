@@ -28,6 +28,9 @@ export async function generateMetadata({ params }) {
   const name = profile.display_name || profile.username;
   const title = `${name}'s Kingdom`;
   const description = `See ${name}'s crowned favourite restaurants on Nomarchy, and start your own kingdom.`;
+  // An "emoji:<char>" avatar (see AVATAR_EMOJI in app/page.js) isn't a
+  // real image URL - share previews just fall back to no image for those.
+  const avatarImageUrl = profile.avatar_url && !profile.avatar_url.startsWith("emoji:") ? profile.avatar_url : null;
 
   return {
     title,
@@ -35,7 +38,7 @@ export async function generateMetadata({ params }) {
     openGraph: {
       title: `${title} | Nomarchy`,
       description,
-      images: profile.avatar_url ? [{ url: profile.avatar_url }] : undefined,
+      images: avatarImageUrl ? [{ url: avatarImageUrl }] : undefined,
     },
     twitter: {
       card: "summary",

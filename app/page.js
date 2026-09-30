@@ -1416,7 +1416,20 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
   );
 }
 
+// An avatar is either a real uploaded photo (a URL) or a chosen emoji,
+// stored as "emoji:<char>" in the same avatar_url column - no schema
+// change needed, just a prefix check here and everywhere else an avatar
+// renders.
+const EMOJI_PREFIX = "emoji:";
+
 function Avatar({ url, size = 28 }) {
+  if (url?.startsWith(EMOJI_PREFIX)) {
+    return (
+      <div className="flex shrink-0 items-center justify-center rounded-full" style={{ width: size, height: size, background: C.card, border: `1px solid ${C.cardEdge}`, fontSize: Math.round(size * 0.55), lineHeight: 1 }}>
+        {url.slice(EMOJI_PREFIX.length)}
+      </div>
+    );
+  }
   return url ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={url} alt="" className="shrink-0 rounded-full object-cover" style={{ width: size, height: size, border: `1px solid ${C.cardEdge}` }} />
@@ -1427,12 +1440,25 @@ function Avatar({ url, size = 28 }) {
   );
 }
 
+// A curated set, not the full emoji keyboard - food/drink/kingdom themed
+// with a handful of plain faces, so this stays "pick a fun avatar" rather
+// than a general-purpose emoji picker.
+const AVATAR_EMOJI = [
+  "😊", "😎", "🤩", "😋", "🥳", "😏",
+  "🧐", "👨‍🍳", "👩‍🍳", "🍔", "🍕", "🍣",
+  "🍜", "🌮", "🍦", "🍰", "🍷", "🍺",
+  "☕", "🥂", "🔥", "⭐", "👑", "💎",
+  "🎯", "🌈", "🦊", "🐱", "🐶", "🦋",
+  "🌸", "🍀", "🌙", "✨", "🎸", "🎨",
+];
+
 // One photo, always the same storage path (a re-upload overwrites it),
 // with a small camera badge to invite changing it - distinct from
 // PhotoPicker below, which manages up to 3 photos on a review.
 function AvatarPicker({ userId, url, onChange }) {
   const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState("");
+  const [pickingEmoji, setPickingEmoji] = useState(false);
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
@@ -1456,6 +1482,24 @@ function AvatarPicker({ userId, url, onChange }) {
         </span>
         <input type="file" accept="image/*" onChange={handleFile} disabled={uploading} className="hidden" />
       </label>
+      <button type="button" onClick={() => setPickingEmoji((v) => !v)} className="mt-2 text-xs font-semibold" style={{ color: C.muted }}>
+        {pickingEmoji ? "Cancel" : "or pick an emoji instead"}
+      </button>
+      {pickingEmoji && (
+        <div className="mt-2 grid grid-cols-6 gap-1.5 rounded-xl p-2.5" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, maxWidth: 264 }}>
+          {AVATAR_EMOJI.map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => { onChange(`${EMOJI_PREFIX}${emoji}`); setPickingEmoji(false); }}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-lg"
+              style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      )}
       {err && <p className="mt-1 text-xs" style={{ color: C.coup }}>{err}</p>}
     </div>
   );
