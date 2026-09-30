@@ -136,6 +136,7 @@ export default function Nomarchy() {
   const [top25City, setTop25City] = useState("");
   const [top25Range, setTop25Range] = useState("all");
   const [top25Locating, setTop25Locating] = useState(false);
+  const [top25Scope, setTop25Scope] = useState("everyone");
   const [restaurantSearch, setRestaurantSearch] = useState("");
   const [openRestaurant, setOpenRestaurant] = useState(null);
   const [uncrownedMatches, setUncrownedMatches] = useState([]);
@@ -669,13 +670,19 @@ export default function Nomarchy() {
   // week" doesn't need per-render precision anyway.
   const RANGE_MS = { all: Infinity, year: 365 * 86400000, month: 30 * 86400000, week: 7 * 86400000 };
   const trendingCutoff = NOW - RANGE_MS[top25Range];
-  const trendingList = top25 && groupCrownedThrones(top25.filter((t) => new Date(t.crowned_at).getTime() >= trendingCutoff));
+  // "Friends" scopes down to Court before grouping - court is already
+  // loaded on every page load (not lazily per-tab), so this needs no new
+  // query. Uncrowned search results (below, in the render) aren't scoped
+  // this way - there's no "whose" to attribute an uncrowned restaurant to.
+  const followedIds = new Set(court.map((f) => f.id));
+  const scopedTop25 = top25 && (top25Scope === "friends" ? top25.filter((t) => followedIds.has(t.user_id)) : top25);
+  const trendingList = scopedTop25 && groupCrownedThrones(scopedTop25.filter((t) => new Date(t.crowned_at).getTime() >= trendingCutoff));
   // Search ignores the range/rank window entirely - "find any restaurant
   // anyone's crowned" shouldn't be limited to the top 25 most-crowned or
   // to whatever time range happens to be selected.
   const restaurantSearchQuery = restaurantSearch.trim().toLowerCase();
-  const restaurantSearchResults = top25 && restaurantSearchQuery
-    ? groupCrownedThrones(top25).filter((p) => p.name.toLowerCase().includes(restaurantSearchQuery))
+  const restaurantSearchResults = scopedTop25 && restaurantSearchQuery
+    ? groupCrownedThrones(scopedTop25).filter((p) => p.name.toLowerCase().includes(restaurantSearchQuery))
     : null;
   // A restaurant already showing up above (someone's crowned it) shouldn't
   // also show up down here as "not yet crowned".
@@ -1098,7 +1105,17 @@ export default function Nomarchy() {
 
         {/* BEST IN THE LAND (restaurants: the trending leaderboard, plus search across every crown app-wide) */}
         {tab === "top25" && (<div>
-          <p className="mb-3 text-sm" style={{ color: C.muted }}>The most-crowned restaurants across everyone&apos;s public kingdoms - or search for any of them.</p>
+          <p className="mb-3 text-sm" style={{ color: C.muted }}>
+            {top25Scope === "friends" ? "The most-crowned restaurants in your Court" : "The most-crowned restaurants across everyone's public kingdoms"} - or search for any of them.
+          </p>
+          <div className="mb-3 flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}`, width: "fit-content" }}>
+            <button onClick={() => setTop25Scope("everyone")} className="px-4 py-1.5 text-xs font-semibold" style={{ background: top25Scope === "everyone" ? C.gold : C.card, color: top25Scope === "everyone" ? C.bg : C.muted }}>
+              Everyone
+            </button>
+            <button onClick={() => setTop25Scope("friends")} className="px-4 py-1.5 text-xs font-semibold" style={{ background: top25Scope === "friends" ? C.gold : C.card, color: top25Scope === "friends" ? C.bg : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
+              My Court
+            </button>
+          </div>
           <div className="relative mb-3">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: C.muted }} />
             <input
@@ -1139,7 +1156,7 @@ export default function Nomarchy() {
               ? trendingList.filter((p) => [p.area, p.address].filter(Boolean).some((f) => f.toLowerCase().includes(q)))
               : trendingList;
             const shownPlaces = filtered.slice(0, 25);
-            if (shownPlaces.length === 0) return <p className="text-sm" style={{ color: C.muted }}>Nothing crowned in that window yet.</p>;
+            if (shownPlaces.length === 0) return <p className="text-sm" style={{ color: C.muted }}>{top25Scope === "friends" ? "Nobody in your Court has crowned anything in that window yet." : "Nothing crowned in that window yet."}</p>;
             return shownPlaces.map((p, i) => <RestaurantRow key={i} p={p} rank={i} onOpen={() => setOpenRestaurant(p)} />);
           })()}
           {uncrownedResults.length > 0 && (
