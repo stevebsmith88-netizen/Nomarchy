@@ -164,11 +164,15 @@ update cuisines set name = 'Shawarma and Middle Eastern' where name = 'Shawarma'
 update cuisines set name = 'Japanese and Ramen' where name = 'Ramen' and is_default = true;
 update cuisines set name = 'Dessert and Bakery' where name = 'Dessert' and is_default = true;
 
--- Added after the initial seed list above, so it's its own insert rather
--- than an edit to that array - same pattern as Overall Favourite below.
-insert into cuisines (name, is_default)
-values ('Vegan and Vegetarian', true)
-on conflict (name, coalesce(created_by, '00000000-0000-0000-0000-000000000000'::uuid)) do nothing;
+-- "Vegan" already existed (added separately, not part of the original
+-- seed array above) - the request was for a Vegan/Vegetarian pairing,
+-- but "Vegan and Vegetarian" as a brand new row would have sat alongside
+-- the existing "Vegan" as a near-duplicate, exactly the kind of overlap
+-- already cleaned up once this session. Renamed rather than deleted for
+-- the same reason as the four renames above - if anyone had already
+-- crowned or shortlisted something under it in the few minutes before
+-- this ran, a delete would have taken that with it.
+update cuisines set name = 'Vegetarian' where name = 'Vegan and Vegetarian' and is_default = true;
 
 -- A reserved, shared cuisine every user gets exactly one throne on (via the
 -- normal unique(user_id, cuisine_id) constraint below) - the app treats it
