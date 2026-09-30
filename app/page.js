@@ -395,22 +395,19 @@ export default function Nomarchy() {
     flash(`${added} imported${skipped ? `, ${skipped} already on your list` : ""}`);
   };
 
-  const sharePick = async (cuisineName, r) => {
-    const text = `My ${cuisineName} throne on Nomarchy: ${r.name}${r.area ? ` (${r.area})` : ""}\n\n"${r.decree}"`;
-    const params = new URLSearchParams({
-      cuisine: cuisineName, name: r.name, area: r.area || "",
-      rating: r.rating || "", decree: r.decree || "", username: profile?.username || "",
-    });
+  // Shared by sharePick (a crowned throne) and sharePretender (a Next in
+  // Line pick, shared to ask what friends think rather than to show off a
+  // decree) - a native share sheet with the branded card image beats a
+  // clipboard copy every time, people can post straight to a story or DM
+  // it. Not every browser can share a file though (most desktop browsers
+  // can't), so this always has the old copy-the-text behaviour to fall
+  // back to.
+  const shareCard = async (text, params, filename) => {
     const cardUrl = `/api/card?${params.toString()}`;
-
-    // A native share sheet with the branded card image beats a clipboard
-    // copy every time - people can post straight to a story or DM it. Not
-    // every browser can share a file though (most desktop browsers can't),
-    // so this always has the old copy-the-text behaviour to fall back to.
     try {
       const res = await fetch(cardUrl);
       const blob = await res.blob();
-      const file = new File([blob], "nomarchy-pick.png", { type: "image/png" });
+      const file = new File([blob], filename, { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], title: "Nomarchy", text });
         return;
@@ -421,10 +418,31 @@ export default function Nomarchy() {
 
     try {
       await navigator.clipboard.writeText(text);
-      flash("Pick copied, paste it in the group chat");
+      flash("Copied, paste it in the group chat");
     } catch {
       flash("Couldn't copy on this device");
     }
+  };
+
+  const sharePick = (cuisineName, r) => {
+    const text = `My ${cuisineName} throne on Nomarchy: ${r.name}${r.area ? ` (${r.area})` : ""}\n\n"${r.decree}"`;
+    const params = new URLSearchParams({
+      cuisine: cuisineName, name: r.name, area: r.area || "",
+      rating: r.rating || "", blurb: r.decree || "", username: profile?.username || "",
+    });
+    return shareCard(text, params, "nomarchy-pick.png");
+  };
+
+  // Sharing something still on the shortlist, not yet crowned - framed as
+  // "worth a visit?" so it reads as an invitation to discuss, not a
+  // finished review.
+  const sharePretender = (p) => {
+    const text = `Thinking about trying this for ${p.cuisine || "something"}: ${p.name}${p.area ? ` (${p.area})` : ""} - worth a visit?${p.note ? `\n\n"${p.note}"` : ""}`;
+    const params = new URLSearchParams({
+      cuisine: p.cuisine || "", name: p.name, area: p.area || "",
+      rating: p.rating || "", blurb: p.note || "", username: profile?.username || "", status: "considering",
+    });
+    return shareCard(text, params, "nomarchy-considering.png");
   };
 
   // Their own public kingdom link doubles as the invite - it's already a
@@ -922,6 +940,7 @@ export default function Nomarchy() {
               {stillToTry.map((p) => (
                 <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines} userId={user.id}
                   friendMatches={friendActivityByPlace.get(placeKey(p.name, p.address, p.area))}
+                  onShare={sharePretender}
                   onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
                   onChangeCuisine={handleChangePretenderCuisine} onChangePhotos={handleChangePretenderPhotos} onToggleVisited={handleToggleVisited}
                   onChangeVerdict={handleChangePretenderVerdict}
@@ -940,6 +959,7 @@ export default function Nomarchy() {
               {beenTo.map((p) => (
                 <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines} userId={user.id}
                   friendMatches={friendActivityByPlace.get(placeKey(p.name, p.address, p.area))}
+                  onShare={sharePretender}
                   onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
                   onChangeCuisine={handleChangePretenderCuisine} onChangePhotos={handleChangePretenderPhotos} onToggleVisited={handleToggleVisited}
                   onChangeVerdict={handleChangePretenderVerdict}
@@ -1344,7 +1364,7 @@ function RankLadder({ score }) {
   );
 }
 
-function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onChangePhotos, onToggleVisited, onChangeVerdict, onCrown, userId, friendMatches }) {
+function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onChangePhotos, onToggleVisited, onChangeVerdict, onCrown, onShare, userId, friendMatches }) {
   return (
     <div className="mb-3 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, opacity: p.visitedAt ? 0.7 : 1 }}>
       <div className="flex items-start justify-between gap-2">
@@ -1366,7 +1386,10 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
             {p.mapsUrl && <a href={p.mapsUrl} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
           </div>
         </div>
-        <button onClick={() => onRemove(p.id)} aria-label="Remove" style={{ color: C.muted }}><Trash2 size={15} /></button>
+        <div className="flex shrink-0 items-center gap-2">
+          {onShare && <button onClick={() => onShare(p)} aria-label="Share" style={{ color: C.muted }}><Share2 size={15} /></button>}
+          <button onClick={() => onRemove(p.id)} aria-label="Remove" style={{ color: C.muted }}><Trash2 size={15} /></button>
+        </div>
       </div>
       {friendMatches && friendMatches.length > 0 && (
         <div className="mt-2 rounded-lg p-2.5" style={{ background: C.bg, border: `1px dashed ${C.gold}66` }}>
