@@ -26,6 +26,19 @@
 // standard stand-in) rather than deleting auth.users, which is what
 // keeps the profiles row - and everything hanging off it - alive.
 //
+// Their real email is also removed, not just the account disabled: it's
+// overwritten on auth.users (the field Supabase actually checks for
+// sign-in/magic links) with a generated placeholder, and any linked OAuth
+// identity (Google) - which independently stores a copy of whatever
+// email/name/photo that provider handed over - is unlinked first, while
+// their own session is still valid (unlinkIdentity has to run as the
+// user, not the admin client). One caveat, a Supabase Auth platform
+// limit rather than a choice made here: unlinkIdentity refuses to remove
+// someone's LAST remaining identity, so the primary one (almost always
+// "email") can't be unlinked this way - overwriting auth.users.email
+// below is what actually neutralizes it, since that's the address
+// Supabase would check on any future sign-in attempt.
+//
 // The anon key can never do any of this - it all needs the service role
 // key, which must never reach the browser. This route is the only place
 // that key is used, and only after verifying (via the caller's own
@@ -54,6 +67,19 @@ export async function POST(request) {
   const { data } = await supabase.auth.getUser(token);
   if (!data.user) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+
+  // Best-effort, and has to happen now: dropping a linked identity needs
+  // the caller's own session, which won't exist anymore once they're
+  // banned below. Ignore failures here rather than blocking the deletion
+  // on them - the email overwrite further down is what actually matters.
+  const { data: identityData } = await supabase.auth.getUserIdentities();
+  const identities = identityData?.identities || [];
+  if (identities.length > 1) {
+    for (const identity of identities) {
+      if (identity.provider === "email") continue;
+      await supabase.auth.unlinkIdentity(identity).catch(() => {});
+    }
   }
 
   const admin = createClient(
@@ -89,8 +115,13 @@ export async function POST(request) {
   await admin.from("next_in_line").delete().eq("user_id", data.user.id);
   await admin.from("ai_calls").delete().eq("user_id", data.user.id);
 
-  const { error: banErr } = await admin.auth.admin.updateUserById(data.user.id, { ban_duration: PERMANENT_BAN });
-  if (banErr) {
+  const { error: authErr } = await admin.auth.admin.updateUserById(data.user.id, {
+    email: `deleted-${data.user.id}@deleted.invalid`,
+    email_confirm: true,
+    user_metadata: {},
+    ban_duration: PERMANENT_BAN,
+  });
+  if (authErr) {
     return NextResponse.json({ error: "Couldn't delete your account" }, { status: 500 });
   }
 
