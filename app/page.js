@@ -65,6 +65,22 @@ const sameRestaurant = (a, b) => {
   return shorter.length >= 5 && longer.includes(shorter);
 };
 
+// Marking something "been" with nothing typed and no verdict chosen used
+// to just leave the note blank - indistinguishable from "haven't written
+// one yet." One of these gets written in instead, so it's obvious at a
+// glance that nothing was said, not that a review is still pending. Same
+// visibility as a real note (friends only, never the public page) and it
+// still counts toward "reviews written" - a is a is a note as far as the
+// rest of the app is concerned.
+const CORNY_VISIT_NOTES = [
+  "The Crown attended, but left no proclamation.",
+  "A visit was paid. Words failed the royal scribe.",
+  "Present and accounted for. No decree was issued.",
+  "The throne was visited. History records nothing further.",
+  "Attendance confirmed. Commentary respectfully withheld.",
+  "Here, apparently. The royal ledger says nothing else.",
+];
+
 export default function Nomarchy() {
   // No return value used here - just subscribing this whole page to theme
   // changes so it (and everything under it) re-renders and picks up C's
@@ -348,12 +364,16 @@ export default function Nomarchy() {
     await refreshPretenders();
   };
 
-  const handleToggleVisited = async (id, currentlyVisited, cuisineId) => {
+  const handleToggleVisited = async (id, currentlyVisited, cuisineId, note, verdict) => {
     if (!currentlyVisited && !cuisineId) {
       flash("Pick a cuisine below first");
       return;
     }
     await markVisited(id, !currentlyVisited);
+    if (!currentlyVisited && !note?.trim() && !verdict) {
+      const corny = CORNY_VISIT_NOTES[Math.floor(Math.random() * CORNY_VISIT_NOTES.length)];
+      await updatePretenderNote(id, corny);
+    }
     await refreshPretenders();
   };
 
@@ -1450,7 +1470,7 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
           <Crown size={13} /> Crown it
         </button>
         <button
-          onClick={() => onToggleVisited(p.id, !!p.visitedAt, p.cuisineId)}
+          onClick={() => onToggleVisited(p.id, !!p.visitedAt, p.cuisineId, p.note, p.verdict)}
           className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
           style={p.visitedAt ? { background: C.green + "22", color: C.green, border: `1px solid ${C.green}66` } : { color: C.muted, border: `1px solid ${C.cardEdge}` }}>
           <Check size={13} /> {p.visitedAt ? "Been here" : "Mark as been"}
