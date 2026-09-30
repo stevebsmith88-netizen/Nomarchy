@@ -12,6 +12,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { CHANGELOG } from "@/lib/changelog";
 
 const SENDGRID_FROM = process.env.DIGEST_FROM_EMAIL || "hello@nomarchy.ca";
 const SITE_URL = "https://nomarchy.ca";
@@ -38,18 +39,7 @@ async function listAllUsers(supabase) {
   return users;
 }
 
-// Recent, notable features worth resurfacing to someone who's been away
-// long enough to have missed all of them - update this by hand as things
-// ship, same idea as ANNOUNCEMENTS in lib/data.js but kept separate since
-// this is a server-only route and that file spins up a client on import.
-const WHATS_NEW = [
-  { title: "Light mode", desc: "toggle it in your profile settings." },
-  { title: "Google Sign-In", desc: "one tap, no password to remember." },
-  { title: "Best in the Land", desc: "the most-crowned restaurants across everyone's kingdoms, or just your Court." },
-  { title: "The Map", desc: "your friends' picks laid out geographically." },
-];
-
-function renderEmail({ name, unsubscribeUrl, friendCrownCount }) {
+function renderEmail({ name, unsubscribeUrl, friendCrownCount, changes }) {
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;border:1px solid #eee;border-radius:12px;overflow:hidden;">
     <div style="background:#1D1326;padding:32px 24px;text-align:center;">
@@ -71,12 +61,13 @@ function renderEmail({ name, unsubscribeUrl, friendCrownCount }) {
       <p style="margin-top:24px;">
         <a href="${SITE_URL}" style="background:#E2B340;color:#1D1326;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:700;font-size:14px;">Open Nomarchy</a>
       </p>
+      ${changes.length > 0 ? `
       <div style="margin-top:24px;padding-top:20px;border-top:1px solid #eee;">
         <p style="font-size:13px;font-weight:700;color:#1D1326;margin-bottom:8px;">So much has changed since you last looked:</p>
         <ul style="font-size:13px;color:#333;line-height:1.8;padding-left:20px;margin:0;">
-          ${WHATS_NEW.map((f) => `<li><strong>${f.title}</strong> - ${f.desc}</li>`).join("")}
+          ${changes.map((c) => `<li><strong>${c.title}</strong> - ${c.desc}</li>`).join("")}
         </ul>
-      </div>
+      </div>` : ""}
     </div>
     <p style="font-size:11px;color:#999;padding:0 24px 24px;">
       You're getting this because your Nomarchy account has been quiet for a while.
@@ -163,10 +154,18 @@ export async function GET(request) {
           const friendCrownCount = thronesRes.data.filter(
             (t) => followedIds.has(t.user_id) && new Date(t.crowned_at).getTime() > lastSignInMs
           ).length;
+          // Everything shipped since they were last active, capped so the
+          // list can't grow unbounded for someone gone a very long time.
+          // Falls back to the latest few regardless if they're "quiet" only
+          // by the no-new-content signal (lastSignInMs is recent) so the
+          // section is never empty.
+          const sinceLastSeen = CHANGELOG.filter((c) => new Date(c.at).getTime() > lastSignInMs);
+          const changes = (sinceLastSeen.length ? sinceLastSeen : CHANGELOG.slice(-3)).slice(-6);
           const html = renderEmail({
             name: p.display_name || p.username,
             unsubscribeUrl: `${SITE_URL}/api/reengage/unsubscribe?token=${p.unsubscribe_token}`,
             friendCrownCount,
+            changes,
           });
           await sendEmail(user.email, "Your kingdom's been quiet", html);
           sent += 1;
