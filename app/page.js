@@ -101,6 +101,7 @@ export default function Nomarchy() {
   const [hiddenCuisinesOpen, setHiddenCuisinesOpen] = useState(false);
   const [nilView, setNilView] = useState("grid");
   const [nilCuisineFilter, setNilCuisineFilter] = useState("");
+  const [courtView, setCourtView] = useState("grid");
   const [adminData, setAdminData] = useState(null);
   const [adminError, setAdminError] = useState("");
   const [pretenderSearch, setPretenderSearch] = useState("");
@@ -589,6 +590,11 @@ export default function Nomarchy() {
   const wantPins = pretenders
     .filter((p) => p.lat && p.lng && !p.visitedAt && matchesNilCuisine(p.cuisine))
     .map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine || "Uncategorized" }));
+  // Crowned picks only, not visited-but-not-crowned reviews - this is
+  // "where my friends' favourites are," same scope as Kingdom's own map.
+  const courtPins = court.flatMap((f) =>
+    f.picks.filter((p) => p.lat && p.lng).map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine, friend: f.name }))
+  );
 
   const pretenderQuery = pretenderSearch.trim().toLowerCase();
   const filteredPretenders = pretenders.filter((p) => {
@@ -993,11 +999,26 @@ export default function Nomarchy() {
             </div>
           )}
 
+          {court.length > 0 && (
+            <div className="mb-3 flex justify-end">
+              <div className="flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}` }}>
+                <button onClick={() => setCourtView("grid")} className="px-3 py-1 text-xs font-semibold" style={{ background: courtView === "grid" ? C.gold : C.card, color: courtView === "grid" ? C.bg : C.muted }}>
+                  Grid
+                </button>
+                <button onClick={() => setCourtView("map")} className="px-3 py-1 text-xs font-semibold" style={{ background: courtView === "map" ? C.gold : C.card, color: courtView === "map" ? C.bg : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
+                  Map
+                </button>
+              </div>
+            </div>
+          )}
+
           {court.length === 0 ? (
             <div className="rounded-xl p-6 text-center" style={{ background: C.card, border: `1px dashed ${C.cardEdge}` }}>
               <Users size={26} className="mx-auto" style={{ color: C.muted }} />
               <p className="mt-2 text-sm" style={{ color: C.muted }}>Nobody in your court yet. Follow a friend by username above, and share yours (@{profile?.username}) so they can follow you back.</p>
             </div>
+          ) : courtView === "map" ? (
+            <KingdomMap pins={courtPins} emptyMessage="None of your friends' crowned spots have a location yet." />
           ) : court.map((f) => (
             <button
               key={f.id}

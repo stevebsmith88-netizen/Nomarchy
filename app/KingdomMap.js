@@ -18,12 +18,11 @@ const icon = L.icon({
   popupAnchor: [1, -34],
 });
 
-export default function KingdomMap({ pins }) {
+export default function KingdomMap({ pins, emptyMessage }) {
   if (pins.length === 0) {
     return (
       <p className="rounded-xl p-6 text-center text-sm" style={{ background: C.card, border: `1px dashed ${C.cardEdge}`, color: C.muted }}>
-        None of your crowned spots have a location yet - this fills in automatically as you crown new
-        places, or once older ones are backfilled.
+        {emptyMessage || "None of your crowned spots have a location yet - this fills in automatically as you crown new places, or once older ones are backfilled."}
       </p>
     );
   }
@@ -40,7 +39,7 @@ export default function KingdomMap({ pins }) {
         {pins.map((p, i) => (
           <Marker key={i} position={[p.lat, p.lng]} icon={icon}>
             <Popup>
-              <strong>{p.name}</strong><br />{p.cuisine}
+              <strong>{p.name}</strong><br />{p.cuisine}{p.friend ? <> &middot; crowned by {p.friend}</> : null}
             </Popup>
           </Marker>
         ))}
