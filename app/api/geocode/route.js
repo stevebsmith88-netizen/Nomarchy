@@ -35,7 +35,11 @@ export async function POST(request) {
 
   if (body.mode === "forward") {
     if (!body.address?.trim()) return NextResponse.json({ error: "Missing address" }, { status: 400 });
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(body.address.trim())}`;
+    // Restricted to Canada - every restaurant in the app is Canadian for
+    // now, and an unrestricted global search can match a same-named
+    // street or neighbourhood (e.g. "Uptown") in the wrong country
+    // entirely. Revisit if/when a US city gets added.
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=${encodeURIComponent(body.address.trim())}`;
     const res = await fetch(url, { headers: { "User-Agent": "Nomarchy (nomarchy.ca)" } });
     if (!res.ok) return NextResponse.json({ error: "Couldn't locate that address" }, { status: 502 });
     const results = await res.json();

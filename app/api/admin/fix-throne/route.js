@@ -21,6 +21,25 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+// Same fix as updateThroneLocation in lib/data.js: correcting the address
+// text alone never moved the map pin, since that lives in separate
+// lat/lng columns. Restricted to Canada for the same reason as
+// /api/geocode - an unrestricted search can match a same-named street or
+// neighbourhood in the wrong country entirely.
+async function geocodeAddress(address) {
+  if (!address?.trim()) return { lat: null, lng: null };
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=${encodeURIComponent(address.trim())}`;
+    const res = await fetch(url, { headers: { "User-Agent": "Nomarchy (nomarchy.ca)" } });
+    if (!res.ok) return { lat: null, lng: null };
+    const results = await res.json();
+    if (!results?.[0]) return { lat: null, lng: null };
+    return { lat: Number(results[0].lat), lng: Number(results[0].lon) };
+  } catch {
+    return { lat: null, lng: null };
+  }
+}
+
 function anonClient(token) {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -84,10 +103,15 @@ export async function PATCH(request) {
   const { throneId, address, neighbourhood, cuisineId } = await request.json();
   if (!throneId) return NextResponse.json({ error: "Missing throneId" }, { status: 400 });
 
-  // Only ever these three columns, named explicitly - never spread the raw
+  // Only ever these columns, named explicitly - never spread the raw
   // body into the update, so a decree or photos field can't ride along.
   const fields = { address: address || null, neighbourhood: neighbourhood || null };
   if (cuisineId) fields.cuisine_id = cuisineId;
+  const coords = await geocodeAddress(address);
+  if (coords.lat != null && coords.lng != null) {
+    fields.lat = coords.lat;
+    fields.lng = coords.lng;
+  }
 
   const { data, error: updateErr } = await admin
     .from("thrones")

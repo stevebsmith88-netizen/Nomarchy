@@ -26,7 +26,7 @@ function admin() {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function geocode(address) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=${encodeURIComponent(address)}`;
   const res = await fetch(url, { headers: { "User-Agent": "Nomarchy (nomarchy.ca)" } });
   if (!res.ok) return null;
   const results = await res.json();
