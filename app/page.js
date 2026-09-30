@@ -963,6 +963,7 @@ export default function Nomarchy() {
             <div className="flex items-center gap-1.5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>
               <Crown size={12} /> The Privy Council
             </div>
+            <p className="mt-1 text-sm" style={{ color: C.cream }}>Can&apos;t decide what to eat this evening?</p>
             {court.length === 0 ? (
               <p className="mt-2 text-sm" style={{ color: C.muted }}>Follow a few friends in Court and the Council can start recommending from their picks.</p>
             ) : (<>
