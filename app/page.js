@@ -117,6 +117,8 @@ export default function Nomarchy() {
   const [hiddenCuisinesOpen, setHiddenCuisinesOpen] = useState(false);
   const [nilView, setNilView] = useState("grid");
   const [nilCuisineFilter, setNilCuisineFilter] = useState("");
+  const [pcCuisine, setPcCuisine] = useState("");
+  const [pcIndex, setPcIndex] = useState(0);
   const [courtView, setCourtView] = useState("grid");
   const [adminData, setAdminData] = useState(null);
   const [adminError, setAdminError] = useState("");
@@ -338,6 +340,22 @@ export default function Nomarchy() {
     await refreshPretenders();
     setAddPretender(false);
     flash(`${entry.name} is next in line`);
+  };
+
+  // Advances to a genuinely different pick whenever there's more than one
+  // option, rather than tracking shown-history - a random offset of at
+  // least 1 into the remaining pool guarantees it's never the same index
+  // twice in a row without needing to remember what's already been shown.
+  const handleAskCouncil = () => {
+    setPcIndex((i) => (councilPool.length > 1 ? (i + 1 + Math.floor(Math.random() * (councilPool.length - 1))) % councilPool.length : 0));
+  };
+
+  const handleAddCouncilPick = async (pick) => {
+    try {
+      await addToPretenders(pick.cuisineId, { name: pick.name, area: pick.area, address: pick.address });
+    } catch (e) {
+      flash(e.message || "Couldn't add that.");
+    }
   };
 
   const handleRemovePretender = async (id) => {
@@ -629,6 +647,28 @@ export default function Nomarchy() {
   // app-wide cuisine list, most of which wouldn't match anything here.
   const nilCuisineOptions = Array.from(new Set(pretenders.map((p) => p.cuisine).filter(Boolean))).sort();
   const nilHasUncategorized = pretenders.some((p) => !p.cuisine);
+
+  // "Ask the Privy Council" - a friend recommendation, not a search: only
+  // ever pulled from what your Court has actually crowned or tried, never
+  // the whole city, so it reads as "your friends think" rather than a
+  // generic result. Excludes anything you've already crowned or already
+  // have on your own list, so it never suggests something you'd just have
+  // to dismiss as "already got that." Cuisine options are only what's
+  // actually in your Court's picks, same reasoning as nilCuisineOptions
+  // above - no point offering a cuisine nobody you follow has tried.
+  const councilPool = court
+    .flatMap((f) => [
+      ...f.picks.map((p) => ({ name: p.name, area: p.area, address: p.address, cuisine: p.cuisine, cuisineId: p.cuisineId, quote: p.decree, from: f.name })),
+      ...f.reviews.map((r) => ({ name: r.name, area: r.area, address: r.address, cuisine: r.cuisine, cuisineId: null, quote: r.note, from: f.name })),
+    ])
+    .filter((c) => !pcCuisine || c.cuisine === pcCuisine)
+    .filter((c) => !Object.values(slots).some((s) => s.current && sameRestaurant(s.current.name, c.name)))
+    .filter((c) => !pretenders.some((p) => sameRestaurant(p.name, c.name)));
+  const councilCuisineOptions = Array.from(
+    new Set(court.flatMap((f) => [...f.picks.map((p) => p.cuisine), ...f.reviews.map((r) => r.cuisine)]).filter(Boolean))
+  ).sort();
+  const councilPick = councilPool.length ? councilPool[pcIndex % councilPool.length] : null;
+
   const matchesNilCuisine = (cuisineName) =>
     !nilCuisineFilter || (nilCuisineFilter === "__uncategorized__" ? !cuisineName : cuisineName === nilCuisineFilter);
 
@@ -918,6 +958,40 @@ export default function Nomarchy() {
         {/* PRETENDERS */}
         {tab === "pretenders" && (<div>
           <p className="mb-3 text-sm" style={{ color: C.muted }}>The places waiting for their shot at a throne. Go, eat, then decide.</p>
+
+          <div className="mb-4 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.gold}66` }}>
+            <div className="flex items-center gap-1.5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>
+              <Crown size={12} /> The Privy Council
+            </div>
+            {court.length === 0 ? (
+              <p className="mt-2 text-sm" style={{ color: C.muted }}>Follow a few friends in Court and the Council can start recommending from their picks.</p>
+            ) : (<>
+              <select
+                value={pcCuisine}
+                onChange={(e) => { setPcCuisine(e.target.value); setPcIndex(0); }}
+                className="mt-2 w-full rounded-lg px-3 py-2 text-sm outline-none"
+                style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: pcCuisine ? C.gold : C.cream }}
+              >
+                <option value="">Any cuisine</option>
+                {councilCuisineOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+
+              {councilPick ? (
+                <div className="mt-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+                  <div className="text-sm font-bold">{councilPick.name}</div>
+                  <div className="text-xs" style={{ color: C.muted }}>{[councilPick.cuisine, councilPick.area].filter(Boolean).join(" · ")} - via {councilPick.from}</div>
+                  {councilPick.quote && <p className="mt-1.5 text-xs italic" style={{ color: C.cream }}>&ldquo;{councilPick.quote}&rdquo;</p>}
+                  <div className="mt-2 flex gap-2">
+                    <button onClick={() => handleAddCouncilPick(councilPick)} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>Add to my list</button>
+                    <button onClick={handleAskCouncil} disabled={councilPool.length <= 1} className="rounded-lg px-3 py-2 text-xs font-bold" style={councilPool.length <= 1 ? { border: `1px solid ${C.cardEdge}`, color: C.cardEdge } : { border: `1px solid ${C.cardEdge}`, color: C.muted }}>Show me another</button>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm" style={{ color: C.muted }}>Nobody in your Court has crowned or tried {pcCuisine || "anything"} yet{pcCuisine ? " - try Any cuisine" : ""}.</p>
+              )}
+            </>)}
+          </div>
+
           <div className="mb-3 flex gap-2">
             <button onClick={() => { setAddPretenderPrefillName(""); setAddPretender(true); }} className="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold" style={{ background: C.gold, color: C.bg }}><Plus size={16} /> Add a place</button>
             <button onClick={() => setImporting(true)} className="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold" style={{ border: `1px solid ${C.gold}66`, color: C.gold }}><ClipboardPaste size={16} /> Import a list</button>
