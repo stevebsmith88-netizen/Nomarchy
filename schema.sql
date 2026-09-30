@@ -174,6 +174,14 @@ update cuisines set name = 'Dessert and Bakery' where name = 'Dessert' and is_de
 -- this ran, a delete would have taken that with it.
 update cuisines set name = 'Vegetarian' where name = 'Vegan and Vegetarian' and is_default = true;
 
+-- Price/occasion tiers, orthogonal to cuisine - the point is giving a
+-- genuinely great cheap or casual spot its own category to win, rather
+-- than only ever competing head-to-head against fine dining within the
+-- same cuisine bucket.
+insert into cuisines (name, is_default)
+select unnest(array['Cheap Eat', 'Special Occasion', 'Quick Bite']), true
+on conflict (name, coalesce(created_by, '00000000-0000-0000-0000-000000000000'::uuid)) do nothing;
+
 -- A reserved, shared cuisine every user gets exactly one throne on (via the
 -- normal unique(user_id, cuisine_id) constraint below) - the app treats it
 -- as "Overall Favourite" rather than a real cuisine, and hides it from the
@@ -818,3 +826,33 @@ create policy "review photos insert rate limit" on storage.objects as restrictiv
     bucket_id <> 'review-photos'
     or review_photos_recent_count(auth.uid()) < 30
   );
+
+-- ------------------------------------------------------------
+-- 11. RESTAURANT PAGE VISIT COUNT
+-- next_in_line's own RLS only ever lets a viewer see their own rows plus
+-- rows from people THEY follow (see "followers see visited picks" above) -
+-- so a plain query from a restaurant's page would only ever show a
+-- fraction of everyone who's actually been, not a real app-wide number.
+-- A security definer function returns just a COUNT, nothing else - no
+-- individual rows, no names, no notes - so it can safely bypass that
+-- narrower visibility for this one number without changing who can see
+-- an actual review anywhere else in the app. Deliberately a simpler,
+-- case-insensitive exact match rather than reusing placeKey's full
+-- normalization (postal codes, punctuation, etc.) - reasonable for a
+-- supplementary "how many have been" stat, not the crown count itself.
+create or replace function restaurant_visit_count(p_name text, p_address text, p_area text)
+returns integer
+language sql
+stable
+security definer set search_path = public
+as $$
+  select count(*)::integer
+  from next_in_line n
+  where n.visited_at is not null
+    and lower(trim(n.place_name)) = lower(trim(p_name))
+    and (
+      (p_address is not null and n.address is not null and lower(trim(n.address)) = lower(trim(p_address)))
+      or (p_area is not null and n.neighbourhood is not null and lower(trim(n.neighbourhood)) = lower(trim(p_area)))
+      or (p_address is null and p_area is null)
+    );
+$$;
