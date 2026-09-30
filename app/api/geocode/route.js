@@ -35,11 +35,15 @@ export async function POST(request) {
 
   if (body.mode === "forward") {
     if (!body.address?.trim()) return NextResponse.json({ error: "Missing address" }, { status: 400 });
-    // Restricted to Canada - every restaurant in the app is Canadian for
-    // now, and an unrestricted global search can match a same-named
-    // street or neighbourhood (e.g. "Uptown") in the wrong country
-    // entirely. Revisit if/when a US city gets added.
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=${encodeURIComponent(body.address.trim())}`;
+    // Appending the known city is what actually makes this reliable
+    // anywhere - "1391 Queen St W, Toronto" can't collide with a
+    // same-named street elsewhere, where a bare street address
+    // sometimes can (that's what put a Toronto pick in San Diego).
+    // countrycodes=ca is just a backstop for the rarer case there's no
+    // city to work with - revisit that default once a non-Canadian city
+    // gets added, since city context alone should carry most cases.
+    const query = body.city?.trim() ? `${body.address.trim()}, ${body.city.trim()}` : body.address.trim();
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=${encodeURIComponent(query)}`;
     const res = await fetch(url, { headers: { "User-Agent": "Nomarchy (nomarchy.ca)" } });
     if (!res.ok) return NextResponse.json({ error: "Couldn't locate that address" }, { status: 502 });
     const results = await res.json();
