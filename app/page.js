@@ -653,20 +653,28 @@ export default function Nomarchy() {
   // the whole city, so it reads as "your friends think" rather than a
   // generic result. Excludes anything you've already crowned or already
   // have on your own list, so it never suggests something you'd just have
-  // to dismiss as "already got that." Cuisine options are only what's
-  // actually in your Court's picks, same reasoning as nilCuisineOptions
-  // above - no point offering a cuisine nobody you follow has tried.
-  const councilPool = court
+  // to dismiss as "already got that."
+  //
+  // Also excludes a pick in a different city than yours - a friend in
+  // another city is still worth following for their taste, but "what
+  // should I eat tonight" means tonight, where you actually are, not a
+  // suggestion two provinces away. A pick with no city on file (older
+  // data, from before city was captured) is kept rather than dropped,
+  // since we can't actually tell it's wrong.
+  const councilLocalPool = court
     .flatMap((f) => [
-      ...f.picks.map((p) => ({ name: p.name, area: p.area, address: p.address, cuisine: p.cuisine, cuisineId: p.cuisineId, quote: p.decree, from: f.name })),
-      ...f.reviews.map((r) => ({ name: r.name, area: r.area, address: r.address, cuisine: r.cuisine, cuisineId: null, quote: r.note, from: f.name })),
+      ...f.picks.map((p) => ({ name: p.name, area: p.area, address: p.address, city: p.city, cuisine: p.cuisine, cuisineId: p.cuisineId, quote: p.decree, from: f.name })),
+      ...f.reviews.map((r) => ({ name: r.name, area: r.area, address: r.address, city: r.city, cuisine: r.cuisine, cuisineId: null, quote: r.note, from: f.name })),
     ])
+    .filter((c) => !c.city || !profile?.city || c.city === profile.city);
+  // Cuisine options are only what's actually local, same reasoning as
+  // nilCuisineOptions above - no point offering a cuisine nobody in your
+  // own city has tried.
+  const councilCuisineOptions = Array.from(new Set(councilLocalPool.map((c) => c.cuisine).filter(Boolean))).sort();
+  const councilPool = councilLocalPool
     .filter((c) => !pcCuisine || c.cuisine === pcCuisine)
     .filter((c) => !Object.values(slots).some((s) => s.current && sameRestaurant(s.current.name, c.name)))
     .filter((c) => !pretenders.some((p) => sameRestaurant(p.name, c.name)));
-  const councilCuisineOptions = Array.from(
-    new Set(court.flatMap((f) => [...f.picks.map((p) => p.cuisine), ...f.reviews.map((r) => r.cuisine)]).filter(Boolean))
-  ).sort();
   const councilPick = councilPool.length ? councilPool[pcIndex % councilPool.length] : null;
 
   const matchesNilCuisine = (cuisineName) =>
