@@ -689,6 +689,7 @@ export default function Nomarchy() {
                       {n.type === "crown" && <><span style={{ fontWeight: 700 }}>{n.name}</span> crowned <span style={{ color: C.gold }}>{n.place}</span> for {n.cuisine}</>}
                       {n.type === "review" && <><span style={{ fontWeight: 700 }}>{n.name}</span> tried <span style={{ color: C.gold }}>{n.place}</span>{n.cuisine ? ` for ${n.cuisine}` : ""}</>}
                       {n.type === "endorse" && <><span style={{ fontWeight: 700 }}>{n.name}</span> endorsed your <span style={{ color: C.gold }}>{n.place}</span> pick</>}
+                      {n.type === "announcement" && <><span style={{ fontWeight: 700, color: C.gold }}>What's new:</span> {n.text}</>}
                     </div>
                   ))}
                 </div>
