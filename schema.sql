@@ -283,6 +283,17 @@ alter table next_in_line add column if not exists lng numeric;
 alter table next_in_line add column if not exists verdict text
   check (verdict in ('worth_it', 'not_for_me'));
 
+-- Groundwork for a "different city" filter - address/neighbourhood are
+-- free text, too unreliable to parse a city back out of (the Lady
+-- Marmalade address bug was exactly this class of problem). Populated
+-- going forward from the city already typed into the "Look it up"
+-- search box at crown/add time (see PlaceModal in app/page.js) - not
+-- backfilled for existing rows, since nothing captured this before now
+-- and guessing from profiles.city could easily be wrong for anyone who's
+-- ever crowned somewhere while traveling.
+alter table next_in_line add column if not exists city text;
+alter table thrones add column if not exists city text;
+
 create index if not exists nil_user_idx on next_in_line(user_id);
 
 -- ------------------------------------------------------------
@@ -380,12 +391,16 @@ create policy "restaurants readable" on restaurants for select using (true);
 -- this existed). Plain `language sql`, not `security definer` - it only
 -- reads a table that's already readable by anyone, so it runs fine under
 -- the caller's own normal permissions.
-create or replace function match_restaurant(search_name text)
-returns table (name text, address text, neighbourhood text, lat numeric, lng numeric)
+-- Adding a return column requires a drop first - unlike a view, CREATE OR
+-- REPLACE FUNCTION refuses to change RETURNS TABLE's shape at all, append
+-- or not.
+drop function if exists match_restaurant(text);
+create function match_restaurant(search_name text)
+returns table (name text, address text, neighbourhood text, lat numeric, lng numeric, city text)
 language sql
 stable
 as $$
-  select r.name, r.address, r.neighbourhood, r.lat, r.lng
+  select r.name, r.address, r.neighbourhood, r.lat, r.lng, r.city
   from restaurants r
   where r.city = 'Toronto'
     and similarity(r.name, search_name) > 0.4
