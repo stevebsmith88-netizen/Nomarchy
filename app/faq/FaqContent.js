@@ -190,24 +190,28 @@ export default function FaqContent() {
 
   return (
     <FontShell>
-      <div className="mx-auto max-w-2xl px-5 py-10">
-        <div className="flex items-center justify-between gap-3">
-          <Link href="/" className="flex items-center gap-2">
-            <LogoMark size={26} />
-            <span className="text-lg tracking-[0.1em]" style={{ ...display, fontWeight: 900 }}>NOMARCHY</span>
-          </Link>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-            style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}
-          >
-            {theme === "light" ? <Moon size={14} /> : <Sun size={14} />}
-          </button>
-        </div>
+      {/* Same max-w-5xl/py-6 shell as the landing page's nav (app/page.js,
+          SignInScreen) - a narrower or more-padded container here made the
+          logo and toggle visibly jump position when navigating between
+          the two pages. */}
+      <nav className="mx-auto flex max-w-5xl items-center justify-between px-5 py-6">
+        <Link href="/" className="flex items-center gap-2">
+          <LogoMark size={26} />
+          <span className="text-lg tracking-[0.1em]" style={{ ...display, fontWeight: 900 }}>NOMARCHY</span>
+        </Link>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+          style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}
+        >
+          {theme === "light" ? <Moon size={14} /> : <Sun size={14} />}
+        </button>
+      </nav>
 
-        <h1 className="mt-8 text-2xl" style={{ ...display, fontWeight: 800 }}>How Nomarchy works</h1>
+      <div className="mx-auto max-w-2xl px-5 pb-10 pt-2">
+        <h1 className="text-2xl" style={{ ...display, fontWeight: 800 }}>How Nomarchy works</h1>
         <p className="mt-1 text-sm" style={{ color: C.muted }}>Tap a question to open it.</p>
 
         <div className="mt-6">
