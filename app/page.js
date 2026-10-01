@@ -96,10 +96,11 @@ const CORNY_VISIT_NOTES = [
 ];
 
 export default function Nomarchy() {
-  // No return value used here - just subscribing this whole page to theme
-  // changes so it (and everything under it) re-renders and picks up C's
-  // current values when the toggle in Profile is used. See theme.js.
-  useTheme();
+  // Subscribes this whole page to theme changes so it (and everything
+  // under it) re-renders and picks up C's current values - theme/
+  // toggleTheme now also power the header's own toggle, not just
+  // Profile's labelled switch (see theme.js).
+  const { theme, toggleTheme } = useTheme();
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [profile, setProfile] = useState(null);
@@ -843,6 +844,15 @@ export default function Nomarchy() {
           </div>
         </div>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            className="flex h-7 w-7 items-center justify-center rounded-full"
+            style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}
+          >
+            {theme === "light" ? <Moon size={13} /> : <Sun size={13} />}
+          </button>
           <span className="relative">
             <button
               onClick={handleOpenNotifications}
