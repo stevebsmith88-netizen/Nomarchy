@@ -894,21 +894,21 @@ export default function Nomarchy() {
               </div>
             )}
           </span>
-          <button onClick={() => setShowFeedback(true)} aria-label="Feedback" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
-            <MessageSquare size={12} /> <span className="hidden sm:inline">Feedback</span>
+          <button onClick={() => setShowFeedback(true)} aria-label="Feedback" className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
+            <MessageSquare size={12} /> Feedback
           </button>
           {profile?.is_owner && (
             <button
               onClick={() => setTab("admin")}
               aria-label="Admin"
-              className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3"
+              className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold"
               style={tab === "admin" ? { background: C.gold, color: C.bg } : { color: C.muted, border: `1px solid ${C.cardEdge}` }}
             >
-              <ShieldCheck size={12} /> <span className="hidden sm:inline">Admin</span>
+              <ShieldCheck size={12} /> Admin
             </button>
           )}
-          <button onClick={signOut} aria-label="Sign out" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
-            <LogOut size={12} /> <span className="hidden sm:inline">Sign out</span>
+          <button onClick={signOut} aria-label="Sign out" className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
+            <LogOut size={12} /> Sign out
           </button>
         </div>
       </header>
@@ -935,7 +935,16 @@ export default function Nomarchy() {
 
       <main className="mx-auto max-w-2xl px-5 pb-28">
         {!loaded ? (
-          <p className="text-center text-sm" style={{ color: C.muted }}>Loading your kingdom...</p>
+          <div>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="mb-3 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+                <Skeleton className="h-2.5 w-24" />
+                <Skeleton className="mt-3 h-4 w-3/5" />
+                <Skeleton className="mt-2 h-2.5 w-2/5" />
+                <Skeleton className="mt-4 h-8 w-28 rounded-lg" />
+              </div>
+            ))}
+          </div>
         ) : (<>
         {/* KINGDOM */}
         {tab === "kingdom" && (<div>
@@ -1337,7 +1346,7 @@ export default function Nomarchy() {
           </div>)}
           {!restaurantSearchResults && top25City && <button onClick={() => setTop25City("")} className="mb-3 text-xs font-semibold" style={{ color: C.muted }}>Clear filter</button>}
           {top25Error && <p className="mb-3 text-xs" style={{ color: C.coup }}>{top25Error}</p>}
-          {!top25 && !top25Error && <p className="text-sm" style={{ color: C.muted }}>Loading...</p>}
+          {!top25 && !top25Error && <RowSkeleton count={5} />}
           {restaurantSearchResults ? (
             restaurantSearchResults.length === 0 && uncrownedResults.length === 0
               ? <p className="text-sm" style={{ color: C.muted }}>No restaurant matches that yet.</p>
@@ -1710,6 +1719,30 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
 // renders.
 const EMOJI_PREFIX = "emoji:";
 
+// A plain pulsing block, composed into shapes that roughly match what's
+// about to load (a few card outlines, a few rows) rather than a spinner
+// or bare "Loading..." text - the shape itself signals what's coming,
+// which reads as a more finished, considered app than a blank wait does.
+function Skeleton({ className = "", style }) {
+  return <div className={`animate-pulse rounded-lg ${className}`} style={{ background: C.cardEdge, ...style }} />;
+}
+
+function RowSkeleton({ count = 3 }) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="mb-2 flex items-center gap-3 rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+          <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1">
+            <Skeleton className="h-3 w-2/3" />
+            <Skeleton className="mt-2 h-2.5 w-1/3" />
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
 function Avatar({ url, size = 28 }) {
   if (url?.startsWith(EMOJI_PREFIX)) {
     return (
@@ -1881,7 +1914,7 @@ function RestaurantProfileModal({ restaurant, onClose }) {
             </div>
           )}
           {err && <p className="text-sm" style={{ color: C.coup }}>{err}</p>}
-          {!entries && !err && <p className="text-sm" style={{ color: C.muted }}>Loading...</p>}
+          {!entries && !err && <RowSkeleton count={3} />}
           {entries && entries.length === 0 && <p className="text-sm" style={{ color: C.muted }}>No public crowns found for this one.</p>}
           {entries && entries.map((e) => (
             <div key={e.id} className="mb-4 border-b pb-4 last:mb-0 last:border-0 last:pb-0" style={{ borderColor: C.cardEdge }}>
@@ -2747,7 +2780,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
               <span className="text-xs" style={{ color: C.muted }}>{conquests.filter((c) => c.completed).length}/{conquests.length}</span>
             )}
           </div>
-          {!conquests && !conquestsError && <p className="text-xs" style={{ color: C.muted }}>Loading...</p>}
+          {!conquests && !conquestsError && <RowSkeleton count={3} />}
           {conquestsError && <p className="text-xs" style={{ color: C.coup }}>{conquestsError}</p>}
           {conquests && conquests.map((c) => (
             <div key={c.key} className="flex items-center gap-2.5 py-1.5">
@@ -3251,7 +3284,7 @@ function MembersModal({ userId, onFollow, onClose }) {
         <div className="mt-4">
           <div className="text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>Public profiles</div>
           <p className="mt-0.5 text-xs" style={{ color: C.muted }}>People who&apos;ve chosen to be discoverable by anyone.</p>
-          {!members && <p className="mt-3 text-sm" style={{ color: C.muted }}>Loading...</p>}
+          {!members && <RowSkeleton count={4} />}
           {members?.length === 0 && <p className="mt-3 text-sm" style={{ color: C.muted }}>No one&apos;s opted into this yet.</p>}
           <div className="mt-1">
             {members?.map((p) => (
