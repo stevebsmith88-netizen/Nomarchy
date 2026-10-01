@@ -2313,10 +2313,14 @@ function GoogleIcon({ size = 16 }) {
 // Instagram, say) has nothing to judge the product by otherwise; a made-up
 // but concrete-looking kingdom does more work than another sentence of
 // description, without needing an actual account's screenshots.
+// Cuisine labels here must match real seeded categories (see schema.sql's
+// cuisines insert) - "Ramen" and "Tacos" alone aren't real ones (they're
+// "Japanese and Ramen" and "Mexican"), and showing the wrong taxonomy on
+// the one page meant to represent the app honestly defeats the point.
 const EXAMPLE_THRONES = [
   { cuisine: "PIZZA", name: "Pizzeria Libretto", note: "Best margherita in the city, hands down." },
-  { cuisine: "RAMEN", name: "Sakura House", note: "Rich tonkotsu broth that never misses." },
-  { cuisine: "TACOS", name: "El Fuego", note: "Al pastor that ruined every other taco for me." },
+  { cuisine: "JAPANESE AND RAMEN", name: "Sakura House", note: "Rich tonkotsu broth that never misses." },
+  { cuisine: "MEXICAN", name: "El Fuego", note: "Al pastor that ruined every other taco for me." },
 ];
 
 function SignInScreen() {
@@ -2365,11 +2369,13 @@ function SignInScreen() {
 
   return (
     <FontShell>
-      {/* NAV */}
+      {/* NAV - logo size/type must match the FAQ page's header exactly
+          (26px, text-lg) or it visibly resizes when navigating between
+          the two, which is what was happening before. */}
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-5 py-6">
         <div className="flex items-center gap-2">
-          <LogoMark size={24} />
-          <span className="text-base tracking-[0.1em]" style={{ ...display, fontWeight: 900 }}>NOMARCHY</span>
+          <LogoMark size={26} />
+          <span className="text-lg tracking-[0.1em]" style={{ ...display, fontWeight: 900 }}>NOMARCHY</span>
         </div>
         <div className="flex items-center gap-5">
           <Link href="/faq" className="hidden text-sm font-semibold sm:inline" style={{ color: C.muted }}>FAQ</Link>
@@ -2379,11 +2385,15 @@ function SignInScreen() {
 
       {/* HERO */}
       <div className="relative mx-auto max-w-2xl px-5 pb-4 pt-6 text-center sm:pt-10">
-        <span aria-hidden className="absolute left-1 top-2 text-2xl sm:left-6 sm:top-4 sm:text-3xl" style={{ "--r": "-10deg", animation: "nomarchy-float 5s ease-in-out infinite" }}>👑</span>
-        <span aria-hidden className="absolute right-6 top-10 text-2xl sm:right-10 sm:top-6 sm:text-3xl" style={{ "--r": "8deg", animation: "nomarchy-float 6s ease-in-out infinite 0.4s" }}>🍕</span>
-        <span aria-hidden className="absolute left-4 top-36 hidden text-2xl sm:block" style={{ "--r": "6deg", animation: "nomarchy-float 5.5s ease-in-out infinite 0.9s" }}>🍜</span>
-        <span aria-hidden className="absolute right-6 top-40 hidden text-2xl sm:block" style={{ "--r": "-6deg", animation: "nomarchy-float 6.5s ease-in-out infinite 1.3s" }}>🍷</span>
-        <span aria-hidden className="absolute left-10 top-64 hidden text-xl sm:block" style={{ "--r": "-4deg", animation: "nomarchy-float 7s ease-in-out infinite 0.2s" }}>🥐</span>
+        {/* A single floating row, not scattered around the text - felt
+            too close to a certain reference image otherwise. */}
+        <div aria-hidden className="mb-4 flex items-center justify-center gap-3 text-2xl sm:gap-4 sm:text-3xl">
+          <span style={{ "--r": "-8deg", animation: "nomarchy-float 5s ease-in-out infinite" }}>👑</span>
+          <span style={{ "--r": "6deg", animation: "nomarchy-float 5.6s ease-in-out infinite 0.3s" }}>🍕</span>
+          <span style={{ "--r": "-5deg", animation: "nomarchy-float 6.2s ease-in-out infinite 0.6s" }}>🍜</span>
+          <span style={{ "--r": "7deg", animation: "nomarchy-float 5.8s ease-in-out infinite 0.9s" }}>🍷</span>
+          <span style={{ "--r": "-6deg", animation: "nomarchy-float 6.6s ease-in-out infinite 1.2s" }}>🥐</span>
+        </div>
 
         <div className="mb-4 inline-block rounded-full px-3 py-1 text-xs font-bold uppercase" style={{ background: C.card, color: C.gold, letterSpacing: "0.1em", border: `1px solid ${C.cardEdge}` }}>
           Toronto Beta
@@ -2391,6 +2401,7 @@ function SignInScreen() {
         <h1 className="text-3xl leading-[1.15] sm:text-5xl" style={{ ...display, fontWeight: 900 }}>
           Crown your favourites.<br />Settle every debate.
         </h1>
+        <p className="mt-2 text-sm italic" style={{ ...display, color: C.muted }}>Long live your favourites.</p>
         <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed" style={{ color: C.muted }}>
           One throne per cuisine. When something better comes along, stage a coup. Compare kingdoms with friends, and climb the ranks as your picks earn trust.
         </p>
