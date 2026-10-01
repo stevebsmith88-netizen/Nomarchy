@@ -95,6 +95,7 @@ export default function Nomarchy() {
   const [pretenders, setPretenders] = useState([]);
   const [cuisineList, setCuisineList] = useState([]);
   const [standing, setStanding] = useState(null);
+  const [promotion, setPromotion] = useState(null);
   const [court, setCourt] = useState([]);
   const [followers, setFollowers] = useState([]);
   const [followBackBusy, setFollowBackBusy] = useState(null);
@@ -185,6 +186,21 @@ export default function Nomarchy() {
       setLoaded(true);
     })();
   }, [user]);
+
+  // Fires the promotion celebration whenever the live, computed rank is
+  // higher than the last one this person was shown it for (last_rank_min,
+  // backfilled in schema.sql so existing users don't get celebrated for a
+  // rank they already held before this shipped). Persisting the new value
+  // happens right away, not on close, so refreshing or closing the modal
+  // before reading it can never bring it back on the next load.
+  useEffect(() => {
+    if (!profile || !standing) return;
+    const currentRank = getRank(standing.score ?? 0);
+    if (currentRank.min > 0 && currentRank.min > (profile.last_rank_min ?? 0)) {
+      setPromotion(currentRank);
+      handleUpdateProfile({ last_rank_min: currentRank.min }).catch(() => {});
+    }
+  }, [profile, standing]);
 
   const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 2200); };
 
@@ -1445,6 +1461,18 @@ export default function Nomarchy() {
         />
       )}
 
+      {profile?.onboarded && promotion && (
+        <PromotionModal
+          rank={promotion}
+          nextRank={RANKS.find((r) => r.min > promotion.min)}
+          score={score}
+          thrones={thrones}
+          reviewCount={reviewCount}
+          profile={profile}
+          onClose={() => setPromotion(null)}
+        />
+      )}
+
       {editingProfile && (
         <ProfileModal
           profile={profile}
@@ -2452,6 +2480,55 @@ function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
         <Link href="/faq" className="mt-3 block text-center text-xs font-semibold" style={{ color: C.muted }}>
           Curious how it all works? Read the FAQ
         </Link>
+      </div>
+    </div>
+  );
+}
+
+// The promotion celebration - a full-screen takeover, not a toast, since
+// crossing a rank threshold should feel like an event worth stopping for.
+// `rank` is the one just reached (see the useEffect that triggers this in
+// the main component); `nextRank` is undefined at the very top of the
+// ladder (Monarch of Taste), which is handled below rather than crashing.
+function PromotionModal({ rank, nextRank, score, thrones, reviewCount, profile, onClose }) {
+  const name = profile?.display_name || profile?.username || "Friend";
+  const proclamation = (rank.proclamation || "").replace("{name}", name);
+
+  return (
+    <div className="fixed inset-0 z-[1150] flex items-center justify-center p-5" style={{ background: "rgba(10,5,16,0.92)" }} onClick={onClose}>
+      <div className="w-full max-w-sm rounded-2xl p-6 text-center" style={{ background: C.card, border: `1px solid ${C.gold}` }} onClick={(e) => e.stopPropagation()}>
+        <Crown size={34} className="mx-auto" style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
+        <p className="mt-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>You've been promoted</p>
+        <h2 className="mt-1 text-2xl" style={{ ...display, fontWeight: 900 }}>{rank.title}</h2>
+
+        <p className="mt-4 text-sm italic leading-relaxed" style={{ color: C.cream }}>&ldquo;{proclamation}&rdquo;</p>
+
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          <div className="rounded-xl p-2.5" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+            <div className="text-lg" style={{ ...display, fontWeight: 700, color: C.gold }}>{score}</div>
+            <div className="text-[10px] uppercase" style={{ color: C.muted, letterSpacing: "0.06em" }}>Credibility</div>
+          </div>
+          <div className="rounded-xl p-2.5" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+            <div className="text-lg" style={{ ...display, fontWeight: 700, color: C.gold }}>{thrones}</div>
+            <div className="text-[10px] uppercase" style={{ color: C.muted, letterSpacing: "0.06em" }}>Thrones</div>
+          </div>
+          <div className="rounded-xl p-2.5" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+            <div className="text-lg" style={{ ...display, fontWeight: 700, color: C.gold }}>{reviewCount}</div>
+            <div className="text-[10px] uppercase" style={{ color: C.muted, letterSpacing: "0.06em" }}>Reviews</div>
+          </div>
+        </div>
+
+        {nextRank ? (
+          <p className="mt-4 text-xs" style={{ color: C.muted }}>
+            <span style={{ color: C.gold, fontWeight: 700 }}>{nextRank.min - score}</span> more to {nextRank.title}
+          </p>
+        ) : (
+          <p className="mt-4 text-xs" style={{ color: C.muted }}>There is no higher seat. The realm is yours.</p>
+        )}
+
+        <button onClick={onClose} className="mt-5 w-full rounded-lg py-3 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>
+          Long may I reign
+        </button>
       </div>
     </div>
   );

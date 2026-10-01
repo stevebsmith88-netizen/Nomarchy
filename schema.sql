@@ -63,6 +63,13 @@ alter table profiles add column if not exists reminders_opt_out boolean not null
 -- Defaults to now() so existing follows/crowns from before this feature
 -- shipped don't all flood in as a backlog of "new" notifications.
 alter table profiles add column if not exists notifications_seen_at timestamptz not null default now();
+-- The highest rank threshold (RANKS[].min in app/theme.js) this person has
+-- already been shown the promotion celebration for - compared against
+-- their live, computed score on each load so a crossing only ever
+-- celebrates once. Defaults to 0 (Peckish Peasant, which everyone starts
+-- at and never "gets promoted into"), so nobody sees a celebration for a
+-- rank they were already sitting at before this shipped.
+alter table profiles add column if not exists last_rank_min integer not null default 0;
 -- Per-type opt-outs for the in-app notification bell (separate from the
 -- reminders_opt_out email above) - default true so nobody's notifications
 -- go quiet just because this shipped after they signed up.
@@ -754,6 +761,25 @@ select
   (select count(*) from thrones t where t.user_id = p.id and cardinality(t.photos) > 0) as thrones_with_photos,
   (select coalesce(sum(c.points), 0) from conquests c where c.user_id = p.id) as conquest_points
 from profiles p;
+
+-- One-time backfill for existing scores at the moment last_rank_min was
+-- added (see its own comment above, in section 1) - without this,
+-- everyone already past Peckish Peasant would see a promotion
+-- celebration for a rank they've held for a while, which would read as
+-- stale rather than exciting. RANKS[].min values are hand-mirrored here
+-- since the real ladder lives in app/theme.js, not the database - keep
+-- these two in sync if the ladder's thresholds ever change. Only touches
+-- rows still at the default 0, so it's a genuine one-time catch-up, not
+-- something that re-runs on every script paste; the trade-off is that
+-- anyone who crosses a threshold and then has this full script re-run
+-- before they next open the app misses that one celebration - a minor,
+-- cosmetic edge case worth accepting over a dedicated migrations table.
+update profiles p
+set last_rank_min = coalesce((
+  select max(t.min) from (values (0),(30),(70),(120),(180),(270),(400),(580),(820)) as t(min)
+  where t.min <= coalesce((select s.score from standings s where s.id = p.id), 0)
+), 0)
+where p.last_rank_min = 0;
 
 -- ------------------------------------------------------------
 -- 10. ANTI-ABUSE WRITE-RATE LIMITS

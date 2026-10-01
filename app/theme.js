@@ -93,16 +93,50 @@ export const body = { fontFamily: "'Work Sans', sans-serif" };
 // progress should stay quick, that's what hooks a new user - but Earl and
 // up now grow much faster than linear, so the ceiling keeps meaning
 // something as more ways to earn points get added underneath it.
+// `proclamation` is the longer, over-the-top paragraph for the promotion
+// celebration modal (see PromotionModal in app/page.js) - deliberately
+// separate from the short `note` above, which stays as the quick inline
+// description used elsewhere (profile badge, welcome email). Each one
+// leans into what that specific title actually means historically
+// (a knighting, a land grant, a coronation...) rather than being
+// interchangeable congratulations - that's what makes the ladder itself
+// feel like the joke, not just the fact of levelling up. No proclamation
+// on Peckish Peasant - everyone starts there, nobody gets "promoted" into
+// it, so it's never shown.
 export const RANKS = [
   { min: 0, title: "Peckish Peasant", note: "Everyone starts hungry." },
-  { min: 30, title: "Court Taster", note: "Your palate is earning trust." },
-  { min: 70, title: "Kitchen Knight", note: "You've earned your spurs at the table." },
-  { min: 120, title: "Baron of the Bites", note: "A modest but real domain of taste." },
-  { min: 180, title: "Viscount of Victuals", note: "Your picks are getting harder to ignore." },
-  { min: 270, title: "Earl of Eats", note: "A serious reputation at the table." },
-  { min: 400, title: "Duke of Dinner", note: "Your word carries weight at the table." },
-  { min: 580, title: "Prince/Princess of the Palate", note: "One reign away from the throne." },
-  { min: 820, title: "Monarch of Taste", note: "Long may you reign." },
+  {
+    min: 30, title: "Court Taster", note: "Your palate is earning trust.",
+    proclamation: "By order of the Court, {name} has been appointed Royal Taster. Every dish that reaches the table must now pass your verdict first - the kitchen fears your palate, and rightly so.",
+  },
+  {
+    min: 70, title: "Kitchen Knight", note: "You've earned your spurs at the table.",
+    proclamation: "Hear ye! By unanimous decree of taste and timing, {name} has been knighted at the table. The realm has tasted your judgment and found it worthy - rise, Kitchen Knight, and may your next pick be even bolder.",
+  },
+  {
+    min: 120, title: "Baron of the Bites", note: "A modest but real domain of taste.",
+    proclamation: "Land, title, and a modest holding of flavour now belong to {name}. The deed is signed, the seal is wax, and your tenants (your friends) owe you nothing but their trust in where to eat next. Welcome to the peerage, Baron of the Bites.",
+  },
+  {
+    min: 180, title: "Viscount of Victuals", note: "Your picks are getting harder to ignore.",
+    proclamation: "The Crown has taken notice. {name} now governs a growing stretch of the realm's finest tables as Viscount of Victuals - a title too big to ignore and too tasty to argue with.",
+  },
+  {
+    min: 270, title: "Earl of Eats", note: "A serious reputation at the table.",
+    proclamation: "Few climb this high. {name} now holds one of the oldest and most respected seats at the table: Earl of Eats. Dukes consult you. Commoners quote you. The realm takes your word as law.",
+  },
+  {
+    min: 400, title: "Duke of Dinner", note: "Your word carries weight at the table.",
+    proclamation: "A vast domain of discerning taste now answers to {name}. As Duke of Dinner, your word carries the weight of an edict - argue with it at your own risk, and at your own expense.",
+  },
+  {
+    min: 580, title: "Prince/Princess of the Palate", note: "One reign away from the throne.",
+    proclamation: "The throne room doors have creaked open. {name} stands one reign away as Prince/Princess of the Palate - heir to the realm's highest honour, and the last to cross before the crown itself.",
+  },
+  {
+    min: 820, title: "Monarch of Taste", note: "Long may you reign.",
+    proclamation: "All hail {name}, Monarch of Taste! The crown is yours, the realm bows, and every throne in the kingdom now answers to a ruler who has earned every last bite of it. Long may you reign.",
+  },
 ];
 
 export function getRank(score) {
