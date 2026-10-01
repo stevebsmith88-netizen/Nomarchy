@@ -1066,13 +1066,18 @@ export default function Nomarchy() {
                 <div className="mt-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
                   <div className="text-sm font-bold">{councilPick.name}</div>
                   <div className="text-xs" style={{ color: C.muted }}>{[councilPick.cuisine, councilPick.area].filter(Boolean).join(" · ")} - {councilPick.mine ? "on your list" : `via ${councilPick.from}`}</div>
-                  {councilPick.quote && <p className="mt-1.5 text-xs italic" style={{ color: C.cream }}>&ldquo;{councilPick.quote}&rdquo;</p>}
+                  {/* Buttons sit right after the name, above the quote -
+                      the quote's length varies a lot (or is sometimes
+                      missing entirely), and having it above the buttons
+                      meant "Show me another" landed in a different spot
+                      on screen every time you tapped it. */}
                   <div className="mt-2 flex gap-2">
                     {!councilPick.mine && (
                       <button onClick={() => handleAddCouncilPick(councilPick)} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>Add to my list</button>
                     )}
                     <button onClick={handleAskCouncil} disabled={councilPool.length <= 1} className={councilPick.mine ? "flex-1 rounded-lg py-2 text-xs font-bold" : "rounded-lg px-3 py-2 text-xs font-bold"} style={councilPool.length <= 1 ? { border: `1px solid ${C.cardEdge}`, color: C.cardEdge } : { border: `1px solid ${C.cardEdge}`, color: C.muted }}>Show me another</button>
                   </div>
+                  {councilPick.quote && <p className="mt-2 text-xs italic" style={{ color: C.cream }}>&ldquo;{councilPick.quote}&rdquo;</p>}
                 </div>
               ) : (
                 <p className="mt-2 text-sm" style={{ color: C.muted }}>Nobody in your Court has crowned or tried {pcCuisine || "anything"} yet, and nothing&apos;s on your own list either{pcCuisine ? " - try Any cuisine" : ""}.</p>
