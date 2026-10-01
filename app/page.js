@@ -7,7 +7,7 @@ import {
   Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock,
-  MessageSquare, Bell, TrendingUp, Navigation, Camera, Mail, ShieldCheck,
+  MessageSquare, Bell, TrendingUp, Navigation, Camera, Mail, ShieldCheck, Sun, Moon,
 } from "lucide-react";
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
@@ -2324,6 +2324,7 @@ const EXAMPLE_THRONES = [
 ];
 
 function SignInScreen() {
+  const { theme, toggleTheme } = useTheme();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState("");
@@ -2377,8 +2378,23 @@ function SignInScreen() {
           <LogoMark size={26} />
           <span className="text-lg tracking-[0.1em]" style={{ ...display, fontWeight: 900 }}>NOMARCHY</span>
         </div>
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-4">
           <Link href="/faq" className="hidden text-sm font-semibold sm:inline" style={{ color: C.muted }}>FAQ</Link>
+          {/* Minimal sun/moon toggle, not the full labelled switch used in
+              Settings - this is a quick "see it both ways" preview for a
+              visitor who hasn't signed up yet, not a persisted setting
+              they need a dedicated row for. Shows the icon for what
+              tapping it switches TO, same convention as everywhere else
+              a theme toggle shows up. */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            className="flex h-8 w-8 items-center justify-center rounded-full"
+            style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}
+          >
+            {theme === "light" ? <Moon size={14} /> : <Sun size={14} />}
+          </button>
           <a href="#sign-in" className="rounded-full px-4 py-2 text-xs font-bold sm:text-sm" style={{ background: C.gold, color: C.bg }}>Open the app</a>
         </div>
       </nav>
