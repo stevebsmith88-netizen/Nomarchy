@@ -65,7 +65,7 @@ function renderEmail(name) {
           <strong>Android:</strong> open this in Chrome, tap the &#8942; menu, then "Add to Home screen" (or "Install app").
         </p>
       </div>
-      <p style="margin-top:20px;font-size:13px;color:#333;">Got feedback, or found something broken? Just reply to this email - it comes straight to me.</p>
+      <p style="margin-top:20px;font-size:13px;color:#333;">Got feedback, or found something broken? Just reply to this email.</p>
       <p style="margin-top:8px;font-size:13px;color:#333;">Curious how it all works? <a href="${SITE_URL}/faq" style="color:#333;text-decoration:underline;">Read the FAQ</a>.</p>
       <p style="margin-top:8px;font-size:13px;color:#333;">Follow along on Instagram: <a href="https://www.instagram.com/nomarchyapp" style="color:#333;text-decoration:underline;">@nomarchyapp</a>.</p>
     </div>

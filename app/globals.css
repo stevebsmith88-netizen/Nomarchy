@@ -20,6 +20,14 @@ html {
      scrolling is what makes that read as an intentional page section
      rather than an abrupt jump. */
   scroll-behavior: smooth;
+  /* Without this, a page short enough to not need a vertical scrollbar
+     (the FAQ, with everything collapsed) renders slightly wider than one
+     that does (the landing page) - a real scrollbar eats into the
+     viewport's width, so a centered max-w-* container's left edge (and
+     everything in it, like the logo) lands a few pixels differently
+     depending on whether THAT page happens to scroll. Reserving the
+     gutter unconditionally keeps every page's available width identical. */
+  scrollbar-gutter: stable;
 }
 
 /* Floating decorative emoji on the signed-out landing page (SignInScreen

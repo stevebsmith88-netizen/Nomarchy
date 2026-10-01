@@ -170,7 +170,7 @@ const QUESTIONS = [
     a: (
       <p>
         Open <strong>Your Profile</strong> and tap <strong>Send</strong> next to Feedback, or just reply to
-        any Nomarchy email - both come straight to the person building this.
+        any Nomarchy email.
       </p>
     ),
   },
@@ -199,15 +199,24 @@ export default function FaqContent() {
           <LogoMark size={26} />
           <span className="text-lg tracking-[0.1em]" style={{ ...display, fontWeight: 900 }}>NOMARCHY</span>
         </Link>
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-          style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}
-        >
-          {theme === "light" ? <Moon size={14} /> : <Sun size={14} />}
-        </button>
+        {/* Same right-side cluster as the landing nav (FAQ link, toggle,
+            "Open the app") so the toggle itself sits at the same x
+            position on both pages - a lone toggle here, with nothing
+            to its right, sat flush against the edge instead of where
+            it sits on the landing page. */}
+        <div className="flex items-center gap-4">
+          <Link href="/faq" className="hidden text-sm font-semibold sm:inline" style={{ color: C.gold }}>FAQ</Link>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+            style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}
+          >
+            {theme === "light" ? <Moon size={14} /> : <Sun size={14} />}
+          </button>
+          <Link href="/#sign-in" className="rounded-full px-4 py-2 text-xs font-bold sm:text-sm" style={{ background: C.gold, color: C.bg }}>Open the app</Link>
+        </div>
       </nav>
 
       <div className="mx-auto max-w-2xl px-5 pb-10 pt-2">
