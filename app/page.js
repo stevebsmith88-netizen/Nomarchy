@@ -12,7 +12,7 @@ import {
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
   linkGoogle, unlinkGoogle, getLinkedProviders,
-  loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, placeKey, loadRestaurantProfile, loadRestaurantVisitCount, loadRestaurantWantingCount, searchAllRestaurants, loadFollowers, followUser, loadNotifications, markNotificationsSeen,
+  loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, placeKey, loadRestaurantProfile, loadRestaurantVisitCount, loadRestaurantWantingCount, searchAllRestaurants, loadFollowers, followUser, loadNotifications, markNotificationsSeen, logRankPromotion,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderVerdict, updatePretenderPhotos,
   moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
@@ -63,6 +63,20 @@ const sameRestaurant = (a, b) => {
   if (na === nb) return true;
   const [shorter, longer] = na.length <= nb.length ? [na, nb] : [nb, na];
   return shorter.length >= 5 && longer.includes(shorter);
+};
+
+// For the notification feed - "3h ago" reads as a real timeline, where a
+// full date on every row would just be noise for anything from today.
+const timeAgo = (at) => {
+  const ms = Date.now() - new Date(at).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(at).toLocaleDateString("en-CA", { month: "short", day: "numeric" });
 };
 
 // Marking something "been" with nothing typed and no verdict chosen used
@@ -179,7 +193,7 @@ export default function Nomarchy() {
         setStanding(s); setCourt(crt); setFollowers(flw); setProfile(p);
         const notifs = await loadNotifications(user.id, p.notifications_seen_at, p);
         setNotifications(notifs);
-        setHasUnseenNotifications(notifs.length > 0);
+        setHasUnseenNotifications(notifs.some((n) => n.isNew));
       } catch (err) {
         setLoadError(err.message);
       }
@@ -199,6 +213,10 @@ export default function Nomarchy() {
     if (currentRank.min > 0 && currentRank.min > (profile.last_rank_min ?? 0)) {
       setPromotion(currentRank);
       handleUpdateProfile({ last_rank_min: currentRank.min }).catch(() => {});
+      // Best-effort and independent of the line above - a friend never
+      // seeing this in their feed shouldn't stop the celebration itself,
+      // and vice versa.
+      logRankPromotion(user.id, currentRank).catch(() => {});
     }
   }, [profile, standing]);
 
@@ -825,20 +843,27 @@ export default function Nomarchy() {
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
                 <div
-                  className="absolute left-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2.5rem)] rounded-xl p-3 text-left"
+                  className="absolute left-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2.5rem)] overflow-y-auto rounded-xl p-3 text-left"
                   onClick={(e) => e.stopPropagation()}
-                  style={{ background: C.card, border: `1px solid ${C.cardEdge}`, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}
+                  style={{ background: C.card, border: `1px solid ${C.cardEdge}`, boxShadow: "0 8px 24px rgba(0,0,0,0.4)", maxHeight: "70vh" }}
                 >
                   <div className="mb-1.5 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Notifications</div>
                   {notifications.length === 0 ? (
-                    <p className="text-xs" style={{ color: C.muted }}>Nothing new.</p>
+                    <p className="text-xs" style={{ color: C.muted }}>Nothing in the last 30 days.</p>
                   ) : notifications.map((n, i) => (
-                    <div key={i} className="py-1.5 text-xs" style={{ borderTop: i > 0 ? `1px solid ${C.cardEdge}` : "none", color: C.cream }}>
-                      {n.type === "follow" && <><span style={{ fontWeight: 700 }}>{n.name}</span> started following you</>}
-                      {n.type === "crown" && <><span style={{ fontWeight: 700 }}>{n.name}</span> crowned <span style={{ color: C.gold }}>{n.place}</span> for {n.cuisine}</>}
-                      {n.type === "review" && <><span style={{ fontWeight: 700 }}>{n.name}</span> tried <span style={{ color: C.gold }}>{n.place}</span>{n.cuisine ? ` for ${n.cuisine}` : ""}</>}
-                      {n.type === "endorse" && <><span style={{ fontWeight: 700 }}>{n.name}</span> endorsed your <span style={{ color: C.gold }}>{n.place}</span> pick</>}
-                      {n.type === "announcement" && <><span style={{ fontWeight: 700, color: C.gold }}>What's new:</span> {n.text}</>}
+                    <div key={i} className="flex items-start gap-2 py-2 text-xs" style={{ borderTop: i > 0 ? `1px solid ${C.cardEdge}` : "none", color: C.cream }}>
+                      {n.isNew && <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: C.gold }} />}
+                      <div className={n.isNew ? "min-w-0 flex-1" : "min-w-0 flex-1 pl-3.5"}>
+                        <div>
+                          {n.type === "follow" && <><span style={{ fontWeight: 700 }}>{n.name}</span> started following you</>}
+                          {n.type === "crown" && <><span style={{ fontWeight: 700 }}>{n.name}</span> crowned <span style={{ color: C.gold }}>{n.place}</span> for {n.cuisine}</>}
+                          {n.type === "review" && <><span style={{ fontWeight: 700 }}>{n.name}</span> tried <span style={{ color: C.gold }}>{n.place}</span>{n.cuisine ? ` for ${n.cuisine}` : ""}</>}
+                          {n.type === "endorse" && <><span style={{ fontWeight: 700 }}>{n.name}</span> endorsed your <span style={{ color: C.gold }}>{n.place}</span> pick</>}
+                          {n.type === "promotion" && <><span style={{ fontWeight: 700 }}>{n.name}</span> was promoted to <span style={{ color: C.gold, fontWeight: 700 }}>{n.rank}</span></>}
+                          {n.type === "announcement" && <><span style={{ fontWeight: 700, color: C.gold }}>What's new:</span> {n.text}</>}
+                        </div>
+                        <div className="mt-0.5 text-[10px]" style={{ color: C.muted }}>{timeAgo(n.at)}</div>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -343,6 +343,20 @@ create table if not exists blocks (
   check (blocker_id <> blocked_id)
 );
 
+-- One row logged each time someone crosses a rank threshold (see the
+-- promotion celebration's useEffect in app/page.js, which inserts here
+-- right alongside persisting last_rank_min) - without this there's no way
+-- to answer "who got promoted and when" for the notification feed, since
+-- rank itself is just a live, computed value with no history of its own.
+create table if not exists rank_promotions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  rank_min integer not null,
+  rank_title text not null,
+  promoted_at timestamptz not null default now()
+);
+create index if not exists rank_promotions_user_idx on rank_promotions(user_id, promoted_at);
+
 -- ------------------------------------------------------------
 -- 7. AI_CALLS
 -- One row per call to /api/ai, used to enforce a per-user hourly rate
@@ -559,6 +573,7 @@ alter table endorsements enable row level security;
 alter table follows      enable row level security;
 alter table blocks       enable row level security;
 alter table ai_calls     enable row level security;
+alter table rank_promotions enable row level security;
 
 -- Profiles: everyone can read, you can only edit your own
 drop policy if exists "profiles readable" on profiles;
@@ -621,6 +636,22 @@ create policy "followers see visited picks" on next_in_line for select
     visited_at is not null
     and exists (select 1 from follows f where f.follower_id = auth.uid() and f.followee_id = next_in_line.user_id)
   );
+
+-- Rank promotions: readable by yourself and anyone who follows you (so a
+-- friend's promotion can show up in their followers' notification feed),
+-- same "visible to anyone who follows you, not a vetted friends list"
+-- caveat as next_in_line's visited picks above. Only ever insertable for
+-- your own user_id, and never updatable/deletable - it's a log, not a
+-- mutable record.
+drop policy if exists "rank promotions readable" on rank_promotions;
+create policy "rank promotions readable" on rank_promotions for select
+  using (
+    auth.uid() = user_id
+    or exists (select 1 from follows f where f.follower_id = auth.uid() and f.followee_id = rank_promotions.user_id)
+  );
+drop policy if exists "own rank promotions insertable" on rank_promotions;
+create policy "own rank promotions insertable" on rank_promotions for insert
+  with check (auth.uid() = user_id);
 
 -- Endorsements: readable by all, and you can never endorse your own pick
 drop policy if exists "endorsements readable" on endorsements;
