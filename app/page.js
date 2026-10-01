@@ -828,18 +828,18 @@ export default function Nomarchy() {
     <FontShell>
       <header className="px-5 pt-7 pb-3 text-center">
         <div className="flex items-center justify-center gap-2">
-          <LogoMark size={32} />
-          <h1 className="text-3xl tracking-[0.12em]" style={{ ...display, fontWeight: 900 }}>NOMARCHY</h1>
+          <LogoMark size={38} />
+          <h1 className="text-4xl tracking-[0.12em]" style={{ ...display, fontWeight: 900 }}>NOMARCHY</h1>
         </div>
         <p className="mt-1 text-sm italic" style={{ ...display, color: C.muted }}>Long live your favourites.</p>
         <div className="mt-2 flex items-center justify-center">
           <div
-            className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold"
+            className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold"
             style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}
           >
-            <button onClick={() => setEditingProfile(true)} className="flex items-center gap-1.5">
-              <Avatar url={profile?.avatar_url} size={26} />
-              @{profile?.username} · {title} <RankBadge score={score} /> {profile?.is_owner && <OwnerBadge />} <Pencil size={11} />
+            <button onClick={() => setEditingProfile(true)} className="flex items-center gap-2">
+              <Avatar url={profile?.avatar_url} size={32} />
+              @{profile?.username} · {title} <RankBadge score={score} size={17} /> {profile?.is_owner && <OwnerBadge size={17} />} <Pencil size={13} />
             </button>
           </div>
         </div>
