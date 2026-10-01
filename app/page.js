@@ -834,12 +834,12 @@ export default function Nomarchy() {
         <p className="mt-1 text-sm italic" style={{ ...display, color: C.muted }}>Long live your favourites.</p>
         <div className="mt-2 flex items-center justify-center">
           <div
-            className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold"
+            className="flex items-center gap-1.5 rounded-full px-3.5 py-1 text-sm font-semibold"
             style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}
           >
-            <button onClick={() => setEditingProfile(true)} className="flex items-center gap-2">
-              <Avatar url={profile?.avatar_url} size={32} />
-              @{profile?.username} · {title} <RankBadge score={score} size={17} /> {profile?.is_owner && <OwnerBadge size={17} />} <Pencil size={13} />
+            <button onClick={() => setEditingProfile(true)} className="flex items-center gap-1.5">
+              <Avatar url={profile?.avatar_url} size={28} />
+              @{profile?.username} · {title} <RankBadge score={score} size={15} /> {profile?.is_owner && <OwnerBadge size={15} />} <Pencil size={12} />
             </button>
           </div>
         </div>
