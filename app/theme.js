@@ -75,15 +75,8 @@ export function ThemeProvider({ children }) {
 export function useTheme() {
   return useContext(ThemeContext);
 }
-// Fraunces (headings/wordmark) + Source Sans 3 (body) - replaces an
-// earlier Raleway + Work Sans pairing that read as generic, templated
-// "default web font" (the same handful of geometric sans pairs show up
-// on every AI-generated/SaaS-template site now). Fraunces has real
-// character that actually fits a royal-decree tone; Source Sans 3 stays
-// quietly readable at the small sizes decrees and notes run at, without
-// being one of the overused ones.
-export const display = { fontFamily: "'Fraunces', serif" };
-export const body = { fontFamily: "'Source Sans 3', sans-serif" };
+export const display = { fontFamily: "'Raleway', sans-serif" };
+export const body = { fontFamily: "'Work Sans', sans-serif" };
 
 // The gap to the next tier widens as you climb - the first promotion is
 // quick (you just need to try the app), the last one is a real reign.
@@ -209,7 +202,7 @@ export function LogoMark({ size = 32 }) {
 export function FontShell({ children }) {
   return (
     <div className="min-h-screen w-full" style={{ background: C.bg, color: C.cream, ...body }}>
-      <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900;1,9..144,500;1,9..144,600&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
       {children}
     </div>
   );
