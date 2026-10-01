@@ -78,7 +78,13 @@ export async function GET(request) {
   const rating = searchParams.get("rating") || "";
   const blurb = (searchParams.get("blurb") || "").slice(0, 220);
   const username = (searchParams.get("username") || "").slice(0, 40);
-  const considering = searchParams.get("status") === "considering";
+  const status = searchParams.get("status") || "crowned";
+  const considering = status === "considering";
+  // A rank promotion isn't about a restaurant at all - same card shell
+  // (header, QR, footer) but the middle swaps a place name for a title,
+  // and the blurb is the rank's proclamation rather than a decree.
+  const promoted = status === "promoted";
+  const rank = (searchParams.get("rank") || "").slice(0, 60);
   // A username lands the scanner on real social proof (this person's
   // actual kingdom) before ever asking them to sign up - a bare homepage
   // would be a colder landing for someone who's never seen the app.
@@ -106,28 +112,41 @@ export async function GET(request) {
             <div style={{ display: "flex", fontSize: 30, fontWeight: 900, color: C.cream, letterSpacing: 4 }}>NOMARCHY</div>
           </div>
 
-          {considering && (
-            <div style={{ display: "flex", marginTop: 56, fontSize: 26, fontWeight: 700, color: C.muted, letterSpacing: 3, textTransform: "uppercase" }}>
-              Worth a visit?
+          {promoted ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div style={{ display: "flex", marginTop: 56, fontSize: 26, fontWeight: 700, color: C.muted, letterSpacing: 3, textTransform: "uppercase" }}>
+                Promoted to
+              </div>
+              <div style={{ display: "flex", marginTop: 16, fontSize: 60, fontWeight: 800, color: C.gold, lineHeight: 1.15, textAlign: "center" }}>
+                {rank}
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              {considering && (
+                <div style={{ display: "flex", marginTop: 56, fontSize: 26, fontWeight: 700, color: C.muted, letterSpacing: 3, textTransform: "uppercase" }}>
+                  Worth a visit?
+                </div>
+              )}
+              <div style={{ display: "flex", marginTop: considering ? 16 : 56, fontSize: 26, fontWeight: 700, color: C.gold, letterSpacing: 3, textTransform: "uppercase" }}>
+                {cuisine}
+              </div>
+              <div style={{ display: "flex", marginTop: 16, fontSize: 68, fontWeight: 800, color: C.cream, lineHeight: 1.1, textAlign: "center" }}>
+                {name}
+              </div>
+              <div style={{ display: "flex", marginTop: 18, fontSize: 28, color: C.muted, gap: 14, alignItems: "center", justifyContent: "center" }}>
+                {area && <div style={{ display: "flex" }}>{area}</div>}
+                {rating && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: C.gold }}>
+                    <svg width={22} height={22} viewBox="0 0 24 24" fill={C.gold}>
+                      <path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.8L5.8 21l1.6-7L2 9.2l7.1-.6z" />
+                    </svg>
+                    {rating}
+                  </div>
+                )}
+              </div>
             </div>
           )}
-          <div style={{ display: "flex", marginTop: considering ? 16 : 56, fontSize: 26, fontWeight: 700, color: C.gold, letterSpacing: 3, textTransform: "uppercase" }}>
-            {cuisine}
-          </div>
-          <div style={{ display: "flex", marginTop: 16, fontSize: 68, fontWeight: 800, color: C.cream, lineHeight: 1.1, textAlign: "center" }}>
-            {name}
-          </div>
-          <div style={{ display: "flex", marginTop: 18, fontSize: 28, color: C.muted, gap: 14, alignItems: "center", justifyContent: "center" }}>
-            {area && <div style={{ display: "flex" }}>{area}</div>}
-            {rating && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, color: C.gold }}>
-                <svg width={22} height={22} viewBox="0 0 24 24" fill={C.gold}>
-                  <path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.8L5.8 21l1.6-7L2 9.2l7.1-.6z" />
-                </svg>
-                {rating}
-              </div>
-            )}
-          </div>
 
           {blurb && (
             <div style={{ display: "flex", marginTop: 44, fontSize: 32, color: C.cream, lineHeight: 1.5, opacity: 0.9, textAlign: "center", maxWidth: 850 }}>
@@ -145,7 +164,11 @@ export async function GET(request) {
 
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, borderTop: `2px solid ${C.cardEdge}`, paddingTop: 28 }}>
           <div style={{ display: "flex", fontSize: 26, color: C.muted }}>
-            {username ? `${considering ? "on" : "crowned by"} @${username}${considering ? "'s list" : ""}` : considering ? "on the list" : "crowned on Nomarchy"}
+            {promoted
+              ? (username ? `@${username}'s new rank` : "promoted on Nomarchy")
+              : username
+                ? `${considering ? "on" : "crowned by"} @${username}${considering ? "'s list" : ""}`
+                : considering ? "on the list" : "crowned on Nomarchy"}
           </div>
           <div style={{ display: "flex", fontSize: 26, color: C.gold, fontWeight: 700 }}>nomarchy.ca</div>
         </div>

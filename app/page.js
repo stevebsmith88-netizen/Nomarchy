@@ -500,6 +500,15 @@ export default function Nomarchy() {
     return shareCard(text, params, "nomarchy-considering.png");
   };
 
+  const sharePromotion = (rank) => {
+    const text = `Just got promoted on Nomarchy: ${rank.title}!`;
+    const params = new URLSearchParams({
+      status: "promoted", rank: rank.title, blurb: (rank.proclamation || "").replace("{name}", profile?.display_name || profile?.username || ""),
+      username: profile?.username || "",
+    });
+    return shareCard(text, params, "nomarchy-promotion.png");
+  };
+
   // Their own public kingdom link doubles as the invite - it's already a
   // real, personal landing page (their crowns, their decrees), not a bare
   // signup form, so whoever clicks it sees something worth joining for
@@ -1469,6 +1478,7 @@ export default function Nomarchy() {
           thrones={thrones}
           reviewCount={reviewCount}
           profile={profile}
+          onShare={() => sharePromotion(promotion)}
           onClose={() => setPromotion(null)}
         />
       )}
@@ -2490,7 +2500,7 @@ function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
 // `rank` is the one just reached (see the useEffect that triggers this in
 // the main component); `nextRank` is undefined at the very top of the
 // ladder (Monarch of Taste), which is handled below rather than crashing.
-function PromotionModal({ rank, nextRank, score, thrones, reviewCount, profile, onClose }) {
+function PromotionModal({ rank, nextRank, score, thrones, reviewCount, profile, onShare, onClose }) {
   const name = profile?.display_name || profile?.username || "Friend";
   const proclamation = (rank.proclamation || "").replace("{name}", name);
 
@@ -2526,9 +2536,14 @@ function PromotionModal({ rank, nextRank, score, thrones, reviewCount, profile, 
           <p className="mt-4 text-xs" style={{ color: C.muted }}>There is no higher seat. The realm is yours.</p>
         )}
 
-        <button onClick={onClose} className="mt-5 w-full rounded-lg py-3 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>
-          Long may I reign
-        </button>
+        <div className="mt-5 flex gap-2">
+          <button onClick={onShare} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-3 text-sm font-bold" style={{ border: `1px solid ${C.gold}66`, color: C.gold }}>
+            <Share2 size={14} /> Share
+          </button>
+          <button onClick={onClose} className="flex-1 rounded-lg py-3 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>
+            Long may I reign
+          </button>
+        </div>
       </div>
     </div>
   );
