@@ -12,7 +12,7 @@ import {
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
   linkGoogle, unlinkGoogle, getLinkedProviders,
-  loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, placeKey, loadRestaurantProfile, loadRestaurantVisitCount, loadRestaurantWantingCount, searchAllRestaurants, loadFollowers, followUser, loadNotifications, markNotificationsSeen, logRankPromotion,
+  loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, placeKey, loadRestaurantProfile, loadRestaurantVisitCount, loadRestaurantWantingCount, searchAllRestaurants, loadFollowers, followUser, loadNotifications, markNotificationsSeen, logRankPromotion, dismissNotification, dismissAllNotifications,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderVerdict, updatePretenderPhotos,
   moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
@@ -640,6 +640,22 @@ export default function Nomarchy() {
     }
   };
 
+  // Removed from the list immediately, not after the write round-trips -
+  // "clear instantly" means instantly, and a dismiss that fails to
+  // persist is a minor annoyance (it reappears next load), not something
+  // worth making someone wait on or see an error for.
+  const handleDismissNotification = (key) => {
+    setNotifications((list) => list.filter((n) => n.key !== key));
+    dismissNotification(user.id, key).catch(() => {});
+  };
+
+  const handleClearAllNotifications = () => {
+    const keys = notifications.map((n) => n.key);
+    setNotifications([]);
+    setHasUnseenNotifications(false);
+    dismissAllNotifications(user.id, keys).catch(() => {});
+  };
+
   // Worded as where the idea came from, not an ongoing claim about their
   // opinion - this note has no live link back to the friend's throne, so
   // "swears by this one" would age into a false statement the moment they
@@ -848,12 +864,17 @@ export default function Nomarchy() {
                 >
                   <div className="mb-1.5 flex items-center justify-between">
                     <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Notifications</div>
-                    <button onClick={() => setShowNotifications(false)} aria-label="Close" style={{ color: C.muted }}><X size={16} /></button>
+                    <div className="flex items-center gap-3">
+                      {notifications.length > 0 && (
+                        <button onClick={handleClearAllNotifications} className="text-[11px] font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.06em" }}>Clear all</button>
+                      )}
+                      <button onClick={() => setShowNotifications(false)} aria-label="Close" style={{ color: C.muted }}><X size={16} /></button>
+                    </div>
                   </div>
                   {notifications.length === 0 ? (
                     <p className="text-xs" style={{ color: C.muted }}>Nothing in the last 30 days.</p>
                   ) : notifications.map((n, i) => (
-                    <div key={i} className="flex items-start gap-2 py-2 text-xs" style={{ borderTop: i > 0 ? `1px solid ${C.cardEdge}` : "none", color: C.cream }}>
+                    <div key={n.key} className="flex items-start gap-2 py-2 text-xs" style={{ borderTop: i > 0 ? `1px solid ${C.cardEdge}` : "none", color: C.cream }}>
                       {n.isNew && <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: C.gold }} />}
                       <div className={n.isNew ? "min-w-0 flex-1" : "min-w-0 flex-1 pl-3.5"}>
                         <div>
@@ -866,6 +887,7 @@ export default function Nomarchy() {
                         </div>
                         <div className="mt-0.5 text-[10px]" style={{ color: C.muted }}>{timeAgo(n.at)}</div>
                       </div>
+                      <button onClick={() => handleDismissNotification(n.key)} aria-label="Dismiss" className="shrink-0 p-0.5" style={{ color: C.muted }}><X size={13} /></button>
                     </div>
                   ))}
                 </div>

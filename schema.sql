@@ -357,6 +357,21 @@ create table if not exists rank_promotions (
 );
 create index if not exists rank_promotions_user_idx on rank_promotions(user_id, promoted_at);
 
+-- The notification feed is computed fresh from live data on every load
+-- (see loadNotifications in lib/data.js) rather than stored rows, which
+-- is what makes a 30-day rolling history free to build - but it also
+-- means "dismiss this" needs somewhere to persist, or a cleared item
+-- would just reappear on the next load. item_key is a deterministic
+-- string built from the notification's own fields (type/time/who/what),
+-- not a foreign key to any one table, since the items here come from
+-- five different tables with no single shared id to point at.
+create table if not exists dismissed_notifications (
+  user_id uuid not null references profiles(id) on delete cascade,
+  item_key text not null,
+  dismissed_at timestamptz not null default now(),
+  primary key (user_id, item_key)
+);
+
 -- ------------------------------------------------------------
 -- 7. AI_CALLS
 -- One row per call to /api/ai, used to enforce a per-user hourly rate
@@ -574,6 +589,7 @@ alter table follows      enable row level security;
 alter table blocks       enable row level security;
 alter table ai_calls     enable row level security;
 alter table rank_promotions enable row level security;
+alter table dismissed_notifications enable row level security;
 
 -- Profiles: everyone can read, you can only edit your own
 drop policy if exists "profiles readable" on profiles;
@@ -652,6 +668,12 @@ create policy "rank promotions readable" on rank_promotions for select
 drop policy if exists "own rank promotions insertable" on rank_promotions;
 create policy "own rank promotions insertable" on rank_promotions for insert
   with check (auth.uid() = user_id);
+
+-- Dismissed notifications: entirely private bookkeeping, never anyone
+-- else's business.
+drop policy if exists "own dismissed notifications" on dismissed_notifications;
+create policy "own dismissed notifications" on dismissed_notifications for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- Endorsements: readable by all, and you can never endorse your own pick
 drop policy if exists "endorsements readable" on endorsements;
