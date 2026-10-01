@@ -50,6 +50,17 @@ const QUESTIONS = [
     ),
   },
   {
+    q: "What's the Privy Council?",
+    a: (
+      <p>
+        The &ldquo;can&apos;t decide what to eat&rdquo; card at the top of Next in Line. Filter by cuisine and
+        it suggests one place - pulled from what your Court has crowned or tried, and from your own
+        unvisited Next in Line, all narrowed to your city. Tap <strong>Show me another</strong> to re-roll, or
+        <strong> Add to my list</strong> to save a friend&apos;s pick to your own.
+      </p>
+    ),
+  },
+  {
     q: "Can I import a list I already keep somewhere else?",
     a: (
       <p>
@@ -88,6 +99,17 @@ const QUESTIONS = [
         One-time achievements for things like crowning your first place, holding two different cuisines, or
         filling every slot in your Kingdom - see the full checklist, and how much each is worth, in your
         profile. Each one only ever pays out once.
+      </p>
+    ),
+  },
+  {
+    q: "What do the crown badges and ranks mean?",
+    a: (
+      <p>
+        That filled-in crown next to a name is your rank, climbing from Peckish Peasant up through titles like
+        Baron, Viscount, and Earl, all the way to Monarch of Taste. It&apos;s driven by your score - crowns,
+        coups, decrees, endorsements, and Conquests all feed it. Cross into a new tier and you&apos;ll get a
+        full-screen (deliberately over-the-top) proclamation to celebrate it, with a share card to go with it.
       </p>
     ),
   },
@@ -147,8 +169,8 @@ const QUESTIONS = [
     q: "Found a bug, or have an idea?",
     a: (
       <p>
-        Use the <strong>Feedback</strong> button at the top of the app, or just reply to any Nomarchy email -
-        both come straight to the person building this.
+        Open <strong>Your Profile</strong> and tap <strong>Send</strong> next to Feedback, or just reply to
+        any Nomarchy email - both come straight to the person building this.
       </p>
     ),
   },
