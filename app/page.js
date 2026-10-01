@@ -673,12 +673,13 @@ export default function Nomarchy() {
   const nilCuisineOptions = Array.from(new Set(pretenders.map((p) => p.cuisine).filter(Boolean))).sort();
   const nilHasUncategorized = pretenders.some((p) => !p.cuisine);
 
-  // "Ask the Privy Council" - a friend recommendation, not a search: only
-  // ever pulled from what your Court has actually crowned or tried, never
-  // the whole city, so it reads as "your friends think" rather than a
-  // generic result. Excludes anything you've already crowned or already
-  // have on your own list, so it never suggests something you'd just have
-  // to dismiss as "already got that."
+  // "Ask the Privy Council" - a recommendation, not a search: pulled from
+  // your Court's crowns/tried picks AND your own still-to-try Next in
+  // Line (a "been to" entry of your own is excluded - you've already
+  // been, that's not a suggestion), never the whole city, so it always
+  // reads as "something real, not a generic search result." Excludes
+  // anything you've already crowned, so it never suggests something
+  // you'd just have to dismiss as "already got that."
   //
   // Also excludes a pick in a different city than yours - a friend in
   // another city is still worth following for their taste, but "what
@@ -686,20 +687,22 @@ export default function Nomarchy() {
   // suggestion two provinces away. A pick with no city on file (older
   // data, from before city was captured) is kept rather than dropped,
   // since we can't actually tell it's wrong.
-  const councilLocalPool = court
-    .flatMap((f) => [
-      ...f.picks.map((p) => ({ name: p.name, area: p.area, address: p.address, city: p.city, cuisine: p.cuisine, cuisineId: p.cuisineId, quote: p.decree, from: f.name })),
-      ...f.reviews.map((r) => ({ name: r.name, area: r.area, address: r.address, city: r.city, cuisine: r.cuisine, cuisineId: null, quote: r.note, from: f.name })),
-    ])
-    .filter((c) => !c.city || !profile?.city || c.city === profile.city);
+  const councilLocalPool = [
+    ...court.flatMap((f) => [
+      ...f.picks.map((p) => ({ name: p.name, area: p.area, address: p.address, city: p.city, cuisine: p.cuisine, cuisineId: p.cuisineId, quote: p.decree, from: f.name, mine: false })),
+      ...f.reviews.map((r) => ({ name: r.name, area: r.area, address: r.address, city: r.city, cuisine: r.cuisine, cuisineId: null, quote: r.note, from: f.name, mine: false })),
+    ]),
+    ...pretenders
+      .filter((p) => !p.visitedAt)
+      .map((p) => ({ name: p.name, area: p.area, address: p.address, city: p.city, cuisine: p.cuisine, cuisineId: p.cuisineId, quote: p.note, from: null, mine: true })),
+  ].filter((c) => !c.city || !profile?.city || c.city === profile.city);
   // Cuisine options are only what's actually local, same reasoning as
   // nilCuisineOptions above - no point offering a cuisine nobody in your
   // own city has tried.
   const councilCuisineOptions = Array.from(new Set(councilLocalPool.map((c) => c.cuisine).filter(Boolean))).sort();
   const councilPool = councilLocalPool
     .filter((c) => !pcCuisine || c.cuisine === pcCuisine)
-    .filter((c) => !Object.values(slots).some((s) => s.current && sameRestaurant(s.current.name, c.name)))
-    .filter((c) => !pretenders.some((p) => sameRestaurant(p.name, c.name)));
+    .filter((c) => !Object.values(slots).some((s) => s.current && sameRestaurant(s.current.name, c.name)));
   const councilPick = councilPool.length ? councilPool[pcIndex % councilPool.length] : null;
 
   const matchesNilCuisine = (cuisineName) =>
@@ -997,8 +1000,8 @@ export default function Nomarchy() {
               <Crown size={12} /> The Privy Council
             </div>
             <p className="mt-1 text-sm" style={{ color: C.cream }}>Can&apos;t decide what to eat this evening?</p>
-            {court.length === 0 ? (
-              <p className="mt-2 text-sm" style={{ color: C.muted }}>Follow a few friends in Court and the Council can start recommending from their picks.</p>
+            {councilLocalPool.length === 0 ? (
+              <p className="mt-2 text-sm" style={{ color: C.muted }}>Follow a few friends in Court, or add something to Next in Line, and the Council will have something to work with.</p>
             ) : (<>
               <select
                 value={pcCuisine}
@@ -1013,15 +1016,17 @@ export default function Nomarchy() {
               {councilPick ? (
                 <div className="mt-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
                   <div className="text-sm font-bold">{councilPick.name}</div>
-                  <div className="text-xs" style={{ color: C.muted }}>{[councilPick.cuisine, councilPick.area].filter(Boolean).join(" · ")} - via {councilPick.from}</div>
+                  <div className="text-xs" style={{ color: C.muted }}>{[councilPick.cuisine, councilPick.area].filter(Boolean).join(" · ")} - {councilPick.mine ? "on your list" : `via ${councilPick.from}`}</div>
                   {councilPick.quote && <p className="mt-1.5 text-xs italic" style={{ color: C.cream }}>&ldquo;{councilPick.quote}&rdquo;</p>}
                   <div className="mt-2 flex gap-2">
-                    <button onClick={() => handleAddCouncilPick(councilPick)} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>Add to my list</button>
-                    <button onClick={handleAskCouncil} disabled={councilPool.length <= 1} className="rounded-lg px-3 py-2 text-xs font-bold" style={councilPool.length <= 1 ? { border: `1px solid ${C.cardEdge}`, color: C.cardEdge } : { border: `1px solid ${C.cardEdge}`, color: C.muted }}>Show me another</button>
+                    {!councilPick.mine && (
+                      <button onClick={() => handleAddCouncilPick(councilPick)} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>Add to my list</button>
+                    )}
+                    <button onClick={handleAskCouncil} disabled={councilPool.length <= 1} className={councilPick.mine ? "flex-1 rounded-lg py-2 text-xs font-bold" : "rounded-lg px-3 py-2 text-xs font-bold"} style={councilPool.length <= 1 ? { border: `1px solid ${C.cardEdge}`, color: C.cardEdge } : { border: `1px solid ${C.cardEdge}`, color: C.muted }}>Show me another</button>
                   </div>
                 </div>
               ) : (
-                <p className="mt-2 text-sm" style={{ color: C.muted }}>Nobody in your Court has crowned or tried {pcCuisine || "anything"} yet{pcCuisine ? " - try Any cuisine" : ""}.</p>
+                <p className="mt-2 text-sm" style={{ color: C.muted }}>Nobody in your Court has crowned or tried {pcCuisine || "anything"} yet, and nothing&apos;s on your own list either{pcCuisine ? " - try Any cuisine" : ""}.</p>
               )}
             </>)}
           </div>
