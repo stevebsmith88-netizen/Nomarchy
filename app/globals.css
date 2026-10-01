@@ -13,3 +13,20 @@ body {
   overflow-x: hidden;
   max-width: 100vw;
 }
+
+html {
+  /* The signed-out landing page's "Open the app" / "Sign up" buttons are
+     plain #anchor links down the same page, not real navigation - smooth
+     scrolling is what makes that read as an intentional page section
+     rather than an abrupt jump. */
+  scroll-behavior: smooth;
+}
+
+/* Floating decorative emoji on the signed-out landing page (SignInScreen
+   in app/page.js) - a gentle bob + slight tilt, not a full spin, so it
+   reads as "alive" rather than distracting. --r sets each emoji's own
+   rest tilt so they don't all rock in lockstep. */
+@keyframes nomarchy-float {
+  0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+  50% { transform: translateY(-14px) rotate(var(--r, 0deg)); }
+}

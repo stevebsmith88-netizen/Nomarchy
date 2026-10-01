@@ -2365,17 +2365,59 @@ function SignInScreen() {
 
   return (
     <FontShell>
-      <div className="flex min-h-screen flex-col items-center px-5 py-10">
-        <div className="w-full max-w-sm rounded-2xl p-7 text-center" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+      {/* NAV */}
+      <nav className="mx-auto flex max-w-5xl items-center justify-between px-5 py-6">
+        <div className="flex items-center gap-2">
+          <LogoMark size={24} />
+          <span className="text-base tracking-[0.1em]" style={{ ...display, fontWeight: 900 }}>NOMARCHY</span>
+        </div>
+        <div className="flex items-center gap-5">
+          <Link href="/faq" className="hidden text-sm font-semibold sm:inline" style={{ color: C.muted }}>FAQ</Link>
+          <a href="#sign-in" className="rounded-full px-4 py-2 text-xs font-bold sm:text-sm" style={{ background: C.gold, color: C.bg }}>Open the app</a>
+        </div>
+      </nav>
+
+      {/* HERO */}
+      <div className="relative mx-auto max-w-2xl px-5 pb-4 pt-6 text-center sm:pt-10">
+        <span aria-hidden className="absolute left-1 top-2 text-2xl sm:left-6 sm:top-4 sm:text-3xl" style={{ "--r": "-10deg", animation: "nomarchy-float 5s ease-in-out infinite" }}>👑</span>
+        <span aria-hidden className="absolute right-6 top-10 text-2xl sm:right-10 sm:top-6 sm:text-3xl" style={{ "--r": "8deg", animation: "nomarchy-float 6s ease-in-out infinite 0.4s" }}>🍕</span>
+        <span aria-hidden className="absolute left-4 top-36 hidden text-2xl sm:block" style={{ "--r": "6deg", animation: "nomarchy-float 5.5s ease-in-out infinite 0.9s" }}>🍜</span>
+        <span aria-hidden className="absolute right-6 top-40 hidden text-2xl sm:block" style={{ "--r": "-6deg", animation: "nomarchy-float 6.5s ease-in-out infinite 1.3s" }}>🍷</span>
+        <span aria-hidden className="absolute left-10 top-64 hidden text-xl sm:block" style={{ "--r": "-4deg", animation: "nomarchy-float 7s ease-in-out infinite 0.2s" }}>🥐</span>
+
+        <div className="mb-4 inline-block rounded-full px-3 py-1 text-xs font-bold uppercase" style={{ background: C.card, color: C.gold, letterSpacing: "0.1em", border: `1px solid ${C.cardEdge}` }}>
+          Toronto Beta
+        </div>
+        <h1 className="text-3xl leading-[1.15] sm:text-5xl" style={{ ...display, fontWeight: 900 }}>
+          Crown your favourites.<br />Settle every debate.
+        </h1>
+        <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed" style={{ color: C.muted }}>
+          One throne per cuisine. When something better comes along, stage a coup. Compare kingdoms with friends, and climb the ranks as your picks earn trust.
+        </p>
+        <div className="mt-6 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
+          <a href="#sign-in" className="rounded-full px-6 py-3 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>Sign up &mdash; it&apos;s free</a>
+          <a href="#preview" className="rounded-full px-6 py-3 text-sm font-bold" style={{ border: `1px solid ${C.cardEdge}`, color: C.cream }}>See how it works</a>
+        </div>
+        <p className="mt-3 text-xs" style={{ color: C.muted }}>Free to use &middot; Toronto beta &middot; No ads, ever</p>
+      </div>
+
+      {/* PREVIEW - illustrative only, not a real account's data (see
+          EXAMPLE_THRONES's own comment) */}
+      <div id="preview" className="scroll-mt-10 px-5 pb-10 pt-4">
+        <PhonePreview />
+      </div>
+
+      <div className="flex min-h-screen flex-col items-center px-5 pb-10 pt-6">
+        <div id="sign-in" className="w-full max-w-sm scroll-mt-10 rounded-2xl p-7 text-center" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
           <div className="flex items-center justify-center gap-2">
             <LogoMark size={28} />
-            <h1 className="text-2xl tracking-[0.12em]" style={{ ...display, fontWeight: 900 }}>NOMARCHY</h1>
+            <h2 className="text-2xl tracking-[0.12em]" style={{ ...display, fontWeight: 900 }}>NOMARCHY</h2>
           </div>
           <p className={`mt-1 text-sm italic ${sent ? "mb-6" : ""}`} style={{ ...display, color: C.muted }}>Long live your favourites.</p>
 
           {!sent && (
             <p className="mb-6 mt-3 text-xs leading-relaxed" style={{ color: C.muted }}>
-              Crown your favourite spot in every cuisine. When something better comes along, stage a coup. Compare your kingdom with friends, and climb the ranks as your picks earn trust. Already keep a list of favourites? Paste the whole thing in once you&apos;re signed in and we&apos;ll sort it out.
+              Already keep a list of favourites? Paste the whole thing in once you&apos;re signed in and we&apos;ll sort it out.
             </p>
           )}
 
@@ -2453,50 +2495,69 @@ function SignInScreen() {
             <Link href="/privacy" style={{ color: C.muted, textDecoration: "underline" }}>Privacy Policy</Link>.
           </p>
         </div>
+      </div>
+    </FontShell>
+  );
+}
 
-        <div className="mt-10 w-full max-w-sm">
-          <p className="text-center text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>See it in action</p>
+// A plain CSS phone frame, not a screenshot - no real account's data to
+// show yet (see EXAMPLE_THRONES's own comment above), so this wraps the
+// same illustrative kingdom/coup cards that lived flat on the page
+// before, just presented the way a visitor actually expects to picture
+// using this on their own phone. Swap in a real screenshot here later if
+// one looks better than the mocked-up cards.
+function PhonePreview() {
+  return (
+    <div className="mx-auto" style={{ width: 300, maxWidth: "100%" }}>
+      <p className="mb-4 text-center text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>See it in action</p>
+      <div className="rounded-[2.5rem] p-3" style={{ background: "#0C0712", boxShadow: "0 30px 60px rgba(0,0,0,0.45)" }}>
+        <div className="relative overflow-hidden rounded-[2rem] px-4 pb-5 pt-9" style={{ background: C.bg, minHeight: 540 }}>
+          <div className="absolute left-1/2 top-2 h-5 w-24 -translate-x-1/2 rounded-full" style={{ background: "#0C0712" }} />
 
-          <p className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Your kingdom</p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="mb-4 flex items-center justify-center gap-1.5">
+            <LogoMark size={16} />
+            <span className="text-xs tracking-[0.1em]" style={{ ...display, fontWeight: 900, color: C.cream }}>NOMARCHY</span>
+          </div>
+
+          <p className="mb-2 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Your kingdom</p>
+          <div className="flex flex-col gap-2">
             {EXAMPLE_THRONES.map((t) => (
               <div key={t.cuisine} className="rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.gold}55` }}>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>{t.cuisine}</span>
-                  <Crown size={13} style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
+                  <span className="text-[10px] font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>{t.cuisine}</span>
+                  <Crown size={12} style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
                 </div>
-                <p className="mt-1.5 text-sm" style={{ ...display, fontWeight: 700 }}>{t.name}</p>
-                <p className="mt-1 text-xs italic leading-snug" style={{ color: C.muted }}>&ldquo;{t.note}&rdquo;</p>
+                <p className="mt-1 text-sm" style={{ ...display, fontWeight: 700, color: C.cream }}>{t.name}</p>
+                <p className="mt-0.5 text-xs italic leading-snug" style={{ color: C.muted }}>&ldquo;{t.note}&rdquo;</p>
               </div>
             ))}
           </div>
 
-          <p className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>A coup in progress</p>
+          <p className="mb-2 mt-4 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>A coup in progress</p>
           <div className="rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
             <div className="flex items-center justify-between opacity-60">
               <div>
                 <span className="text-[10px] font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Reigning &mdash; Pizza</span>
-                <p className="text-sm" style={{ ...display, fontWeight: 700, textDecoration: "line-through" }}>Mario&rsquo;s Pizzeria</p>
+                <p className="text-sm" style={{ ...display, fontWeight: 700, color: C.cream, textDecoration: "line-through" }}>Mario&rsquo;s Pizzeria</p>
               </div>
-              <Crown size={16} style={{ color: C.muted }} />
+              <Crown size={15} style={{ color: C.muted }} />
             </div>
-            <div className="mt-3 flex items-center justify-between">
+            <div className="mt-2.5 flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>Challenger</span>
-                <p className="text-sm" style={{ ...display, fontWeight: 700 }}>Pizzeria Libretto</p>
+                <p className="text-sm" style={{ ...display, fontWeight: 700, color: C.cream }}>Pizzeria Libretto</p>
               </div>
               <span className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>
                 <Crown size={12} /> Crown it
               </span>
             </div>
           </div>
-
-          <p className="mt-4 text-center text-[11px] italic" style={{ color: C.muted }}>
-            Example kingdom shown &mdash; yours starts empty, waiting for your first pick.
-          </p>
         </div>
       </div>
-    </FontShell>
+      <p className="mt-4 text-center text-[11px] italic" style={{ color: C.muted }}>
+        Example kingdom shown &mdash; yours starts empty, waiting for your first pick.
+      </p>
+    </div>
   );
 }
 
