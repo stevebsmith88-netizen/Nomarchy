@@ -955,6 +955,14 @@ export default function Nomarchy() {
         ) : (<>
         {/* KINGDOM */}
         {tab === "kingdom" && (<div>
+          {/* Caption comes first, same as every other tab's opening line
+              (Next in Line, Court, Best in the Land) - it used to sit
+              below the Overall Favourite card instead, so Kingdom was the
+              one tab that opened straight into a card with no lead-in,
+              making the top of the page feel like it jumped around
+              between tabs rather than starting the same way each time. */}
+          <p className="mb-3 text-sm" style={{ color: C.muted }}>One throne per cuisine. Choose like it matters.</p>
+
           {overallCuisine && (
             <div className="mb-4">
               <ThroneCard
@@ -976,22 +984,19 @@ export default function Nomarchy() {
             </div>
           )}
 
-          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm" style={{ color: C.muted }}>One throne per cuisine. Choose like it matters.</p>
-            <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
-              {kingdomView === "grid" && (
-                <button onClick={() => setOnlyCrowned(!onlyCrowned)} className="min-w-[124px] rounded-full px-3 py-1 text-center text-xs font-semibold" style={{ background: onlyCrowned ? C.gold : C.card, color: onlyCrowned ? C.bg : C.muted, border: `1px solid ${C.cardEdge}` }}>
-                  {onlyCrowned ? "Showing crowned" : "Show all"}
-                </button>
-              )}
-              <div className="ml-auto flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}` }}>
-                <button onClick={() => setKingdomView("grid")} className="px-3 py-1 text-xs font-semibold" style={{ background: kingdomView === "grid" ? C.gold : C.card, color: kingdomView === "grid" ? C.bg : C.muted }}>
-                  Grid
-                </button>
-                <button onClick={() => setKingdomView("map")} className="px-3 py-1 text-xs font-semibold" style={{ background: kingdomView === "map" ? C.gold : C.card, color: kingdomView === "map" ? C.bg : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
-                  Map
-                </button>
-              </div>
+          <div className="mb-3 flex items-center justify-end gap-2">
+            {kingdomView === "grid" && (
+              <button onClick={() => setOnlyCrowned(!onlyCrowned)} className="min-w-[124px] rounded-full px-3 py-1 text-center text-xs font-semibold" style={{ background: onlyCrowned ? C.gold : C.card, color: onlyCrowned ? C.bg : C.muted, border: `1px solid ${C.cardEdge}` }}>
+                {onlyCrowned ? "Showing crowned" : "Show all"}
+              </button>
+            )}
+            <div className="flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}` }}>
+              <button onClick={() => setKingdomView("grid")} className="px-3 py-1 text-xs font-semibold" style={{ background: kingdomView === "grid" ? C.gold : C.card, color: kingdomView === "grid" ? C.bg : C.muted }}>
+                Grid
+              </button>
+              <button onClick={() => setKingdomView("map")} className="px-3 py-1 text-xs font-semibold" style={{ background: kingdomView === "map" ? C.gold : C.card, color: kingdomView === "map" ? C.bg : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
+                Map
+              </button>
             </div>
           </div>
 
