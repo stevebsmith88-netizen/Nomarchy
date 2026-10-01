@@ -837,7 +837,7 @@ export default function Nomarchy() {
             style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}
           >
             <button onClick={() => setEditingProfile(true)} className="flex items-center gap-1.5">
-              <Avatar url={profile?.avatar_url} size={18} />
+              <Avatar url={profile?.avatar_url} size={26} />
               @{profile?.username} · {title} <RankBadge score={score} /> {profile?.is_owner && <OwnerBadge />} <Pencil size={11} />
             </button>
           </div>
