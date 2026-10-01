@@ -840,14 +840,16 @@ export default function Nomarchy() {
               )}
             </button>
             {showNotifications && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+              <div className="fixed inset-0 z-[1100] flex items-start justify-center p-5 pt-24" style={{ background: "rgba(10,5,16,0.78)" }} onClick={() => setShowNotifications(false)}>
                 <div
-                  className="absolute left-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2.5rem)] overflow-y-auto rounded-xl p-3 text-left"
+                  className="w-full max-w-sm overflow-y-auto rounded-xl p-3 text-left"
                   onClick={(e) => e.stopPropagation()}
                   style={{ background: C.card, border: `1px solid ${C.cardEdge}`, boxShadow: "0 8px 24px rgba(0,0,0,0.4)", maxHeight: "70vh" }}
                 >
-                  <div className="mb-1.5 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Notifications</div>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Notifications</div>
+                    <button onClick={() => setShowNotifications(false)} aria-label="Close" style={{ color: C.muted }}><X size={16} /></button>
+                  </div>
                   {notifications.length === 0 ? (
                     <p className="text-xs" style={{ color: C.muted }}>Nothing in the last 30 days.</p>
                   ) : notifications.map((n, i) => (
@@ -867,7 +869,7 @@ export default function Nomarchy() {
                     </div>
                   ))}
                 </div>
-              </>
+              </div>
             )}
           </span>
           <button onClick={() => setShowFeedback(true)} aria-label="Feedback" className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold sm:px-3" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
