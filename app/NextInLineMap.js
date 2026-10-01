@@ -2,30 +2,14 @@
 
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import L from "leaflet";
 import { C } from "./theme";
+import { cuisinePinIcon, PIN_GOLD, PIN_BLUE } from "./cuisineIcons";
 
-// Two colours, two meanings: gold matches "crowned/favourite" everywhere
-// else in the app, so it's reused here for anything already been to
-// (crowned or just visited). Blue reuses Leaflet's own default marker -
-// the same icon the Kingdom map already shows - for anything still on
-// the list to try, so it isn't a brand-new visual element to learn.
-const wantIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-});
-const beenIcon = L.icon({
-  iconUrl: "https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-gold.png",
-  iconRetinaUrl: "https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-2x-gold.png",
-  shadowUrl: "https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-});
+// Two ring colours, two meanings: gold matches "crowned/favourite"
+// everywhere else in the app, so it's reused here for anything already
+// been to (crowned or just visited); blue for anything still on the list
+// to try. The emoji inside each pin is purely "what cuisine" - the ring
+// is what still carries been/want, so the two never collide on one pin.
 
 export default function NextInLineMap({ beenPins, wantPins }) {
   const allPins = [...beenPins, ...wantPins];
@@ -49,12 +33,12 @@ export default function NextInLineMap({ beenPins, wantPins }) {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           {beenPins.map((p, i) => (
-            <Marker key={`been-${i}`} position={[p.lat, p.lng]} icon={beenIcon}>
+            <Marker key={`been-${i}`} position={[p.lat, p.lng]} icon={cuisinePinIcon(p.cuisine, PIN_GOLD)}>
               <Popup><strong>{p.name}</strong><br />{p.cuisine}<br />Been</Popup>
             </Marker>
           ))}
           {wantPins.map((p, i) => (
-            <Marker key={`want-${i}`} position={[p.lat, p.lng]} icon={wantIcon}>
+            <Marker key={`want-${i}`} position={[p.lat, p.lng]} icon={cuisinePinIcon(p.cuisine, PIN_BLUE)}>
               <Popup><strong>{p.name}</strong><br />{p.cuisine}<br />Still to try</Popup>
             </Marker>
           ))}
@@ -62,10 +46,10 @@ export default function NextInLineMap({ beenPins, wantPins }) {
       </div>
       <div className="mt-2 flex items-center gap-4 text-xs" style={{ color: C.muted }}>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: C.gold }} /> Been
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: PIN_GOLD }} /> Been
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#4A80C7" }} /> Still to try
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: PIN_BLUE }} /> Still to try
         </span>
       </div>
     </div>

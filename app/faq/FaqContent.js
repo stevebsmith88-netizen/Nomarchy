@@ -74,10 +74,10 @@ const QUESTIONS = [
     q: "What does the Map show?",
     a: (
       <p>
-        Everything with a known location - gold pins for places you&apos;ve been (crowned or just visited),
-        blue for what&apos;s still on the list. Handy if you&apos;re heading somewhere and want to see
-        what&apos;s nearby. The cuisine filter narrows both views down to just what you&apos;re in the mood
-        for.
+        Everything with a known location - gold-ringed pins for places you&apos;ve been (crowned or just
+        visited), blue for what&apos;s still on the list, each one showing an emoji for its cuisine so you can
+        tell what&apos;s what at a glance. Handy if you&apos;re heading somewhere and want to see what&apos;s
+        nearby. The cuisine filter narrows both views down to just what you&apos;re in the mood for.
       </p>
     ),
   },
