@@ -844,15 +844,6 @@ export default function Nomarchy() {
           </div>
         </div>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5">
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-            className="flex h-7 w-7 items-center justify-center rounded-full"
-            style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}
-          >
-            {theme === "light" ? <Moon size={13} /> : <Sun size={13} />}
-          </button>
           <span className="relative">
             <button
               onClick={handleOpenNotifications}
@@ -904,6 +895,15 @@ export default function Nomarchy() {
               </div>
             )}
           </span>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            className="flex h-7 w-7 items-center justify-center rounded-full"
+            style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}
+          >
+            {theme === "light" ? <Moon size={13} /> : <Sun size={13} />}
+          </button>
           {profile?.is_owner && (
             <button
               onClick={() => setTab("admin")}
