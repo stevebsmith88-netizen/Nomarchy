@@ -2568,6 +2568,13 @@ function PhonePreview() {
       <p className="mt-4 text-center text-[11px] italic" style={{ color: C.muted }}>
         Example kingdom shown &mdash; yours starts empty, waiting for your first pick.
       </p>
+      {/* The nav's own FAQ link is hidden on narrow phones to keep that
+          row from crowding - this is the mobile equivalent, placed right
+          where someone who just watched the preview would look for "ok,
+          how does this actually work". */}
+      <p className="mt-3 text-center text-xs sm:hidden">
+        <Link href="/faq" className="font-semibold underline" style={{ color: C.muted }}>Read the FAQ</Link>
+      </p>
     </div>
   );
 }
