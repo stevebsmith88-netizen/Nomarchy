@@ -904,9 +904,6 @@ export default function Nomarchy() {
               </div>
             )}
           </span>
-          <button onClick={() => setShowFeedback(true)} aria-label="Feedback" className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
-            <MessageSquare size={12} /> Feedback
-          </button>
           {profile?.is_owner && (
             <button
               onClick={() => setTab("admin")}
@@ -1580,6 +1577,7 @@ export default function Nomarchy() {
           onSubmit={handleUpdateProfile}
           onChangeAvatar={(avatar_url) => handleUpdateProfile({ avatar_url })}
           onDeleteAccount={handleDeleteAccount}
+          onFeedback={() => { setEditingProfile(false); setShowFeedback(true); }}
         />
       )}
 
@@ -2746,7 +2744,7 @@ function PromotionModal({ rank, nextRank, score, thrones, reviewCount, profile, 
   );
 }
 
-function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, onSubmit, onChangeAvatar, onDeleteAccount }) {
+function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, onSubmit, onChangeAvatar, onDeleteAccount, onFeedback }) {
   const { theme, toggleTheme } = useTheme();
   const [username, setUsername] = useState(profile?.username || "");
   const [displayName, setDisplayName] = useState(profile?.display_name || "");
@@ -3066,6 +3064,22 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
               className="absolute left-0 top-0.5 h-5 w-5 rounded-full transition-transform"
               style={{ background: C.bg, transform: theme === "light" ? "translateX(22px)" : "translateX(2px)" }}
             />
+          </button>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+          <div>
+            <div className="text-sm font-semibold">Feedback</div>
+            <div className="mt-0.5 text-xs" style={{ color: C.muted }}>Found a bug, or have an idea?</div>
+          </div>
+          <button
+            type="button"
+            onClick={onFeedback}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
+            style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}
+          >
+            <MessageSquare size={13} />
+            Send
           </button>
         </div>
 
