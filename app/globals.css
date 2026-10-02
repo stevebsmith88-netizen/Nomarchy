@@ -53,3 +53,31 @@ html {
 html[data-theme-pending] body {
   visibility: hidden;
 }
+
+/* Keyboard users need to see where they are. Many fields switch off the
+   browser's own outline for looks, so put a clear one back - only for
+   keyboard (and field) focus, never on a mouse click of a button. Written
+   outside Tailwind's layers so it wins over "outline-none". */
+:focus-visible {
+  outline: 2px solid var(--focus-ring, #775912);
+  outline-offset: 2px;
+}
+
+/* A pop-up panel receives focus so keyboard users start inside it; the
+   panel itself doesn't need an outline (its contents get one). */
+[role="dialog"]:focus {
+  outline: none;
+}
+
+/* Respect the phone's "reduce motion" setting: no spinning, sliding or
+   floating animations for people who find motion uncomfortable. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

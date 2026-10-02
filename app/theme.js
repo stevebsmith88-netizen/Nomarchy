@@ -21,10 +21,14 @@ const DARK = {
 // reads C.cream as "primary text colour") even though it's now the dark
 // text tone, not literally cream - the role stays the same, the hex
 // underneath just serves whichever theme is active.
+//
+// Gold, red and green are deeper here than in dark mode so text in them
+// meets the WCAG AA contrast ratio (4.5:1) on both the page and on cards -
+// including on their own pale tint, which badges sit on.
 const LIGHT = {
   bg: "#F5ECDE", card: "#FFFFFF", cardEdge: "#E4D6BE",
-  gold: "#A67C1E", cream: "#2A1E38", muted: "#6B5C7D",
-  coup: "#E85D4A", green: "#7FB069",
+  gold: "#775912", cream: "#2A1E38", muted: "#6B5C7D",
+  coup: "#A8352A", green: "#3D6A2E",
 };
 
 // A real object, not a lookup - every existing `C.gold`/`C.bg`/etc. call
@@ -71,6 +75,7 @@ export function ThemeProvider({ children }) {
     if (!restored) return;
     const root = document.documentElement;
     root.style.setProperty("--page-bg", C.bg);
+    root.style.setProperty("--focus-ring", C.gold);
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", C.bg);
     root.removeAttribute("data-theme-pending");

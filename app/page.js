@@ -279,7 +279,8 @@ export default function Nomarchy() {
     }
   }, [profile, standing]);
 
-  const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 2200); };
+  // Long enough to read without rushing (2.2s was too quick for many people).
+  const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 4500); };
 
   const refreshKingdom = async () => setSlots(await loadKingdom(user.id));
   const refreshPretenders = async () => setPretenders(await loadNextInLine(user.id));
@@ -972,8 +973,8 @@ export default function Nomarchy() {
               )}
             </button>
             {showNotifications && (
-              <div className="fixed inset-0 z-[1100] flex items-start justify-center p-5 pt-24" style={{ background: "rgba(10,5,16,0.78)" }} onClick={() => setShowNotifications(false)}>
-                <div
+              <div data-modal-backdrop className="fixed inset-0 z-[1100] flex items-start justify-center p-5 pt-24" style={{ background: "rgba(10,5,16,0.78)" }} onClick={() => setShowNotifications(false)}>
+                <div role="dialog" aria-modal="true" tabIndex={-1}
                   className="w-full max-w-sm overflow-y-auto rounded-xl p-3 text-left"
                   onClick={(e) => e.stopPropagation()}
                   style={{ background: C.card, border: `1px solid ${C.cardEdge}`, boxShadow: "0 8px 24px rgba(0,0,0,0.4)", maxHeight: "70vh" }}
@@ -1191,7 +1192,7 @@ export default function Nomarchy() {
                 <button type="button" onClick={() => setPickingNewEmoji((v) => !v)} aria-label="Pick an icon" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg" style={{ background: C.bg, border: `1px solid ${pickingNewEmoji ? C.gold : C.cardEdge}` }}>
                   {newCuisineEmoji || "🍽️"}
                 </button>
-                <input autoFocus value={newCuisine} onChange={(e) => setNewCuisine(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddCuisine()} placeholder="e.g. Pho, Wings" className="w-full rounded-lg px-3 py-2 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+                <input aria-label="New cuisine name" autoFocus value={newCuisine} onChange={(e) => setNewCuisine(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddCuisine()} placeholder="e.g. Pho, Wings" className="w-full rounded-lg px-3 py-2 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
                 <button onClick={handleAddCuisine} className="rounded-lg px-3 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>Add</button>
               </div>
               {pickingNewEmoji && <CuisineEmojiGrid onPick={(e) => { setNewCuisineEmoji(e); setPickingNewEmoji(false); }} />}
@@ -1220,7 +1221,7 @@ export default function Nomarchy() {
             {councilLocalPool.length === 0 ? (
               <p className="mt-2 text-sm" style={{ color: C.muted }}>Follow a few friends in Court, or add something to Next in Line, and the Council will have something to work with.</p>
             ) : (<>
-              <select
+              <select aria-label="Privy Council cuisine"
                 value={pcCuisine}
                 onChange={(e) => { setPcCuisine(e.target.value); setPcIndex(0); }}
                 className="mt-2 w-full rounded-lg px-3 py-2 text-sm outline-none"
@@ -1261,7 +1262,7 @@ export default function Nomarchy() {
 
           {pretenders.length > 0 && (
             <div className="mb-3 flex items-center justify-between gap-2">
-              <select
+              <select aria-label="Filter Next in Line by cuisine"
                 value={nilCuisineFilter}
                 onChange={(e) => setNilCuisineFilter(e.target.value)}
                 className="rounded-lg px-3 py-1.5 text-xs outline-none"
@@ -1288,7 +1289,7 @@ export default function Nomarchy() {
           {pretenders.length > 0 && (
             <div className="relative mb-4">
               <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" style={{ color: C.muted }} />
-              <input
+              <input aria-label="Search your list"
                 value={pretenderSearch}
                 onChange={(e) => setPretenderSearch(e.target.value)}
                 placeholder="Search your list..."
@@ -1372,7 +1373,7 @@ export default function Nomarchy() {
           </button>
 
           <form onSubmit={handleAddFollow} className="mb-4 flex gap-2">
-            <input value={followInput} onChange={(e) => setFollowInput(e.target.value)} placeholder="Follow by username" className="w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+            <input aria-label="Follow by username" value={followInput} onChange={(e) => setFollowInput(e.target.value)} placeholder="Follow by username" className="w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
             <button type="submit" disabled={followBusy || !followInput.trim()} className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>
               {followBusy ? <Loader2 size={13} className="animate-spin" /> : <UserPlus size={13} />} Follow
             </button>
@@ -1506,7 +1507,7 @@ export default function Nomarchy() {
           </div>
           <div className="relative mb-3">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: C.muted }} />
-            <input
+            <input aria-label="Search every crowned restaurant"
               value={restaurantSearch}
               onChange={(e) => setRestaurantSearch(e.target.value)}
               placeholder="Search every crowned restaurant"
@@ -1515,7 +1516,7 @@ export default function Nomarchy() {
             />
           </div>
           {!restaurantSearchResults && (<div className="mb-2 flex gap-2">
-            <select
+            <select aria-label="Time range"
               value={top25Range}
               onChange={(e) => setTop25Range(e.target.value)}
               className="rounded-lg px-3 py-2.5 text-sm outline-none"
@@ -1526,7 +1527,7 @@ export default function Nomarchy() {
               <option value="month">This month</option>
               <option value="week">This week</option>
             </select>
-            <input value={top25City} onChange={(e) => setTop25City(e.target.value)} placeholder="Filter by city or neighbourhood" className="w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+            <input aria-label="Filter by city or neighbourhood" value={top25City} onChange={(e) => setTop25City(e.target.value)} placeholder="Filter by city or neighbourhood" className="w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
             <button onClick={handleNearMe} disabled={top25Locating} className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-bold" style={{ background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
               {top25Locating ? <Loader2 size={13} className="animate-spin" /> : <Navigation size={13} />} Near me
             </button>
@@ -1738,8 +1739,10 @@ export default function Nomarchy() {
         </>)}
       </main>
 
+      {/* Always in the page, so screen readers announce each message. */}
+      <div role="status" aria-live="polite" className="sr-only">{toast}</div>
       {toast && (
-        <div className="fixed bottom-5 left-1/2 z-[1200] -translate-x-1/2 rounded-full px-4 py-2 text-sm font-semibold shadow-lg" style={{ background: C.gold, color: C.bg }}>
+        <div aria-hidden="true" className="fixed bottom-5 left-1/2 z-[1200] -translate-x-1/2 rounded-full px-4 py-2 text-sm font-semibold shadow-lg" style={{ background: C.gold, color: C.bg }}>
           <Check size={14} className="mr-1 inline" />{toast}
         </div>)}
 
@@ -1954,7 +1957,7 @@ function PretenderCard({ p, closed, selectableCuisines, onRemove, onChangeNote, 
           )}
         </div>
       )}
-      <textarea
+      <textarea aria-label={p.visitedAt ? "Your review" : "Your note"}
         key={p.id + (p.note || "")}
         defaultValue={p.note || ""}
         onBlur={(e) => { if (e.target.value !== (p.note || "")) onChangeNote(p.id, e.target.value.trim()); }}
@@ -1981,7 +1984,7 @@ function PretenderCard({ p, closed, selectableCuisines, onRemove, onChangeNote, 
           </button>
         </div>
       )}
-      <select
+      <select aria-label="Cuisine"
         value={p.cuisineId || ""}
         onChange={(e) => onChangeCuisine(p.id, e.target.value)}
         className="mt-2 rounded px-2 py-1 text-xs outline-none"
@@ -2101,7 +2104,7 @@ function AvatarPicker({ userId, url, onChange }) {
         <span className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full" style={{ background: C.gold, color: C.bg, border: `2px solid ${C.card}` }}>
           {uploading ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
         </span>
-        <input type="file" accept="image/*" onChange={handleFile} disabled={uploading} className="hidden" />
+        <input aria-label="Upload a profile photo" type="file" accept="image/*" onChange={handleFile} disabled={uploading} className="hidden" />
       </label>
       <button type="button" onClick={() => setPickingEmoji((v) => !v)} className="mt-2 text-xs font-semibold" style={{ color: C.muted }}>
         {pickingEmoji ? "Cancel" : "or pick an emoji instead"}
@@ -2186,8 +2189,8 @@ function RestaurantProfileModal({ restaurant, onClose }) {
   }, [restaurant.name, restaurant.address, restaurant.area, restaurant.googlePlaceId]);
 
   return (
-    <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
+    <div data-modal-backdrop className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+      <div role="dialog" aria-modal="true" tabIndex={-1} className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
         <div className="flex shrink-0 items-center justify-between gap-2 px-5 pt-5 pb-3" style={{ background: C.card, borderBottom: `1px solid ${C.cardEdge}` }}>
           <div className="min-w-0">
             <h3 className="truncate text-lg" style={{ ...display, fontWeight: 700 }}>{restaurant.name}</h3>
@@ -2264,8 +2267,8 @@ function PhotoStrip({ photos, onRemove, removeInViewer = false }) {
         ))}
       </div>
       {viewingIndex !== null && (
-        <div className="fixed inset-0 z-[1300] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={() => setViewingIndex(null)}>
-          <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
+        <div data-modal-backdrop className="fixed inset-0 z-[1300] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={() => setViewingIndex(null)}>
+          <div role="dialog" aria-modal="true" tabIndex={-1} className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
             <div className="flex shrink-0 items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${C.cardEdge}` }}>
               <span className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>
                 {photos.length > 1 ? `Photo ${viewingIndex + 1} of ${photos.length}` : "Photo"}
@@ -2332,7 +2335,7 @@ function PhotoPicker({ userId, photos, onChange, action, canRemove = true, remov
             <label className="flex w-fit cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
               {uploading ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
               {uploading ? "Uploading..." : `Add photo (${photos.length}/${MAX_REVIEW_PHOTOS})`}
-              <input type="file" accept="image/*" multiple onChange={handleFiles} disabled={uploading} className="hidden" />
+              <input aria-label="Add photos" type="file" accept="image/*" multiple onChange={handleFiles} disabled={uploading} className="hidden" />
             </label>
           ) : <span className="text-xs font-semibold" style={{ color: C.muted }}>{photos.length}/{MAX_REVIEW_PHOTOS} photos</span>}
           {action}
@@ -2409,7 +2412,7 @@ function FixThroneTool({ cuisines }) {
     <div className="mb-5">
       <p className="mb-2 text-xs" style={{ color: C.muted }}>Corrects address, neighbourhood, or cuisine on anyone&apos;s crown - never their review text or photos.</p>
       <div className="flex gap-2">
-        <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="Search by restaurant name..." className="w-full rounded-lg px-3 py-2 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+        <input aria-label="Search by restaurant name" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="Search by restaurant name..." className="w-full rounded-lg px-3 py-2 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
         <button onClick={search} disabled={searching || !query.trim()} className="flex shrink-0 items-center justify-center rounded-lg px-3" style={{ background: C.gold, color: C.bg }}>
           {searching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
         </button>
@@ -2436,16 +2439,16 @@ function FixThroneTool({ cuisines }) {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Address</label>
-                      <input value={addressText} onChange={(e) => setAddressText(e.target.value)} className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+                      <input aria-label="Street address" value={addressText} onChange={(e) => setAddressText(e.target.value)} className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
                     </div>
                     <div>
                       <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Neighbourhood</label>
-                      <input value={areaText} onChange={(e) => setAreaText(e.target.value)} className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+                      <input aria-label="Neighbourhood" value={areaText} onChange={(e) => setAreaText(e.target.value)} className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
                     </div>
                   </div>
                   <div className="mt-2">
                     <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Cuisine</label>
-                    <select value={cuisineId} onChange={(e) => setCuisineId(e.target.value)} className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}>
+                    <select aria-label="Cuisine" value={cuisineId} onChange={(e) => setCuisineId(e.target.value)} className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}>
                       <option value="">Leave as is ({r.cuisineName || "Uncategorized"})</option>
                       {cuisines.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
@@ -2504,8 +2507,8 @@ function ReviewCard({ group: g, saving, hasCoords, entryCount, onChoose, onSkip,
         </button>
       ))}
       <div className="mt-2 flex gap-1.5">
-        <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="Search again" className="min-w-0 flex-1 rounded-lg px-2 py-1.5 text-xs outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
-        <input value={city} onChange={(e) => setCity(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="City" className="w-20 rounded-lg px-2 py-1.5 text-xs outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+        <input aria-label="Search again" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="Search again" className="min-w-0 flex-1 rounded-lg px-2 py-1.5 text-xs outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+        <input aria-label="City" value={city} onChange={(e) => setCity(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="City" className="w-20 rounded-lg px-2 py-1.5 text-xs outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
         <button onClick={search} disabled={busy || !query.trim()} aria-label="Search" className="flex shrink-0 items-center justify-center rounded-lg px-2.5" style={busy || !query.trim() ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.bg }}>
           {busy ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
         </button>
@@ -2922,7 +2925,7 @@ function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji, onChan
         </div>
         {editing ? (
           <div className="mt-2">
-            <textarea
+            <textarea aria-label="Your decree"
               autoFocus
               value={decreeText}
               onChange={(e) => setDecreeText(e.target.value)}
@@ -2934,7 +2937,7 @@ function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji, onChan
             {onMoveCuisine && (
               <div className="mt-2">
                 <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Cuisine</label>
-                <select value={targetCuisineId} onChange={(e) => setTargetCuisineId(e.target.value)} className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}>
+                <select aria-label="Cuisine" value={targetCuisineId} onChange={(e) => setTargetCuisineId(e.target.value)} className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}>
                   <option value={cuisineId}>{cuisineName} (current)</option>
                   {(emptyCuisines || []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
@@ -2944,11 +2947,11 @@ function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji, onChan
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Address</label>
-                  <input value={addressText} onChange={(e) => setAddressText(e.target.value)} placeholder="Street address" className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+                  <input aria-label="Street address" value={addressText} onChange={(e) => setAddressText(e.target.value)} placeholder="Street address" className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
                 </div>
                 <div>
                   <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Neighbourhood</label>
-                  <input value={areaText} onChange={(e) => setAreaText(e.target.value)} placeholder="Neighbourhood" className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+                  <input aria-label="Neighbourhood" value={areaText} onChange={(e) => setAreaText(e.target.value)} placeholder="Neighbourhood" className="mt-1 w-full rounded-lg px-2 py-1.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
                 </div>
               </div>
             )}
@@ -3152,7 +3155,7 @@ function SignInScreen() {
               <p className="text-sm" style={{ color: C.muted }}>
                 Check your email for a sign-in code and type it in below. (There&apos;s also a link in that email if you&apos;d rather tap that on a computer.)
               </p>
-              <input
+              <input aria-label="Sign-in code"
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
@@ -3198,7 +3201,7 @@ function SignInScreen() {
               </div>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-                <input
+                <input aria-label="Email address"
                   type="email"
                   required
                   placeholder="you@example.com"
@@ -3333,7 +3336,7 @@ function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
 
         <div className="mt-4 text-left">
           <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>What should we call you?</label>
-          <input
+          <input aria-label="Your name"
             autoFocus
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
@@ -3349,7 +3352,7 @@ function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
 
         <div className="mt-3 text-left">
           <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Pick a handle</label>
-          <input
+          <input aria-label="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="lowercase, letters/numbers/hyphens"
@@ -3391,8 +3394,8 @@ function PromotionModal({ rank, nextRank, score, thrones, reviewCount, profile, 
   const proclamation = (rank.proclamation || "").replace("{name}", name);
 
   return (
-    <div className="fixed inset-0 z-[1150] flex items-center justify-center p-5" style={{ background: "rgba(10,5,16,0.92)" }} onClick={onClose}>
-      <div className="w-full max-w-sm rounded-2xl p-6 text-center" style={{ background: C.card, border: `1px solid ${C.gold}` }} onClick={(e) => e.stopPropagation()}>
+    <div data-modal-backdrop className="fixed inset-0 z-[1150] flex items-center justify-center p-5" style={{ background: "rgba(10,5,16,0.92)" }} onClick={onClose}>
+      <div role="dialog" aria-modal="true" tabIndex={-1} className="w-full max-w-sm rounded-2xl p-6 text-center" style={{ background: C.card, border: `1px solid ${C.gold}` }} onClick={(e) => e.stopPropagation()}>
         <Crown size={34} className="mx-auto" style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
         <p className="mt-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>You've been promoted</p>
         <h2 className="mt-1 text-2xl" style={{ ...display, fontWeight: 900 }}>{rank.title}</h2>
@@ -3565,8 +3568,8 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
   };
 
   return (
-    <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
+    <div data-modal-backdrop className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+      <div role="dialog" aria-modal="true" tabIndex={-1} className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
         <div className="flex shrink-0 items-center justify-between px-5 pt-5 pb-3" style={{ background: C.card, borderBottom: `1px solid ${C.cardEdge}` }}>
           <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>Your profile</h3>
           <button onClick={onClose} aria-label="Close" className="flex h-8 w-8 items-center justify-center" style={{ color: C.muted }}><X size={18} /></button>
@@ -3633,7 +3636,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
         <ProfileSection title="Settings">
         <div>
           <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Display name</label>
-          <input
+          <input aria-label="Display name"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="What should we call you?"
@@ -3648,7 +3651,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
 
         <div className="mt-3">
           <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Username</label>
-          <input
+          <input aria-label="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="lowercase, letters/numbers/hyphens"
@@ -3662,7 +3665,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
 
         <div className="mt-3">
           <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Your city</label>
-          <input
+          <input aria-label="City"
             value={city}
             onChange={(e) => setCity(e.target.value)}
             placeholder="e.g. Toronto, Austin, Manchester"
@@ -3922,7 +3925,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
               <p className="mt-2 text-xs" style={{ color: C.muted }}>
                 Type <span style={{ color: C.cream, fontWeight: 700 }}>{profile?.username}</span> to confirm.
               </p>
-              <input
+              <input aria-label="Type your username to confirm"
                 value={deleteText}
                 onChange={(e) => setDeleteText(e.target.value)}
                 className="mt-1.5 w-full rounded-lg px-3 py-2 text-sm outline-none"
@@ -4045,8 +4048,8 @@ function FriendKingdomModal({ friend: f, closedIds, onClose, onEndorse, onAddToL
   };
 
   return (
-    <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
-      <div className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
+    <div data-modal-backdrop className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+      <div role="dialog" aria-modal="true" tabIndex={-1} className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <Avatar url={f.avatarUrl} size={36} />
@@ -4124,7 +4127,7 @@ function FriendKingdomModal({ friend: f, closedIds, onClose, onEndorse, onAddToL
             <p className="text-xs" style={{ color: C.muted }}>Report sent - thanks for flagging it.</p>
           ) : reporting ? (
             <div>
-              <textarea
+              <textarea aria-label="Reason for report (optional)"
                 value={reportText}
                 onChange={(e) => setReportText(e.target.value)}
                 placeholder="What's wrong? (optional)"
@@ -4184,8 +4187,8 @@ function MembersModal({ userId, onFollow, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
-      <div className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
+    <div data-modal-backdrop className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+      <div role="dialog" aria-modal="true" tabIndex={-1} className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>Find people</h3>
           <button onClick={onClose} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
@@ -4241,8 +4244,8 @@ function FeedbackModal({ onClose, onSubmit, initialMessage = "" }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
-      <div className="w-full max-w-sm rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
+    <div data-modal-backdrop className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+      <div role="dialog" aria-modal="true" tabIndex={-1} className="w-full max-w-sm rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>Feedback</h3>
           <button onClick={onClose} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
@@ -4259,7 +4262,7 @@ function FeedbackModal({ onClose, onSubmit, initialMessage = "" }) {
             <p className="mt-2 text-sm" style={{ color: C.muted }}>
               Found a bug, something confusing, or an idea? Say as much or as little as you like.
             </p>
-            <textarea
+            <textarea aria-label="Feedback message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={5}
@@ -4363,8 +4366,8 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
   };
 
   return (
-    <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
-      <div className="max-h-screen w-full max-w-md overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
+    <div data-modal-backdrop className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+      <div role="dialog" aria-modal="true" tabIndex={-1} className="max-h-screen w-full max-w-md overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>
             {isPretender ? "Add to Next in Line" : isCoup ? `Stage a coup · ${czName}` : `Crown your ${czName} spot`}
@@ -4379,7 +4382,7 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
 
         {(isPretender || prefill) && (<div className="mt-3">
           <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Cuisine</label>
-          <select value={cz} onChange={(e) => { setCz(e.target.value); setCzTouched(true); setCzSuggested(""); }} className="mt-1 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: cz ? C.cream : C.muted }}>
+          <select aria-label="Cuisine" value={cz} onChange={(e) => { setCz(e.target.value); setCzTouched(true); setCzSuggested(""); }} className="mt-1 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: cz ? C.cream : C.muted }}>
             {!cz && <option value="">Choose a cuisine...</option>}
             {cuisines.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
@@ -4389,8 +4392,8 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
         <div className="mt-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
           <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Find the real place</div>
           <div className="mt-2 flex gap-2">
-            <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && find()} placeholder="Restaurant name" className="w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
-            <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="w-24 rounded-lg px-2 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+            <input aria-label="Restaurant name to search" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && find()} placeholder="Restaurant name" className="w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+            <input aria-label="City" value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="w-24 rounded-lg px-2 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
           </div>
           <button onClick={find} disabled={searching || !query.trim()} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold" style={searching || !query.trim() ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.bg }}>
             {searching ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}{searching ? "Searching the realm..." : "Look it up"}
@@ -4416,9 +4419,9 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
           {sel?.googlePlaceId && <p className="mt-1.5 text-right text-[10px]" style={{ color: C.muted }}>Place details from Google Maps</p>}
         </div>
 
-        <input value={name} onChange={(e) => { setName(e.target.value); if (sel && e.target.value !== sel.name) setSel(null); }} placeholder="Restaurant name" className="mt-3 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
-        <input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Neighbourhood (optional)" className="mt-2 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
-        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={isPretender ? 2 : 4}
+        <input aria-label="Restaurant name" value={name} onChange={(e) => { setName(e.target.value); if (sel && e.target.value !== sel.name) setSel(null); }} placeholder="Restaurant name" className="mt-3 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+        <input aria-label="Neighbourhood (optional)" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Neighbourhood (optional)" className="mt-2 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+        <textarea aria-label={isPretender ? "Why you want to go" : "Your decree"} value={text} onChange={(e) => setText(e.target.value)} rows={isPretender ? 2 : 4}
           placeholder={isPretender ? "Why do you want to go? (optional)" : isCoup ? "The decree: why does this dethrone the reigning spot?" : "The decree: what makes this your one true spot?"}
           className="mt-2 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
         {!isPretender && (<div className="mt-1 text-right text-xs" style={{ color: text.trim().length >= minLen ? C.green : C.muted }}>
@@ -4488,8 +4491,8 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
   const keeping = rows ? rows.filter((r) => r._keep) : [];
 
   return (
-    <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
-      <div className="max-h-screen w-full max-w-md overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
+    <div data-modal-backdrop className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
+      <div role="dialog" aria-modal="true" tabIndex={-1} className="max-h-screen w-full max-w-md overflow-y-auto rounded-t-2xl p-5 sm:rounded-2xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="text-lg" style={{ ...display, fontWeight: 700 }}>Import your list</h3>
           <button onClick={onClose} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
@@ -4499,7 +4502,7 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
           <p className="mt-2 text-sm" style={{ color: C.muted }}>
             Paste it in however it comes. Notes, a CSV, a screenshot&apos;s worth of text, a rambling list from the group chat. It&apos;ll sort out the mess.
           </p>
-          <textarea value={raw} onChange={(e) => setRaw(e.target.value)} rows={8} maxLength={MAX_IMPORT_CHARS}
+          <textarea aria-label="Your list to import" value={raw} onChange={(e) => setRaw(e.target.value)} rows={8} maxLength={MAX_IMPORT_CHARS}
             placeholder={"Bar Prima - pizza, Little Italy, best margherita\nPai (thai) khao soi!!\nKinton Ramen, Annex\nsunny's chinese - kensington, cumin lamb"}
             className="mt-3 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
           <div className="mt-1 text-right text-xs" style={{ color: C.muted }}>{raw.length}/{MAX_IMPORT_CHARS}</div>
@@ -4523,7 +4526,7 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
             {rows.map((r) => (
               <div key={r._id} className="mb-2 rounded-lg p-2.5" style={{ background: C.bg, border: `1px solid ${r._keep ? C.cardEdge : C.cardEdge + "55"}`, opacity: r._keep ? 1 : 0.45 }}>
                 <div className="flex items-center justify-between gap-2">
-                  <input
+                  <input aria-label="Restaurant name"
                     value={r.name}
                     onChange={(e) => update(r._id, "name", e.target.value)}
                     className="flex-1 rounded bg-transparent px-1 py-0.5 text-sm font-bold outline-none"
@@ -4535,11 +4538,11 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
                   </button>
                 </div>
                 <div className="mt-1.5 flex items-center gap-2">
-                  <select value={r.cuisine} onChange={(e) => update(r._id, "cuisine", e.target.value)} className="shrink-0 rounded px-2 py-1 text-xs outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: r.cuisine ? C.cream : C.muted }}>
+                  <select aria-label="Cuisine" value={r.cuisine} onChange={(e) => update(r._id, "cuisine", e.target.value)} className="shrink-0 rounded px-2 py-1 text-xs outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: r.cuisine ? C.cream : C.muted }}>
                     {!r.cuisine && <option value="">Choose a cuisine...</option>}
                     {[...new Set([r.cuisine, ...cuisineNames].filter(Boolean))].map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
-                  <input
+                  <input aria-label="Area"
                     value={r.area || ""}
                     onChange={(e) => update(r._id, "area", e.target.value)}
                     placeholder="area"
@@ -4547,7 +4550,7 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
                     style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}
                   />
                 </div>
-                <input
+                <input aria-label="Note"
                   value={r.note || ""}
                   onChange={(e) => update(r._id, "note", e.target.value)}
                   placeholder="note (optional)"
