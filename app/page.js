@@ -2045,7 +2045,7 @@ function PhotoPicker({ userId, photos, onChange, action }) {
               {uploading ? "Uploading..." : `Add photo (${photos.length}/${MAX_REVIEW_PHOTOS})`}
               <input type="file" accept="image/*" multiple onChange={handleFiles} disabled={uploading} className="hidden" />
             </label>
-          ) : <span />}
+          ) : <span className="text-xs font-semibold" style={{ color: C.muted }}>{photos.length}/{MAX_REVIEW_PHOTOS} photos</span>}
           {action}
         </div>
       )}
