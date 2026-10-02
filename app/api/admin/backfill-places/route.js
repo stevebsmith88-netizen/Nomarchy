@@ -156,6 +156,17 @@ export async function POST(request) {
       return NextResponse.json(await preview(admin, offset));
     }
     if (body.mode === "apply") return await apply(admin, body.updates);
+    if (body.mode === "search") {
+      // The owner's own search for one place, for review items where the
+      // automatic search couldn't find the right one (another city, a vague
+      // area, a renamed restaurant). Looks only - nothing is saved here.
+      const query = typeof body.query === "string" ? body.query.trim().slice(0, 200) : "";
+      const city = typeof body.city === "string" ? body.city.trim().slice(0, 100) : "";
+      if (!query) return NextResponse.json({ error: "Type a name to search for" }, { status: 400 });
+      const results = await searchGooglePlaces(query, city, { onCall: () => logGoogleCall("backfill_search") });
+      if (results === null) return NextResponse.json({ error: "Google couldn't be reached - try again" }, { status: 502 });
+      return NextResponse.json({ results });
+    }
     return NextResponse.json({ error: "Unknown mode" }, { status: 400 });
   } catch (e) {
     return NextResponse.json({ error: e.message || "Something went wrong" }, { status: 500 });

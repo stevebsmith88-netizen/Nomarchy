@@ -2300,6 +2300,55 @@ function FixThroneTool({ cuisines }) {
   );
 }
 
+// One doubtful place in the backfill review list: Google's candidates, plus
+// a way to search again yourself - for a place in another city, one saved
+// with only a vague area, or one that's been renamed.
+function ReviewCard({ group: g, saving, hasCoords, entryCount, onChoose, onSkip, onCandidates }) {
+  const [query, setQuery] = useState(g.name || "");
+  const [city, setCity] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
+
+  const search = async () => {
+    if (!query.trim() || busy) return;
+    setBusy(true); setNote("");
+    try {
+      const data = await adminPlaceMatch({ mode: "search", query: query.trim(), city: city.trim() });
+      if (data.results.length === 0) setNote("Nothing found - try different words or a city.");
+      else onCandidates(data.results);
+    } catch (e) {
+      setNote(e.message || "Search failed.");
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="mb-2 rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-bold">{g.name}</div>
+          <div className="truncate text-xs" style={{ color: C.muted }}>{[g.area, g.address].filter(Boolean).join(" · ") || "no location on file"} · {entryCount} saved</div>
+        </div>
+        <button onClick={onSkip} className="shrink-0 text-xs font-semibold" style={{ color: C.muted }}>Skip</button>
+      </div>
+      {(g.candidates || (g.match ? [g.match] : [])).map((m) => (
+        <button key={m.googlePlaceId} disabled={saving || !hasCoords(m)} onClick={() => onChoose(g, m)} className="mt-1.5 w-full rounded-lg p-2 text-left" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+          <div className="text-sm font-semibold">{m.name}</div>
+          <div className="text-xs" style={{ color: C.muted }}>{[m.neighbourhood, m.address].filter(Boolean).join(" · ")}</div>
+        </button>
+      ))}
+      <div className="mt-2 flex gap-1.5">
+        <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="Search again" className="min-w-0 flex-1 rounded-lg px-2 py-1.5 text-xs outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+        <input value={city} onChange={(e) => setCity(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="City" className="w-20 rounded-lg px-2 py-1.5 text-xs outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+        <button onClick={search} disabled={busy || !query.trim()} aria-label="Search" className="flex shrink-0 items-center justify-center rounded-lg px-2.5" style={busy || !query.trim() ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.bg }}>
+          {busy ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+        </button>
+      </div>
+      {note && <p className="mt-1 text-xs" style={{ color: C.muted }}>{note}</p>}
+    </div>
+  );
+}
+
 const GOOGLE_USAGE_LABELS = {
   search: "Place searches",
   backfill_search: "Backfill searches",
@@ -2323,8 +2372,9 @@ function PlaceMatchTool() {
   const entryCount = (g) => g.thrones.length + g.nextInLine.length;
 
   const auto = groups.filter((g) => g.status === "auto" && hasCoords(g.match));
-  const review = groups.filter((g) => g.status === "review" || (g.status === "auto" && !hasCoords(g.match)));
-  const none = groups.filter((g) => g.status === "none");
+  // Places Google couldn't find get a review card too (with no candidates),
+  // so there's always a search box to try again with different words.
+  const review = groups.filter((g) => g.status === "review" || g.status === "none" || (g.status === "auto" && !hasCoords(g.match)));
   const failed = groups.filter((g) => g.status === "error");
 
   const scan = async () => {
@@ -2399,7 +2449,7 @@ function PlaceMatchTool() {
       {groups.length > 0 && (
         <div className="mt-3 rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
           <div className="text-xs" style={{ color: C.muted }}>
-            {auto.length} clear match{auto.length === 1 ? "" : "es"} · {review.length} to review · {none.length} not found{failed.length > 0 ? ` · ${failed.length} couldn't be checked` : ""}
+            {auto.length} clear match{auto.length === 1 ? "" : "es"} · {review.length} to review{failed.length > 0 ? ` · ${failed.length} couldn't be checked` : ""}
           </div>
           {auto.length > 0 && (
             <button onClick={saveAuto} disabled={saving || phase === "scanning"} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold" style={saving || phase === "scanning" ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.bg }}>
@@ -2426,29 +2476,23 @@ function PlaceMatchTool() {
         <div className="mt-3">
           <div className="mb-1.5 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>To review ({review.length})</div>
           {review.map((g) => (
-            <div key={g.key} className="mb-2 rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-bold">{g.name}</div>
-                  <div className="truncate text-xs" style={{ color: C.muted }}>{[g.area, g.address].filter(Boolean).join(" · ") || "no location on file"} · {entryCount(g)} saved</div>
-                </div>
-                <button onClick={() => remove(g.key)} className="shrink-0 text-xs font-semibold" style={{ color: C.muted }}>Skip</button>
-              </div>
-              {(g.candidates || (g.match ? [g.match] : [])).map((m) => (
-                <button key={m.googlePlaceId} disabled={saving || !hasCoords(m)} onClick={() => choose(g, m)} className="mt-1.5 w-full rounded-lg p-2 text-left" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
-                  <div className="text-sm font-semibold">{m.name}</div>
-                  <div className="text-xs" style={{ color: C.muted }}>{[m.neighbourhood, m.address].filter(Boolean).join(" · ")}</div>
-                </button>
-              ))}
-            </div>
+            <ReviewCard
+              key={g.key}
+              group={g}
+              saving={saving}
+              hasCoords={hasCoords}
+              entryCount={entryCount(g)}
+              onChoose={choose}
+              onSkip={() => remove(g.key)}
+              onCandidates={(candidates) => setGroups((gs) => gs.map((x) => (x.key === g.key ? { ...x, status: "review", candidates } : x)))}
+            />
           ))}
         </div>
       )}
 
-      {(none.length > 0 || failed.length > 0) && phase === "done" && (
+      {failed.length > 0 && phase === "done" && (
         <p className="mt-2 text-xs" style={{ color: C.muted }}>
-          {none.length > 0 && <>Not found on Google: {none.map((g) => g.name).join(", ")}. </>}
-          {failed.length > 0 && <>Couldn&apos;t be checked (Google error - try scanning again): {failed.map((g) => g.name).join(", ")}.</>}
+          Couldn&apos;t be checked (Google error - try scanning again): {failed.map((g) => g.name).join(", ")}.
         </p>
       )}
     </div>
