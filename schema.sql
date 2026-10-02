@@ -1152,3 +1152,12 @@ alter table closed_places enable row level security;
 
 drop policy if exists "closed places readable" on closed_places;
 create policy "closed places readable" on closed_places for select using (true);
+
+-- ------------------------------------------------------------
+-- FIRST-TIME TOUR
+-- When someone finished or skipped the walkthrough, so it only starts by
+-- itself once per account. Null means not yet. No backfill: the app only
+-- auto-starts it for accounts created after it launched, so existing
+-- people are never interrupted (they can replay it from Your Profile).
+-- ------------------------------------------------------------
+alter table profiles add column if not exists tour_seen_at timestamptz;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
@@ -18,10 +18,12 @@ import {
   moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
   uploadReviewPhoto, deleteReviewPhoto, uploadAvatar, MAX_REVIEW_PHOTOS,
   loadCourt, toggleEndorsement, followByUsername, loadStanding, loadConquestProgress, blockUser, unblockUser, loadBlockedUsers,
-  loadAdminOverview, adminPlaceMatch, adminCheckClosures, adminClosedPlace, loadClosedPlaceIds, loadClosedPlaceRows,
+  loadAdminOverview, adminPlaceMatch, adminCheckClosures, adminClosedPlace, loadClosedPlaceIds, loadClosedPlaceRows, loadTourSeen, markTourSeen,
 } from "@/lib/data";
 import { claimSignupSource } from "@/lib/signupSource";
 import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
+import { shouldAutoStartTour, tourSeenLocally, rememberTourLocally } from "@/lib/tour";
+import Tour from "./Tour";
 import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell, useTheme } from "./theme";
 
 // The Google map loader touches window/document, which breaks server-side
@@ -161,6 +163,10 @@ export default function Nomarchy() {
   const [editingProfile, setEditingProfile] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackPrefill, setFeedbackPrefill] = useState("");
+  // First-time walkthrough (see Tour.js). Starts by itself once for new
+  // accounts; anyone can replay it from Your Profile.
+  const [tourOpen, setTourOpen] = useState(false);
+  const tourChecked = useRef(false);
   // Google place IDs the owner has confirmed as permanently closed.
   const [closedIds, setClosedIds] = useState(() => new Set());
   const [showMembers, setShowMembers] = useState(false);
@@ -199,6 +205,23 @@ export default function Nomarchy() {
   useEffect(() => {
     if (user) claimSignupSource(supabase, user);
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user || !loaded || !profile?.onboarded || tourChecked.current) return;
+    tourChecked.current = true;
+    loadTourSeen(user.id).then((seen) => {
+      if (shouldAutoStartTour({ createdAt: profile.created_at, onboarded: profile.onboarded, databaseOk: seen.databaseOk, seenAt: seen.seenAt, locallySeen: tourSeenLocally() })) {
+        setTourOpen(true);
+      }
+    });
+  }, [user?.id, loaded, profile?.onboarded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const endTour = () => {
+    setTourOpen(false);
+    setTab("kingdom");
+    rememberTourLocally();
+    if (user) markTourSeen(user.id);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -913,6 +936,7 @@ export default function Nomarchy() {
           <span className="relative">
             <button
               onClick={handleOpenNotifications}
+              data-tour="bell"
               aria-label="Notifications"
               className="flex h-7 w-7 items-center justify-center rounded-full"
               style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}
@@ -1015,7 +1039,7 @@ export default function Nomarchy() {
           { id: "court", label: "Court", icon: Users },
           { id: "top25", label: "Best in the Land", icon: TrendingUp },
         ].map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setTab(id)} className="flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold sm:px-4"
+          <button key={id} data-tour={`tab-${id}`} onClick={() => setTab(id)} className="flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold sm:px-4"
             style={tab === id ? { background: C.gold, color: C.bg, border: `1px solid ${C.gold}` } : { background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <Icon size={15} strokeWidth={2.2} />{label}
           </button>
@@ -1779,8 +1803,11 @@ export default function Nomarchy() {
           onChangeAvatar={(avatar_url) => handleUpdateProfile({ avatar_url })}
           onDeleteAccount={handleDeleteAccount}
           onFeedback={() => { setEditingProfile(false); setShowFeedback(true); }}
+          onTour={() => { setEditingProfile(false); setTourOpen(true); }}
         />
       )}
+
+      {tourOpen && <Tour onSetTab={(t) => t && setTab(t)} onDone={endTour} />}
 
       {showFeedback && (
         <FeedbackModal
@@ -2769,6 +2796,7 @@ function ThroneCard({ cuisineName, cuisineId, slot, closed, featured, historyOpe
   return (
     <div
       className="rounded-xl p-4"
+      data-tour={featured ? "first-throne" : undefined}
       style={{
         background: C.card,
         border: `${featured ? 2 : 1}px solid ${r ? C.gold + "55" : C.cardEdge}`,
@@ -3346,7 +3374,7 @@ function ProfileSection({ title, right, className = "", children }) {
   );
 }
 
-function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, onSubmit, onChangeAvatar, onDeleteAccount, onFeedback }) {
+function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, onSubmit, onChangeAvatar, onDeleteAccount, onFeedback, onTour }) {
   const { theme, toggleTheme } = useTheme();
   const [username, setUsername] = useState(profile?.username || "");
   const [displayName, setDisplayName] = useState(profile?.display_name || "");
@@ -3668,6 +3696,23 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
             />
           </button>
         </div>
+
+        {onTour && (
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+            <div>
+              <div className="text-sm font-semibold">Take the tour</div>
+              <div className="mt-0.5 text-xs" style={{ color: C.muted }}>A quick walkthrough of the app.</div>
+            </div>
+            <button
+              type="button"
+              onClick={onTour}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
+              style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}
+            >
+              Start
+            </button>
+          </div>
+        )}
 
         <div className="mt-3 flex items-center justify-between gap-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
           <div>

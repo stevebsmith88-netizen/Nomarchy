@@ -39,6 +39,16 @@ const QUESTIONS = [
     ),
   },
   {
+    q: "Is there a tour of the app?",
+    a: (
+      <p>
+        Yes - new accounts get a short walkthrough the first time they sign in, with arrows pointing out
+        where everything is. You can skip it any time, and replay it whenever you like: tap your name at the
+        top, open <strong>Settings</strong>, and choose <strong>Take the tour</strong>.
+      </p>
+    ),
+  },
+  {
     q: "How does searching for a restaurant work?",
     a: (
       <p>
