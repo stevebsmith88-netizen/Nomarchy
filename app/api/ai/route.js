@@ -19,6 +19,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
+import { searchGooglePlaces } from "../../../lib/googlePlaces";
 
 // Import is a batch, wait-a-moment task where getting cuisines right
 // matters most, so it stays on Opus. Lookup happens mid-flow while
@@ -170,6 +171,16 @@ async function searchLocalRestaurants(supabase, query, city) {
 }
 
 async function handleLookup(supabase, query, city) {
+  // Google first: exact addresses, coordinates and a place ID in one fast
+  // call, for any city. Its results are never cached (Google's terms), and
+  // each one counts toward the hourly limit since it's a paid call. If
+  // Google isn't configured, errors, or finds nothing, everything below
+  // runs exactly as it did before.
+  const google = await searchGooglePlaces(query, city);
+  if (google && google.length > 0) {
+    return { result: { results: google, google: true }, cached: false };
+  }
+
   const local = await searchLocalRestaurants(supabase, query, city);
   if (local.results.length > 0) {
     return { result: { results: local.results, fuzzy: local.fuzzy }, cached: true };

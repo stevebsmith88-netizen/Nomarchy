@@ -366,6 +366,7 @@ export default function Nomarchy() {
       rating: throne.rating,
       mapsUrl: throne.mapsUrl,
       photos: throne.photos,
+      googlePlaceId: throne.googlePlaceId,
       lat: throne.lat,
       lng: throne.lng,
       cuisineId,
@@ -406,7 +407,7 @@ export default function Nomarchy() {
 
   const handleAddCouncilPick = async (pick) => {
     try {
-      await addToPretenders(pick.cuisineId, { name: pick.name, area: pick.area, address: pick.address });
+      await addToPretenders(pick.cuisineId, { name: pick.name, area: pick.area, address: pick.address, city: pick.city, googlePlaceId: pick.googlePlaceId, lat: pick.lat, lng: pick.lng });
     } catch (e) {
       flash(e.message || "Couldn't add that.");
     }
@@ -685,6 +686,11 @@ export default function Nomarchy() {
       await addToPretenders(pick.cuisineId, {
         name: pick.name,
         area: pick.area,
+        address: pick.address,
+        city: pick.city,
+        googlePlaceId: pick.googlePlaceId,
+        lat: pick.lat,
+        lng: pick.lng,
         note: `Added from ${friendName}'s picks.`,
       });
     } catch (e) {
@@ -743,7 +749,7 @@ export default function Nomarchy() {
   // since we can't actually tell it's wrong.
   const councilLocalPool = [
     ...court.flatMap((f) => [
-      ...f.picks.map((p) => ({ name: p.name, area: p.area, address: p.address, city: p.city, cuisine: p.cuisine, cuisineId: p.cuisineId, quote: p.decree, from: f.name, mine: false })),
+      ...f.picks.map((p) => ({ name: p.name, area: p.area, address: p.address, city: p.city, googlePlaceId: p.googlePlaceId, lat: p.lat, lng: p.lng, cuisine: p.cuisine, cuisineId: p.cuisineId, quote: p.decree, from: f.name, mine: false })),
       ...f.reviews.map((r) => ({ name: r.name, area: r.area, address: r.address, city: r.city, cuisine: r.cuisine, cuisineId: null, quote: r.note, from: f.name, mine: false })),
     ]),
     ...pretenders
@@ -3644,6 +3650,7 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
   const [city, setCity] = useState(defaultCity || "Toronto");
   const [results, setResults] = useState([]);
   const [fuzzy, setFuzzy] = useState(false);
+  const [fromGoogle, setFromGoogle] = useState(false);
   const [searching, setSearching] = useState(false);
   const [err, setErr] = useState("");
   const [sel, setSel] = useState(prefill?.mapsUrl ? prefill : null);
@@ -3660,7 +3667,7 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
     if (!valid || submitting) return;
     setSubmitting(true); setErr("");
     try {
-      await onSubmit(cz, { name: name.trim().toUpperCase(), area: area.trim(), ...(isPretender ? { note: text.trim() } : { decree: text.trim(), photos }), address: sel?.address || "", rating: sel?.rating || "", mapsUrl: sel?.mapsUrl || "", city: city.trim() || defaultCity || null });
+      await onSubmit(cz, { name: name.trim().toUpperCase(), area: area.trim(), ...(isPretender ? { note: text.trim() } : { decree: text.trim(), photos }), address: sel?.address || "", rating: sel?.rating || "", mapsUrl: sel?.mapsUrl || "", googlePlaceId: sel?.googlePlaceId || null, lat: sel?.lat ?? null, lng: sel?.lng ?? null, city: city.trim() || defaultCity || null });
     } catch (e) {
       setErr(e.message || "That didn't save - try again.");
     }
@@ -3669,7 +3676,7 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
 
   const find = async () => {
     if (!query.trim() || searching) return;
-    setSearching(true); setErr(""); setResults([]); setFuzzy(false); setSel(null);
+    setSearching(true); setErr(""); setResults([]); setFuzzy(false); setFromGoogle(false); setSel(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/ai", {
@@ -3687,6 +3694,7 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
       if (Array.isArray(data.results) && data.results.length) {
         setResults(data.results.slice(0, 3));
         setFuzzy(!!data.fuzzy);
+        setFromGoogle(!!data.google);
       } else {
         setErr("No matches found. Fill in the details manually below.");
       }
@@ -3740,11 +3748,15 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
                 {r.rating && <span className="flex items-center gap-0.5 text-xs" style={{ color: C.gold }}><Star size={11} fill={C.gold} /> {r.rating}</span>}</div>
               <div className="mt-0.5 text-xs" style={{ color: C.muted }}>{[r.neighbourhood, r.address].filter(Boolean).join(" · ")}</div>
             </button>))}
+          {fromGoogle && results.length > 0 && (
+            <p className="mt-2 text-right text-[10px]" style={{ color: C.muted }}>Results from Google Maps</p>
+          )}
           {sel && (<div className="mt-2 flex items-start justify-between rounded-lg p-2.5" style={{ border: `1px solid ${C.green}66`, background: C.green + "11" }}>
             <div><div className="text-sm font-bold" style={{ color: C.green }}>{sel.name}</div>
               <div className="text-xs" style={{ color: C.muted }}>{[sel.neighbourhood || sel.area, sel.address].filter(Boolean).join(" · ")}</div></div>
             {sel.mapsUrl && <a href={sel.mapsUrl} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.green }}>Map <ExternalLink size={10} /></a>}
           </div>)}
+          {sel?.googlePlaceId && <p className="mt-1.5 text-right text-[10px]" style={{ color: C.muted }}>Place details from Google Maps</p>}
         </div>
 
         <input value={name} onChange={(e) => { setName(e.target.value); if (sel && e.target.value !== sel.name) setSel(null); }} placeholder="Restaurant name" className="mt-3 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
