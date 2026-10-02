@@ -89,7 +89,9 @@ const QUESTIONS = [
         into their credibility score, alongside how many thrones they hold, how many coups they&apos;ve
         staged, how much thought goes into their decrees, and whether they bothered to add photos - it&apos;s
         meant to reward genuine taste, not just volume. In your Court list, the three highest scores (ties share
-        a place) get a crown, and you can switch between an Expanded and a Compact view.
+        a place) get a gold, silver or bronze crown, and you can switch between an Expanded and a Compact view.
+        Open a friend and, once they have at least two places in a cuisine, you&apos;ll see what they&apos;re
+        &ldquo;Known for&rdquo; - worked out automatically from their crowns and the places they&apos;ve been.
       </p>
     ),
   },

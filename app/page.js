@@ -3305,7 +3305,28 @@ function PersonRow({ p, onFollow, busy, hint }) {
 // of thrones, but someone with a long history of picks and reviews would
 // turn the whole Court tab into one giant scroll, burying every other
 // friend below them.
+// Auto-derived "known for": the cuisine someone has the most places in,
+// counting both crowns and been-to reviews. The price/occasion tiers and
+// Overall Favourite aren't cuisines, so they never count. Needs at least
+// two places so one visit doesn't label anyone; ties go to the cuisine
+// they've actually crowned, then alphabetically so it never flickers.
+const NOT_A_CUISINE = new Set(["Overall Favourite", "Cheap Eat", "Special Occasion", "Quick Bite"]);
+
+function knownFor(f) {
+  const counts = new Map();
+  for (const p of f.picks) if (p.cuisine && !NOT_A_CUISINE.has(p.cuisine)) counts.set(p.cuisine, (counts.get(p.cuisine) || 0) + 1);
+  for (const r of f.reviews) if (r.cuisine && !NOT_A_CUISINE.has(r.cuisine)) counts.set(r.cuisine, (counts.get(r.cuisine) || 0) + 1);
+  const crowned = new Set(f.picks.map((p) => p.cuisine));
+  const best = [...counts.entries()]
+    .filter(([, n]) => n >= 2)
+    .sort((a, b) => b[1] - a[1] || (crowned.has(b[0]) ? 1 : 0) - (crowned.has(a[0]) ? 1 : 0) || a[0].localeCompare(b[0]))[0];
+  if (!best) return null;
+  const pick = f.picks.find((p) => p.cuisine === best[0]);
+  return { cuisine: best[0], endorsements: pick?.endorsements || 0 };
+}
+
 function FriendKingdomModal({ friend: f, onClose, onEndorse, onAddToList, onBlock, onReport }) {
+  const specialty = knownFor(f);
   const [reporting, setReporting] = useState(false);
   const [reportText, setReportText] = useState("");
   const [reportSent, setReportSent] = useState(false);
@@ -3334,6 +3355,12 @@ function FriendKingdomModal({ friend: f, onClose, onEndorse, onAddToList, onBloc
               >
                 {getTitle(f.isOwner, f.score)}
               </span>
+              {specialty && (
+                <p className="mt-1 text-xs" style={{ color: C.muted }}>
+                  Known for <span style={{ color: C.gold, fontWeight: 700 }}>{specialty.cuisine}</span>
+                  {specialty.endorsements > 0 && ` · pick endorsed by ${specialty.endorsements}`}
+                </p>
+              )}
             </div>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
