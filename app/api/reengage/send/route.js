@@ -13,6 +13,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { CHANGELOG } from "@/lib/changelog";
+import { isCronAuthorized } from "@/lib/cronAuth";
 
 const SENDGRID_FROM = process.env.DIGEST_FROM_EMAIL || "hello@nomarchy.ca";
 const SITE_URL = "https://nomarchy.ca";
@@ -99,8 +100,7 @@ async function sendEmail(to, subject, html) {
 }
 
 export async function GET(request) {
-  const auth = request.headers.get("authorization");
-  if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!process.env.SENDGRID_API_KEY) {
