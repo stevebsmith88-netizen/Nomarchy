@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
-  Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
+  Crown, Plus, ScrollText, Swords, X, Users, ChevronDown, ChevronLeft, ChevronRight,
   MapPin, Search, Star, ExternalLink, Loader2, Bookmark, Share2, Check, Trash2,
   ClipboardPaste, Wand2, LogOut, UserPlus, Pencil, RotateCcw, Globe, Lock,
   MessageSquare, Bell, TrendingUp, Navigation, Camera, Mail, ShieldCheck, Sun, Moon,
@@ -2180,8 +2180,6 @@ function FixThroneTool({ cuisines }) {
 
 function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown, onEditDecree, onEditLocation, onEditPhotos, onHide, userId }) {
   const r = slot?.current;
-  const fallenList = slot?.fallen || [];
-  const open = historyOpen[cuisineName];
 
   // One edit panel covers both the decree text and the cuisine it's filed
   // under - these used to be two separate buttons ("Edit review" and "Wrong
@@ -2220,15 +2218,8 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
     setSaving(false);
   };
 
-  // The fallen count stacks directly above Coup so Coup is always the
-  // bottom-right element of the card, wherever the history toggle is.
-  const coupAction = (
-    <div className="flex shrink-0 flex-col items-end gap-2">
-      {fallenList.length > 0 && (
-        <button onClick={() => setHistoryOpen((p) => ({ ...p, [cuisineName]: !p[cuisineName] }))} className="flex items-center gap-1 text-xs font-semibold" style={{ color: C.muted }}>{fallenList.length} fallen {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</button>
-      )}
-      <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
-    </div>
+  const coupButton = (
+    <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
   );
 
   return (
@@ -2316,13 +2307,8 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
         {/* Coup shares a row with Add photo whenever photos are editable -
             otherwise it sat alone on its own row with a dead gap beside it. */}
         {onEditPhotos
-          ? <PhotoPicker userId={userId} photos={r.photos || []} onChange={(photos) => onEditPhotos(photos)} action={coupAction} />
-          : <div className="mt-3 flex justify-end">{coupAction}</div>}
-        {open && fallenList.map((f, i) => (
-          <div key={i} className="mt-2 rounded-lg p-3 text-xs" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
-            <div className="font-bold" style={{ color: C.muted }}>{f.name} <span className="font-normal">· reigned until {fmt(f.dethronedAt)}</span></div>
-            <p className="mt-1 italic" style={{ color: C.muted }}>&ldquo;{f.decree}&rdquo;</p>
-          </div>))}
+          ? <PhotoPicker userId={userId} photos={r.photos || []} onChange={(photos) => onEditPhotos(photos)} action={coupButton} />
+          : <div className="mt-3 flex justify-end">{coupButton}</div>}
       </div>) : (<div className="mt-2">
         <p className="text-sm italic" style={{ color: C.muted }}>{featured ? "No overall favourite crowned yet." : "This throne sits empty."}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
