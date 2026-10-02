@@ -919,7 +919,14 @@ create policy "review photos insert rate limit" on storage.objects as restrictiv
 -- case-insensitive exact match rather than reusing placeKey's full
 -- normalization (postal codes, punctuation, etc.) - reasonable for a
 -- supplementary "how many have been" stat, not the crown count itself.
-create or replace function restaurant_visit_count(p_name text, p_address text, p_area text)
+-- Counts by Google place ID when one is given (exact), and otherwise - or
+-- for saved entries that have no ID - by name and address as before. Two
+-- different Google IDs are never counted as the same place. p_place_id
+-- defaults to null so an older caller passing three values still works.
+-- The old three-value version has to be dropped first: leaving both would
+-- make a three-value call ambiguous.
+drop function if exists restaurant_visit_count(text, text, text);
+create or replace function restaurant_visit_count(p_name text, p_address text, p_area text, p_place_id text default null)
 returns integer
 language sql
 stable
@@ -928,11 +935,17 @@ as $$
   select count(*)::integer
   from next_in_line n
   where n.visited_at is not null
-    and lower(trim(n.place_name)) = lower(trim(p_name))
     and (
-      (p_address is not null and n.address is not null and lower(trim(n.address)) = lower(trim(p_address)))
-      or (p_area is not null and n.neighbourhood is not null and lower(trim(n.neighbourhood)) = lower(trim(p_area)))
-      or (p_address is null and p_area is null)
+      (p_place_id is not null and n.google_place_id = p_place_id)
+      or (
+        (p_place_id is null or n.google_place_id is null)
+        and lower(trim(n.place_name)) = lower(trim(p_name))
+        and (
+          (p_address is not null and n.address is not null and lower(trim(n.address)) = lower(trim(p_address)))
+          or (p_area is not null and n.neighbourhood is not null and lower(trim(n.neighbourhood)) = lower(trim(p_area)))
+          or (p_address is null and p_area is null)
+        )
+      )
     );
 $$;
 
@@ -940,7 +953,8 @@ $$;
 -- but haven't marked it visited yet - "X want to try this", a third stat
 -- alongside crowns and "been, not crowned" so a restaurant page isn't
 -- stuck at just two thin numbers.
-create or replace function restaurant_wanting_count(p_name text, p_address text, p_area text)
+drop function if exists restaurant_wanting_count(text, text, text);
+create or replace function restaurant_wanting_count(p_name text, p_address text, p_area text, p_place_id text default null)
 returns integer
 language sql
 stable
@@ -949,11 +963,17 @@ as $$
   select count(*)::integer
   from next_in_line n
   where n.visited_at is null
-    and lower(trim(n.place_name)) = lower(trim(p_name))
     and (
-      (p_address is not null and n.address is not null and lower(trim(n.address)) = lower(trim(p_address)))
-      or (p_area is not null and n.neighbourhood is not null and lower(trim(n.neighbourhood)) = lower(trim(p_area)))
-      or (p_address is null and p_area is null)
+      (p_place_id is not null and n.google_place_id = p_place_id)
+      or (
+        (p_place_id is null or n.google_place_id is null)
+        and lower(trim(n.place_name)) = lower(trim(p_name))
+        and (
+          (p_address is not null and n.address is not null and lower(trim(n.address)) = lower(trim(p_address)))
+          or (p_area is not null and n.neighbourhood is not null and lower(trim(n.neighbourhood)) = lower(trim(p_area)))
+          or (p_address is null and p_area is null)
+        )
+      )
     );
 $$;
 

@@ -803,20 +803,39 @@ export default function Nomarchy() {
   // name+address/area key Trending uses, so a place in your own Next in
   // Line can point back to a friend's crowned pick or visited review of
   // that exact same restaurant without a separate query.
-  const friendActivityByPlace = new Map();
+  // Each entry is filed under its Google ID (exact) and under its
+  // name+address key (for places saved without an ID); friendMatchesFor
+  // looks up by ID first, then by name+address, never matching two places
+  // that have different Google IDs.
+  const friendActivityByGid = new Map();
+  const friendActivityByText = new Map();
+  const fileActivity = (place, entry) => {
+    const e = { ...entry, gid: place.googlePlaceId || null };
+    const textKey = placeKey(place.name, place.address, place.area);
+    if (!friendActivityByText.has(textKey)) friendActivityByText.set(textKey, []);
+    friendActivityByText.get(textKey).push(e);
+    if (e.gid) {
+      if (!friendActivityByGid.has(e.gid)) friendActivityByGid.set(e.gid, []);
+      friendActivityByGid.get(e.gid).push(e);
+    }
+  };
   for (const f of court) {
     for (const p of f.picks) {
-      const key = placeKey(p.name, p.address, p.area);
-      if (!friendActivityByPlace.has(key)) friendActivityByPlace.set(key, []);
-      friendActivityByPlace.get(key).push({ friend: f.name, crowned: true, cuisine: p.cuisine, text: p.decree });
+      fileActivity(p, { friend: f.name, crowned: true, cuisine: p.cuisine, text: p.decree });
     }
     for (const r of f.reviews) {
       if (!r.note && !r.verdict) continue;
-      const key = placeKey(r.name, r.address, r.area);
-      if (!friendActivityByPlace.has(key)) friendActivityByPlace.set(key, []);
-      friendActivityByPlace.get(key).push({ friend: f.name, crowned: false, cuisine: r.cuisine, text: r.note, verdict: r.verdict });
+      fileActivity(r, { friend: f.name, crowned: false, cuisine: r.cuisine, text: r.note, verdict: r.verdict });
     }
   }
+  const friendMatchesFor = (p) => {
+    const mine = p.googlePlaceId || null;
+    const found = new Set([
+      ...(mine ? friendActivityByGid.get(mine) || [] : []),
+      ...(friendActivityByText.get(placeKey(p.name, p.address, p.area)) || []).filter((e) => !e.gid || !mine || e.gid === mine),
+    ]);
+    return found.size ? [...found] : undefined;
+  };
 
   // NOW is a module-level constant (evaluated once at page load), not a
   // fresh Date.now() call here - calling that directly in render is an
@@ -1216,7 +1235,7 @@ export default function Nomarchy() {
               <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Still to try</h3>
               {stillToTry.map((p) => (
                 <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines} userId={user.id}
-                  friendMatches={friendActivityByPlace.get(placeKey(p.name, p.address, p.area))}
+                  friendMatches={friendMatchesFor(p)}
                   onShare={sharePretender}
                   onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
                   onChangeCuisine={handleChangePretenderCuisine} onChangePhotos={handleChangePretenderPhotos} onToggleVisited={handleToggleVisited}
@@ -1235,7 +1254,7 @@ export default function Nomarchy() {
               <h3 className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Been to</h3>
               {beenTo.map((p) => (
                 <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines} userId={user.id}
-                  friendMatches={friendActivityByPlace.get(placeKey(p.name, p.address, p.area))}
+                  friendMatches={friendMatchesFor(p)}
                   onShare={sharePretender}
                   onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
                   onChangeCuisine={handleChangePretenderCuisine} onChangePhotos={handleChangePretenderPhotos} onToggleVisited={handleToggleVisited}
@@ -2019,19 +2038,19 @@ function RestaurantProfileModal({ restaurant, onClose }) {
 
   useEffect(() => {
     let cancelled = false;
-    loadRestaurantProfile(restaurant.name, restaurant.address, restaurant.area)
+    loadRestaurantProfile(restaurant.name, restaurant.address, restaurant.area, restaurant.googlePlaceId)
       .then((data) => { if (!cancelled) setEntries(data); })
       .catch((e) => { if (!cancelled) setErr(e.message || "Couldn't load this restaurant."); });
     // Best-effort, separate from the main load - a stats number failing
     // to load shouldn't block seeing the crowns themselves.
-    loadRestaurantVisitCount(restaurant.name, restaurant.address, restaurant.area)
+    loadRestaurantVisitCount(restaurant.name, restaurant.address, restaurant.area, restaurant.googlePlaceId)
       .then((n) => { if (!cancelled) setVisitCount(n); })
       .catch(() => { if (!cancelled) setVisitCount(null); });
-    loadRestaurantWantingCount(restaurant.name, restaurant.address, restaurant.area)
+    loadRestaurantWantingCount(restaurant.name, restaurant.address, restaurant.area, restaurant.googlePlaceId)
       .then((n) => { if (!cancelled) setWantingCount(n); })
       .catch(() => { if (!cancelled) setWantingCount(null); });
     return () => { cancelled = true; };
-  }, [restaurant.name, restaurant.address, restaurant.area]);
+  }, [restaurant.name, restaurant.address, restaurant.area, restaurant.googlePlaceId]);
 
   return (
     <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
