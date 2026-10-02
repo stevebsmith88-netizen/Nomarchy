@@ -2015,7 +2015,7 @@ function PhotoStrip({ photos, onRemove }) {
 // "save" - simpler state, and it means a review's photos are never lost to
 // a closed tab mid-edit. Removing one is a local array change the caller
 // persists (immediately for an existing review, or on submit for a new one).
-function PhotoPicker({ userId, photos, onChange }) {
+function PhotoPicker({ userId, photos, onChange, action }) {
   const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState("");
 
@@ -2037,12 +2037,17 @@ function PhotoPicker({ userId, photos, onChange }) {
   return (
     <div className="mt-2">
       <PhotoStrip photos={photos} onRemove={(i) => { deleteReviewPhoto(photos[i]); onChange(photos.filter((_, idx) => idx !== i)); }} />
-      {photos.length < MAX_REVIEW_PHOTOS && (
-        <label className="mt-2 flex w-fit cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
-          {uploading ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
-          {uploading ? "Uploading..." : `Add photo (${photos.length}/${MAX_REVIEW_PHOTOS})`}
-          <input type="file" accept="image/*" multiple onChange={handleFiles} disabled={uploading} className="hidden" />
-        </label>
+      {(photos.length < MAX_REVIEW_PHOTOS || action) && (
+        <div className="mt-2 flex items-center justify-between gap-2">
+          {photos.length < MAX_REVIEW_PHOTOS ? (
+            <label className="flex w-fit cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>
+              {uploading ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
+              {uploading ? "Uploading..." : `Add photo (${photos.length}/${MAX_REVIEW_PHOTOS})`}
+              <input type="file" accept="image/*" multiple onChange={handleFiles} disabled={uploading} className="hidden" />
+            </label>
+          ) : <span />}
+          {action}
+        </div>
       )}
       {err && <p className="mt-1 text-xs" style={{ color: C.coup }}>{err}</p>}
     </div>
@@ -2215,6 +2220,10 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
     setSaving(false);
   };
 
+  const coupButton = (
+    <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
+  );
+
   return (
     <div
       className="rounded-xl p-4"
@@ -2297,13 +2306,17 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
             )}
           </p>
         )}
-        {onEditPhotos && <PhotoPicker userId={userId} photos={r.photos || []} onChange={(photos) => onEditPhotos(photos)} />}
-        <div className="mt-3 flex items-center justify-between gap-2">
-          {fallenList.length > 0 ? (
-            <button onClick={() => setHistoryOpen((p) => ({ ...p, [cuisineName]: !p[cuisineName] }))} className="flex items-center gap-1 text-xs font-semibold" style={{ color: C.muted }}>{fallenList.length} fallen {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</button>
-          ) : <span />}
-          <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
-        </div>
+        {/* Coup shares a row with Add photo whenever photos are editable -
+            otherwise it sat alone on its own row with a dead gap beside it. */}
+        {onEditPhotos && <PhotoPicker userId={userId} photos={r.photos || []} onChange={(photos) => onEditPhotos(photos)} action={coupButton} />}
+        {(fallenList.length > 0 || !onEditPhotos) && (
+          <div className="mt-3 flex items-center justify-between gap-2">
+            {fallenList.length > 0 ? (
+              <button onClick={() => setHistoryOpen((p) => ({ ...p, [cuisineName]: !p[cuisineName] }))} className="flex items-center gap-1 text-xs font-semibold" style={{ color: C.muted }}>{fallenList.length} fallen {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</button>
+            ) : <span />}
+            {!onEditPhotos && coupButton}
+          </div>
+        )}
         {open && fallenList.map((f, i) => (
           <div key={i} className="mt-2 rounded-lg p-3 text-xs" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
             <div className="font-bold" style={{ color: C.muted }}>{f.name} <span className="font-normal">· reigned until {fmt(f.dethronedAt)}</span></div>
