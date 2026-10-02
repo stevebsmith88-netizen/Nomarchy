@@ -1014,3 +1014,47 @@ $$;
 
 revoke all on function record_signup_source(text) from public;
 grant execute on function record_signup_source(text) to authenticated;
+
+-- ------------------------------------------------------------
+-- GOOGLE USAGE (a count of our own calls to Google)
+-- One row per request our server sends to Google, so the Admin tab can
+-- show usage before a bill does. Only the server writes here (with the
+-- service role - there is deliberately no insert policy), and only the
+-- owner can read it, through google_usage_summary() below. Google's own
+-- billing page remains the source of truth for what you're charged.
+-- kind is free text so new kinds (coordinate refreshes, map loads) can be
+-- added later without a schema change.
+-- ------------------------------------------------------------
+create table if not exists google_api_calls (
+  id         bigint generated always as identity primary key,
+  kind       text not null,
+  user_id    uuid references profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists google_api_calls_kind_created_idx on google_api_calls (kind, created_at);
+
+alter table google_api_calls enable row level security;
+
+-- Owner-only totals per kind: today, this month, all time (UTC days and
+-- months - Google bills on Pacific time, so month edges can differ by a
+-- few hours). Returns nothing at all to anyone who isn't the owner.
+create or replace function google_usage_summary()
+returns table (kind text, today bigint, this_month bigint, all_time bigint)
+language sql
+stable
+security definer set search_path = public
+as $$
+  select
+    c.kind,
+    count(*) filter (where c.created_at >= date_trunc('day', now())),
+    count(*) filter (where c.created_at >= date_trunc('month', now())),
+    count(*)
+  from google_api_calls c
+  where exists (select 1 from profiles p where p.id = auth.uid() and p.is_owner)
+  group by c.kind
+  order by c.kind;
+$$;
+
+revoke all on function google_usage_summary() from public;
+grant execute on function google_usage_summary() to authenticated;

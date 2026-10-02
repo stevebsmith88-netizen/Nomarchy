@@ -20,6 +20,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { searchGooglePlaces } from "../../../../lib/googlePlaces";
+import { logGoogleCall } from "../../../../lib/googleUsage";
 import { decide, groupKey } from "../../../../lib/placeMatch";
 
 export const maxDuration = 60;
@@ -91,7 +92,7 @@ async function preview(admin, offset) {
   const slice = groups.slice(offset, offset + BATCH_SIZE);
 
   const checked = await inChunks(slice, CONCURRENCY, async (g) => {
-    const results = await searchGooglePlaces(`${g.row.name} ${g.row.address || g.row.area || ""}`.trim(), g.row.city);
+    const results = await searchGooglePlaces(`${g.row.name} ${g.row.address || g.row.area || ""}`.trim(), g.row.city, { onCall: () => logGoogleCall("backfill_search") });
     const base = {
       key: g.key,
       name: g.row.name,

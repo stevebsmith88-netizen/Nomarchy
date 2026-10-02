@@ -1508,6 +1508,31 @@ export default function Nomarchy() {
               </div>
             </div>
 
+            <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Google usage</h3>
+            <div className="mb-4 rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+              {adminData.googleUsage === null ? (
+                <p className="p-3 text-xs" style={{ color: C.muted }}>Counting hasn&apos;t started - run the latest database update (schema.sql) to turn it on.</p>
+              ) : (<>
+                <div className="grid grid-cols-[1fr_3.5rem_4.5rem_4rem] gap-x-3 px-3 py-2 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>
+                  <span>Calls</span><span className="text-right">Today</span><span className="text-right">Month</span><span className="text-right">All time</span>
+                </div>
+                {adminData.googleUsage.length === 0 && (
+                  <p className="px-3 py-2 text-sm" style={{ color: C.muted, borderTop: `1px solid ${C.cardEdge}` }}>Nothing yet - the next place search will show up here.</p>
+                )}
+                {adminData.googleUsage.map((u) => (
+                  <div key={u.kind} className="grid grid-cols-[1fr_3.5rem_4.5rem_4rem] gap-x-3 px-3 py-2 text-sm" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
+                    <span className="truncate font-semibold">{GOOGLE_USAGE_LABELS[u.kind] || u.kind}</span>
+                    <span className="text-right" style={{ color: C.gold }}>{u.today}</span>
+                    <span className="text-right" style={{ color: C.gold }}>{u.thisMonth}</span>
+                    <span className="text-right" style={{ color: C.gold }}>{u.allTime}</span>
+                  </div>
+                ))}
+                <p className="px-3 py-2 text-xs leading-relaxed" style={{ color: C.muted, borderTop: `1px solid ${C.cardEdge}` }}>
+                  Our own count of calls to Google since counting began (UTC days and months). Place searches get roughly 5,000 free a month - check Google&apos;s pricing page for the exact figure. Google&apos;s billing page is what you&apos;re actually charged on. Map loads aren&apos;t counted yet.
+                </p>
+              </>)}
+            </div>
+
             <FixThroneTool cuisines={selectableCuisines} />
             <PlaceMatchTool />
 
@@ -2274,6 +2299,13 @@ function FixThroneTool({ cuisines }) {
     </div>
   );
 }
+
+const GOOGLE_USAGE_LABELS = {
+  search: "Place searches",
+  backfill_search: "Backfill searches",
+  place_refresh: "Coordinate refreshes",
+  map_load: "Map loads",
+};
 
 // One-time Google ID backfill. Scanning searches Google but saves nothing;
 // the owner then approves the automatic matches and picks the right result

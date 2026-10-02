@@ -20,6 +20,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
 import { searchGooglePlaces } from "../../../lib/googlePlaces";
+import { logGoogleCall } from "../../../lib/googleUsage";
 
 // Import is a batch, wait-a-moment task where getting cuisines right
 // matters most, so it stays on Opus. Lookup happens mid-flow while
@@ -106,7 +107,7 @@ export async function POST(request) {
     let cached = false;
     if (mode === "lookup") {
       if (!query?.trim()) return NextResponse.json({ error: "No query" }, { status: 400 });
-      ({ result, cached } = await handleLookup(supabase, query, city));
+      ({ result, cached } = await handleLookup(supabase, query, city, user.id));
     } else if (mode === "import") {
       if (!raw?.trim()) return NextResponse.json({ error: "Nothing to import" }, { status: 400 });
       result = await handleImport(raw, cuisines);
@@ -170,13 +171,13 @@ async function searchLocalRestaurants(supabase, query, city) {
   return { results: [], fuzzy: false };
 }
 
-async function handleLookup(supabase, query, city) {
+async function handleLookup(supabase, query, city, userId) {
   // Google first: exact addresses, coordinates and a place ID in one fast
   // call, for any city. Its results are never cached (Google's terms), and
   // each one counts toward the hourly limit since it's a paid call. If
   // Google isn't configured, errors, or finds nothing, everything below
   // runs exactly as it did before.
-  const google = await searchGooglePlaces(query, city);
+  const google = await searchGooglePlaces(query, city, { onCall: () => logGoogleCall("search", userId) });
   if (google && google.length > 0) {
     return { result: { results: google, google: true }, cached: false };
   }
