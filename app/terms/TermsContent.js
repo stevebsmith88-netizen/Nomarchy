@@ -22,7 +22,7 @@ export default function TermsContent() {
 
         <Section title="Using Nomarchy">
           By creating an account, you agree to these terms and to our{" "}
-          <Link href="/privacy" style={{ color: C.gold }}>Privacy Policy</Link>. Nomarchy is provided as-is,
+          <Link href="/privacy" style={{ color: C.goldText }}>Privacy Policy</Link>. Nomarchy is provided as-is,
           currently in beta, which means things may change, break, or be reset as it’s actively developed.
         </Section>
 
@@ -44,7 +44,7 @@ export default function TermsContent() {
           <p className="text-sm leading-relaxed" style={{ color: C.cream + "CC" }}>
             You can delete your own account at any time from Your Profile - this is permanent. You choose
             whether your crowns, reviews and photos are deleted with it or stay up without your name (see the{" "}
-            <Link href="/privacy" style={{ color: C.gold }}>Privacy Policy</Link>). We may also suspend or
+            <Link href="/privacy" style={{ color: C.goldText }}>Privacy Policy</Link>). We may also suspend or
             remove an account that violates these terms.
           </p>
         </Section>
@@ -66,13 +66,13 @@ export default function TermsContent() {
 
         <Section title="Contact">
           Questions about these terms? Reach out at{" "}
-          <a href="mailto:hello@nomarchy.ca" style={{ color: C.gold }}>hello@nomarchy.ca</a>.
+          <a href="mailto:hello@nomarchy.ca" style={{ color: C.goldText }}>hello@nomarchy.ca</a>.
         </Section>
 
         <p className="mt-10 text-center text-xs" style={{ color: C.muted }}>
-          <Link href="/" style={{ color: C.gold }}>Back to Nomarchy</Link>
+          <Link href="/" style={{ color: C.goldText }}>Back to Nomarchy</Link>
           {" · "}
-          <Link href="/privacy" style={{ color: C.gold }}>Privacy Policy</Link>
+          <Link href="/privacy" style={{ color: C.goldText }}>Privacy Policy</Link>
         </p>
       </div>
     </FontShell>
@@ -82,7 +82,7 @@ export default function TermsContent() {
 function Section({ title, children }) {
   return (
     <div className="mt-6">
-      <h2 className="text-sm font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>{title}</h2>
+      <h2 className="text-sm font-bold uppercase" style={{ color: C.goldText, letterSpacing: "0.1em" }}>{title}</h2>
       <div className="mt-2 text-sm leading-relaxed" style={{ color: C.cream + "CC" }}>{children}</div>
     </div>
   );

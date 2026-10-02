@@ -996,16 +996,16 @@ export default function Nomarchy() {
                       <div className={n.isNew ? "min-w-0 flex-1" : "min-w-0 flex-1 pl-3.5"}>
                         <div>
                           {n.type === "follow" && <><span style={{ fontWeight: 700 }}>{n.name}</span> started following you</>}
-                          {n.type === "crown" && <><span style={{ fontWeight: 700 }}>{n.name}</span> crowned <span style={{ color: C.gold }}>{n.place}</span> for {n.cuisine}</>}
-                          {n.type === "review" && <><span style={{ fontWeight: 700 }}>{n.name}</span> tried <span style={{ color: C.gold }}>{n.place}</span>{n.cuisine ? ` for ${n.cuisine}` : ""}</>}
-                          {n.type === "endorse" && <><span style={{ fontWeight: 700 }}>{n.name}</span> endorsed your <span style={{ color: C.gold }}>{n.place}</span> pick</>}
-                          {n.type === "promotion" && <><span style={{ fontWeight: 700 }}>{n.name}</span> was promoted to <span style={{ color: C.gold, fontWeight: 700 }}>{n.rank}</span></>}
-                          {n.type === "closed" && n.kind === "crown" && <><span style={{ color: C.gold }}>{n.place}</span> has permanently closed. Time to pick a new favourite?</>}
+                          {n.type === "crown" && <><span style={{ fontWeight: 700 }}>{n.name}</span> crowned <span style={{ color: C.goldText }}>{n.place}</span> for {n.cuisine}</>}
+                          {n.type === "review" && <><span style={{ fontWeight: 700 }}>{n.name}</span> tried <span style={{ color: C.goldText }}>{n.place}</span>{n.cuisine ? ` for ${n.cuisine}` : ""}</>}
+                          {n.type === "endorse" && <><span style={{ fontWeight: 700 }}>{n.name}</span> endorsed your <span style={{ color: C.goldText }}>{n.place}</span> pick</>}
+                          {n.type === "promotion" && <><span style={{ fontWeight: 700 }}>{n.name}</span> was promoted to <span style={{ color: C.goldText, fontWeight: 700 }}>{n.rank}</span></>}
+                          {n.type === "closed" && n.kind === "crown" && <><span style={{ color: C.goldText }}>{n.place}</span> has permanently closed. Time to pick a new favourite?</>}
                           {n.type === "closed" && n.kind === "list" && (<>
-                            <span style={{ color: C.gold }}>{n.place}</span> on your Next in Line has been marked as permanently closed. If this is an error,{" "}
+                            <span style={{ color: C.goldText }}>{n.place}</span> on your Next in Line has been marked as permanently closed. If this is an error,{" "}
                             <button
                               className="font-bold underline"
-                              style={{ color: C.gold }}
+                              style={{ color: C.goldText }}
                               onClick={() => {
                                 setShowNotifications(false);
                                 setFeedbackPrefill(`${n.place} was marked as permanently closed, but I think that's a mistake: `);
@@ -1013,7 +1013,7 @@ export default function Nomarchy() {
                               }}
                             >report it here</button>.
                           </>)}
-                          {n.type === "announcement" && <><span style={{ fontWeight: 700, color: C.gold }}>What's new:</span> {n.text}</>}
+                          {n.type === "announcement" && <><span style={{ fontWeight: 700, color: C.goldText }}>What's new:</span> {n.text}</>}
                         </div>
                         <div className="mt-0.5 text-[10px]" style={{ color: C.muted }}>{timeAgo(n.at)}</div>
                       </div>
@@ -1038,7 +1038,7 @@ export default function Nomarchy() {
               onClick={() => setTab("admin")}
               aria-label="Admin"
               className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold"
-              style={tab === "admin" ? { background: C.gold, color: C.bg } : { color: C.muted, border: `1px solid ${C.cardEdge}` }}
+              style={tab === "admin" ? { background: C.gold, color: C.onGold } : { color: C.muted, border: `1px solid ${C.cardEdge}` }}
             >
               <ShieldCheck size={12} /> Admin
             </button>
@@ -1066,7 +1066,7 @@ export default function Nomarchy() {
           { id: "top25", label: "Best in the Land", icon: TrendingUp },
         ].map(({ id, label, icon: Icon }) => (
           <button key={id} data-tour={`tab-${id}`} onClick={() => setTab(id)} className="flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold sm:px-4"
-            style={tab === id ? { background: C.gold, color: C.bg, border: `1px solid ${C.gold}` } : { background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
+            style={tab === id ? { background: C.gold, color: C.onGold, border: `1px solid ${C.gold}` } : { background: C.card, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <Icon size={15} strokeWidth={2.2} />{label}
           </button>
         ))}
@@ -1119,15 +1119,15 @@ export default function Nomarchy() {
 
           <div className="mb-3 flex items-center justify-end gap-2">
             {kingdomView === "grid" && (
-              <button onClick={() => setOnlyCrowned(!onlyCrowned)} className="min-w-[124px] rounded-full px-3 py-1 text-center text-xs font-semibold" style={{ background: onlyCrowned ? C.gold : C.card, color: onlyCrowned ? C.bg : C.muted, border: `1px solid ${C.cardEdge}` }}>
+              <button onClick={() => setOnlyCrowned(!onlyCrowned)} className="min-w-[124px] rounded-full px-3 py-1 text-center text-xs font-semibold" style={{ background: onlyCrowned ? C.gold : C.card, color: onlyCrowned ? C.onGold : C.muted, border: `1px solid ${C.cardEdge}` }}>
                 {onlyCrowned ? "Showing crowned" : "Show all"}
               </button>
             )}
             <div className="flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}` }}>
-              <button onClick={() => setKingdomView("grid")} className="px-3 py-1 text-xs font-semibold" style={{ background: kingdomView === "grid" ? C.gold : C.card, color: kingdomView === "grid" ? C.bg : C.muted }}>
+              <button onClick={() => setKingdomView("grid")} className="px-3 py-1 text-xs font-semibold" style={{ background: kingdomView === "grid" ? C.gold : C.card, color: kingdomView === "grid" ? C.onGold : C.muted }}>
                 Grid
               </button>
-              <button onClick={() => setKingdomView("map")} className="px-3 py-1 text-xs font-semibold" style={{ background: kingdomView === "map" ? C.gold : C.card, color: kingdomView === "map" ? C.bg : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
+              <button onClick={() => setKingdomView("map")} className="px-3 py-1 text-xs font-semibold" style={{ background: kingdomView === "map" ? C.gold : C.card, color: kingdomView === "map" ? C.onGold : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
                 Map
               </button>
             </div>
@@ -1193,7 +1193,7 @@ export default function Nomarchy() {
                   {newCuisineEmoji || "🍽️"}
                 </button>
                 <input aria-label="New cuisine name" autoFocus value={newCuisine} onChange={(e) => setNewCuisine(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddCuisine()} placeholder="e.g. Pho, Wings" className="w-full rounded-lg px-3 py-2 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
-                <button onClick={handleAddCuisine} className="rounded-lg px-3 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>Add</button>
+                <button onClick={handleAddCuisine} className="rounded-lg px-3 text-sm font-bold" style={{ background: C.gold, color: C.onGold }}>Add</button>
               </div>
               {pickingNewEmoji && <CuisineEmojiGrid onPick={(e) => { setNewCuisineEmoji(e); setPickingNewEmoji(false); }} />}
               {!pickingNewEmoji && !newCuisineEmoji && <p className="mt-1.5 text-xs" style={{ color: C.muted }}>Tap the plate to pick an icon for its map pins.</p>}
@@ -1210,7 +1210,7 @@ export default function Nomarchy() {
           <div className="mb-4 rounded-xl" style={{ background: C.card, border: `1px solid ${C.gold}66` }}>
             <button onClick={() => setCouncilOpen((v) => !v)} aria-expanded={councilOpen} className="flex w-full items-center justify-between gap-3 p-4 text-left">
               <span>
-                <span className="flex items-center gap-1.5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>
+                <span className="flex items-center gap-1.5 text-xs font-bold uppercase" style={{ color: C.goldText, letterSpacing: "0.1em" }}>
                   <Crown size={12} /> The Privy Council
                 </span>
                 <span className="mt-1 block text-sm" style={{ color: C.cream }}>Can&apos;t decide what to eat this evening?</span>
@@ -1225,7 +1225,7 @@ export default function Nomarchy() {
                 value={pcCuisine}
                 onChange={(e) => { setPcCuisine(e.target.value); setPcIndex(0); }}
                 className="mt-2 w-full rounded-lg px-3 py-2 text-sm outline-none"
-                style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: pcCuisine ? C.gold : C.cream }}
+                style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: pcCuisine ? C.goldText : C.cream }}
               >
                 <option value="">Any cuisine</option>
                 {councilCuisineOptions.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -1242,7 +1242,7 @@ export default function Nomarchy() {
                       on screen every time you tapped it. */}
                   <div className="mt-2 flex gap-2">
                     {!councilPick.mine && (
-                      <button onClick={() => handleAddCouncilPick(councilPick)} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>Add to my list</button>
+                      <button onClick={() => handleAddCouncilPick(councilPick)} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ background: C.gold, color: C.onGold }}>Add to my list</button>
                     )}
                     <button onClick={handleAskCouncil} disabled={councilPool.length <= 1} className={councilPick.mine ? "flex-1 rounded-lg py-2 text-xs font-bold" : "rounded-lg px-3 py-2 text-xs font-bold"} style={councilPool.length <= 1 ? { border: `1px solid ${C.cardEdge}`, color: C.cardEdge } : { border: `1px solid ${C.cardEdge}`, color: C.muted }}>Show me another</button>
                   </div>
@@ -1256,8 +1256,8 @@ export default function Nomarchy() {
           </div>
 
           <div className="mb-3 flex gap-2">
-            <button onClick={() => { setAddPretenderPrefillName(""); setAddPretender(true); }} className="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold" style={{ background: C.gold, color: C.bg }}><Plus size={16} /> Add a place</button>
-            <button onClick={() => setImporting(true)} className="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold" style={{ border: `1px solid ${C.gold}66`, color: C.gold }}><ClipboardPaste size={16} /> Import a list</button>
+            <button onClick={() => { setAddPretenderPrefillName(""); setAddPretender(true); }} className="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold" style={{ background: C.gold, color: C.onGold }}><Plus size={16} /> Add a place</button>
+            <button onClick={() => setImporting(true)} className="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold" style={{ border: `1px solid ${C.gold}66`, color: C.goldText }}><ClipboardPaste size={16} /> Import a list</button>
           </div>
 
           {pretenders.length > 0 && (
@@ -1266,17 +1266,17 @@ export default function Nomarchy() {
                 value={nilCuisineFilter}
                 onChange={(e) => setNilCuisineFilter(e.target.value)}
                 className="rounded-lg px-3 py-1.5 text-xs outline-none"
-                style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: nilCuisineFilter ? C.gold : C.cream }}
+                style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: nilCuisineFilter ? C.goldText : C.cream }}
               >
                 <option value="">All cuisines</option>
                 {nilCuisineOptions.map((c) => <option key={c} value={c}>{c}</option>)}
                 {nilHasUncategorized && <option value="__uncategorized__">Uncategorized</option>}
               </select>
               <div className="flex shrink-0 overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}` }}>
-                <button onClick={() => setNilView("grid")} className="px-3 py-1 text-xs font-semibold" style={{ background: nilView === "grid" ? C.gold : C.card, color: nilView === "grid" ? C.bg : C.muted }}>
+                <button onClick={() => setNilView("grid")} className="px-3 py-1 text-xs font-semibold" style={{ background: nilView === "grid" ? C.gold : C.card, color: nilView === "grid" ? C.onGold : C.muted }}>
                   Grid
                 </button>
-                <button onClick={() => setNilView("map")} className="px-3 py-1 text-xs font-semibold" style={{ background: nilView === "map" ? C.gold : C.card, color: nilView === "map" ? C.bg : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
+                <button onClick={() => setNilView("map")} className="px-3 py-1 text-xs font-semibold" style={{ background: nilView === "map" ? C.gold : C.card, color: nilView === "map" ? C.onGold : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
                   Map
                 </button>
               </div>
@@ -1314,7 +1314,7 @@ export default function Nomarchy() {
                 <button
                   onClick={() => { setAddPretenderPrefillName(pretenderSearch); setAddPretender(true); }}
                   className="mx-auto mt-2 flex items-center gap-1.5 text-sm font-semibold"
-                  style={{ color: C.gold }}
+                  style={{ color: C.goldText }}
                 >
                   <Plus size={14} /> Add &ldquo;{pretenderSearch}&rdquo; to your list
                 </button>
@@ -1329,7 +1329,7 @@ export default function Nomarchy() {
                   aria-selected={nilList === id}
                   onClick={() => setNilList(id)}
                   className="flex-1 py-2 text-sm font-semibold"
-                  style={{ background: nilList === id ? C.gold : C.card, color: nilList === id ? C.bg : C.muted, borderLeft: i > 0 ? `1px solid ${C.cardEdge}` : "none" }}
+                  style={{ background: nilList === id ? C.gold : C.card, color: nilList === id ? C.onGold : C.muted, borderLeft: i > 0 ? `1px solid ${C.cardEdge}` : "none" }}
                 >
                   {label} ({n})
                 </button>
@@ -1364,7 +1364,7 @@ export default function Nomarchy() {
         {tab === "court" && (<div>
           <p className="mb-3 text-sm" style={{ color: C.muted }}>Your friends&apos; reigning picks. Endorse the good ones, or add them to your own shortlist.</p>
 
-          <button onClick={handleInviteFriend} className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>
+          <button onClick={handleInviteFriend} className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.onGold }}>
             <Share2 size={14} /> Invite a friend
           </button>
 
@@ -1374,7 +1374,7 @@ export default function Nomarchy() {
 
           <form onSubmit={handleAddFollow} className="mb-4 flex gap-2">
             <input aria-label="Follow by username" value={followInput} onChange={(e) => setFollowInput(e.target.value)} placeholder="Follow by username" className="w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
-            <button type="submit" disabled={followBusy || !followInput.trim()} className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>
+            <button type="submit" disabled={followBusy || !followInput.trim()} className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-bold" style={{ background: C.gold, color: C.onGold }}>
               {followBusy ? <Loader2 size={13} className="animate-spin" /> : <UserPlus size={13} />} Follow
             </button>
           </form>
@@ -1392,7 +1392,7 @@ export default function Nomarchy() {
                     onClick={() => handleFollowBack(f.id)}
                     disabled={followBackBusy === f.id}
                     className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
-                    style={{ background: C.gold, color: C.bg }}
+                    style={{ background: C.gold, color: C.onGold }}
                   >
                     {followBackBusy === f.id ? <Loader2 size={11} className="animate-spin" /> : <UserPlus size={11} />}
                     Follow back
@@ -1412,19 +1412,19 @@ export default function Nomarchy() {
             <div className="mb-3 flex items-center justify-between gap-2">
               {courtView === "grid" ? (
                 <div className="flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}` }}>
-                  <button onClick={() => changeCourtDensity("expanded")} className="px-3 py-1 text-xs font-semibold" style={{ background: courtDensity === "expanded" ? C.gold : C.card, color: courtDensity === "expanded" ? C.bg : C.muted }}>
+                  <button onClick={() => changeCourtDensity("expanded")} className="px-3 py-1 text-xs font-semibold" style={{ background: courtDensity === "expanded" ? C.gold : C.card, color: courtDensity === "expanded" ? C.onGold : C.muted }}>
                     Expanded
                   </button>
-                  <button onClick={() => changeCourtDensity("compact")} className="px-3 py-1 text-xs font-semibold" style={{ background: courtDensity === "compact" ? C.gold : C.card, color: courtDensity === "compact" ? C.bg : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
+                  <button onClick={() => changeCourtDensity("compact")} className="px-3 py-1 text-xs font-semibold" style={{ background: courtDensity === "compact" ? C.gold : C.card, color: courtDensity === "compact" ? C.onGold : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
                     Compact
                   </button>
                 </div>
               ) : <span />}
               <div className="flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}` }}>
-                <button onClick={() => setCourtView("grid")} className="px-3 py-1 text-xs font-semibold" style={{ background: courtView === "grid" ? C.gold : C.card, color: courtView === "grid" ? C.bg : C.muted }}>
+                <button onClick={() => setCourtView("grid")} className="px-3 py-1 text-xs font-semibold" style={{ background: courtView === "grid" ? C.gold : C.card, color: courtView === "grid" ? C.onGold : C.muted }}>
                   Grid
                 </button>
-                <button onClick={() => setCourtView("map")} className="px-3 py-1 text-xs font-semibold" style={{ background: courtView === "map" ? C.gold : C.card, color: courtView === "map" ? C.bg : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
+                <button onClick={() => setCourtView("map")} className="px-3 py-1 text-xs font-semibold" style={{ background: courtView === "map" ? C.gold : C.card, color: courtView === "map" ? C.onGold : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
                   Map
                 </button>
               </div>
@@ -1498,10 +1498,10 @@ export default function Nomarchy() {
             {top25Scope === "friends" ? "The most-crowned restaurants in your Court" : "The most-crowned restaurants across everyone's public kingdoms"} - or search for any of them.
           </p>
           <div className="mb-3 flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}`, width: "fit-content" }}>
-            <button onClick={() => setTop25Scope("everyone")} className="px-4 py-1.5 text-xs font-semibold" style={{ background: top25Scope === "everyone" ? C.gold : C.card, color: top25Scope === "everyone" ? C.bg : C.muted }}>
+            <button onClick={() => setTop25Scope("everyone")} className="px-4 py-1.5 text-xs font-semibold" style={{ background: top25Scope === "everyone" ? C.gold : C.card, color: top25Scope === "everyone" ? C.onGold : C.muted }}>
               Everyone
             </button>
-            <button onClick={() => setTop25Scope("friends")} className="px-4 py-1.5 text-xs font-semibold" style={{ background: top25Scope === "friends" ? C.gold : C.card, color: top25Scope === "friends" ? C.bg : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
+            <button onClick={() => setTop25Scope("friends")} className="px-4 py-1.5 text-xs font-semibold" style={{ background: top25Scope === "friends" ? C.gold : C.card, color: top25Scope === "friends" ? C.onGold : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
               My Court
             </button>
           </div>
@@ -1565,7 +1565,7 @@ export default function Nomarchy() {
                     <span className="truncate text-sm font-semibold">{r.name}</span>
                     <div className="truncate text-xs" style={{ color: C.muted }}>{[r.area, r.address].filter(Boolean).join(" · ")}</div>
                   </div>
-                  <span className="flex shrink-0 items-center gap-0.5 text-xs font-bold" style={{ color: C.gold }}><Plus size={12} /> Add</span>
+                  <span className="flex shrink-0 items-center gap-0.5 text-xs font-bold" style={{ color: C.goldText }}><Plus size={12} /> Add</span>
                 </div>
               ))}
             </div>
@@ -1589,7 +1589,7 @@ export default function Nomarchy() {
                 ["Total crowns", adminData.stats.totalCrowns],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-xl p-3 text-center" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
-                  <div className="text-2xl" style={{ ...display, fontWeight: 900, color: C.gold }}>{value}</div>
+                  <div className="text-2xl" style={{ ...display, fontWeight: 900, color: C.goldText }}>{value}</div>
                   <div className="mt-0.5 text-xs" style={{ color: C.muted }}>{label}</div>
                 </div>
               ))}
@@ -1629,8 +1629,8 @@ export default function Nomarchy() {
               {adminData.signupSources.rows.map((r) => (
                 <div key={r.source} className="grid grid-cols-[1fr_5.5rem_5rem] gap-x-4 px-3 py-2 text-sm" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
                   <span className="truncate font-semibold">{r.source}</span>
-                  <span className="text-right" style={{ color: C.gold }}>{r.week}</span>
-                  <span className="text-right" style={{ color: C.gold }}>{r.allTime}</span>
+                  <span className="text-right" style={{ color: C.goldText }}>{r.week}</span>
+                  <span className="text-right" style={{ color: C.goldText }}>{r.allTime}</span>
                 </div>
               ))}
               <div className="grid grid-cols-[1fr_5.5rem_5rem] gap-x-4 px-3 py-2 text-sm" style={{ borderTop: `1px solid ${C.cardEdge}`, color: C.muted }}>
@@ -1661,25 +1661,25 @@ export default function Nomarchy() {
             <AdminSection title="Popular places and cuisines">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Most-crowned places</h3>
+                <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.goldText, letterSpacing: "0.14em" }}>Most-crowned places</h3>
                 <div className="rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
                   {adminData.topPlaces.length === 0 && <p className="p-3 text-sm" style={{ color: C.muted }}>Nothing crowned yet.</p>}
                   {adminData.topPlaces.map((p, i) => (
                     <div key={p.name} className="flex items-center justify-between px-3 py-2 text-sm" style={i > 0 ? { borderTop: `1px solid ${C.cardEdge}` } : undefined}>
                       <span className="truncate">{p.name}</span>
-                      <span className="shrink-0 font-bold" style={{ color: C.gold }}>{p.count}</span>
+                      <span className="shrink-0 font-bold" style={{ color: C.goldText }}>{p.count}</span>
                     </div>
                   ))}
                 </div>
               </div>
               <div>
-                <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Most-crowned cuisines</h3>
+                <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.goldText, letterSpacing: "0.14em" }}>Most-crowned cuisines</h3>
                 <div className="rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
                   {adminData.topCuisines.length === 0 && <p className="p-3 text-sm" style={{ color: C.muted }}>Nothing crowned yet.</p>}
                   {adminData.topCuisines.map((c, i) => (
                     <div key={c.name} className="flex items-center justify-between px-3 py-2 text-sm" style={i > 0 ? { borderTop: `1px solid ${C.cardEdge}` } : undefined}>
                       <span className="truncate">{c.name}</span>
-                      <span className="shrink-0 font-bold" style={{ color: C.gold }}>{c.count}</span>
+                      <span className="shrink-0 font-bold" style={{ color: C.goldText }}>{c.count}</span>
                     </div>
                   ))}
                 </div>
@@ -1701,9 +1701,9 @@ export default function Nomarchy() {
                 {adminData.googleUsage.map((u) => (
                   <div key={u.kind} className="grid grid-cols-[1fr_3.5rem_4.5rem_4rem] gap-x-3 px-3 py-2 text-sm" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
                     <span className="truncate font-semibold">{GOOGLE_USAGE_LABELS[u.kind] || u.kind}</span>
-                    <span className="text-right" style={{ color: C.gold }}>{u.today}</span>
-                    <span className="text-right" style={{ color: C.gold }}>{u.thisMonth}</span>
-                    <span className="text-right" style={{ color: C.gold }}>{u.allTime}</span>
+                    <span className="text-right" style={{ color: C.goldText }}>{u.today}</span>
+                    <span className="text-right" style={{ color: C.goldText }}>{u.thisMonth}</span>
+                    <span className="text-right" style={{ color: C.goldText }}>{u.allTime}</span>
                   </div>
                 ))}
                 <p className="px-3 py-2 text-xs leading-relaxed" style={{ color: C.muted, borderTop: `1px solid ${C.cardEdge}` }}>
@@ -1727,7 +1727,7 @@ export default function Nomarchy() {
             </>)}
             </AdminSection>
 
-            <div className="mt-5 mb-1 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Tools</div>
+            <div className="mt-5 mb-1 text-xs font-bold uppercase" style={{ color: C.goldText, letterSpacing: "0.14em" }}>Tools</div>
             <AdminSection title="Fix a restaurant"><FixThroneTool cuisines={selectableCuisines} /></AdminSection>
             <AdminSection title="Match places to Google"><PlaceMatchTool /></AdminSection>
             <AdminSection title="Check for closures"><ClosureCheckTool /></AdminSection>
@@ -1742,7 +1742,7 @@ export default function Nomarchy() {
       {/* Always in the page, so screen readers announce each message. */}
       <div role="status" aria-live="polite" className="sr-only">{toast}</div>
       {toast && (
-        <div aria-hidden="true" className="fixed bottom-5 left-1/2 z-[1200] -translate-x-1/2 rounded-full px-4 py-2 text-sm font-semibold shadow-lg" style={{ background: C.gold, color: C.bg }}>
+        <div aria-hidden="true" className="fixed bottom-5 left-1/2 z-[1200] -translate-x-1/2 rounded-full px-4 py-2 text-sm font-semibold shadow-lg" style={{ background: C.gold, color: C.onGold }}>
           <Check size={14} className="mr-1 inline" />{toast}
         </div>)}
 
@@ -1877,11 +1877,11 @@ function RankLadder({ score }) {
             style={{ borderTop: i > 0 ? `1px solid ${C.cardEdge}` : "none" }}>
             <div className="flex items-center gap-2">
               <Crown size={13} style={{ color: reached ? C.gold : C.muted }} fill={reached ? C.gold : "none"} strokeWidth={reached ? 0 : 2} />
-              <span className="text-sm" style={{ color: isCurrent ? C.gold : reached ? C.cream : C.muted, fontWeight: isCurrent ? 700 : 500 }}>
+              <span className="text-sm" style={{ color: isCurrent ? C.goldText : reached ? C.cream : C.muted, fontWeight: isCurrent ? 700 : 500 }}>
                 {r.title}
               </span>
               {isCurrent && (
-                <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: C.gold, color: C.bg, letterSpacing: "0.06em" }}>
+                <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: C.gold, color: C.onGold, letterSpacing: "0.06em" }}>
                   You are here
                 </span>
               )}
@@ -1918,7 +1918,7 @@ function PretenderCard({ p, closed, selectableCuisines, onRemove, onChangeNote, 
               </span>
             )}
             {courtCount > 0 && !open && (
-              <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: C.gold + "22", color: C.gold }}>
+              <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: C.gold + "22", color: C.goldText }}>
                 <Crown size={10} /> {courtCount} from Court
               </span>
             )}
@@ -1938,7 +1938,7 @@ function PretenderCard({ p, closed, selectableCuisines, onRemove, onChangeNote, 
       </div>
       {open && (<>
         {safeMapsUrl(p.mapsUrl) && (
-          <a href={safeMapsUrl(p.mapsUrl)} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.gold }}>
+          <a href={safeMapsUrl(p.mapsUrl)} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.goldText }}>
             <MapPin size={11} /> Map <ExternalLink size={10} />
           </a>
         )}
@@ -1946,7 +1946,7 @@ function PretenderCard({ p, closed, selectableCuisines, onRemove, onChangeNote, 
         <div className="mt-2 rounded-lg p-2.5" style={{ background: C.bg, border: `1px dashed ${C.gold}66` }}>
           {friendMatches.slice(0, 2).map((m, i) => (
             <p key={i} className="text-xs leading-relaxed" style={{ color: C.cream + "CC" }}>
-              {m.crowned ? <Crown size={11} className="mr-1 inline" style={{ color: C.gold }} /> : <Check size={11} className="mr-1 inline" style={{ color: C.green }} />}
+              {m.crowned ? <Crown size={11} className="mr-1 inline" style={{ color: C.goldText }} /> : <Check size={11} className="mr-1 inline" style={{ color: C.green }} />}
               <strong>{m.friend}</strong>{m.crowned ? ` crowned this for ${m.cuisine}` : "'s been"}
               {m.verdict && <> - <span style={{ color: m.verdict === "worth_it" ? C.green : C.muted, fontWeight: 700 }}>{m.verdict === "worth_it" ? "Worth it" : "Not for me"}</span></>}
               {m.text && <>: &ldquo;{m.text}&rdquo;</>}
@@ -1997,7 +1997,7 @@ function PretenderCard({ p, closed, selectableCuisines, onRemove, onChangeNote, 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           onClick={() => onCrown(p)}
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.onGold }}>
           <Crown size={13} /> Crown it
         </button>
         <button
@@ -2101,7 +2101,7 @@ function AvatarPicker({ userId, url, onChange }) {
     <div className="flex flex-col items-center">
       <label className="relative cursor-pointer">
         <Avatar url={url} size={72} />
-        <span className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full" style={{ background: C.gold, color: C.bg, border: `2px solid ${C.card}` }}>
+        <span className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full" style={{ background: C.gold, color: C.onGold, border: `2px solid ${C.card}` }}>
           {uploading ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
         </span>
         <input aria-label="Upload a profile photo" type="file" accept="image/*" onChange={handleFile} disabled={uploading} className="hidden" />
@@ -2142,7 +2142,7 @@ function RestaurantRow({ p, rank, onOpen }) {
       style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}
     >
       {rank !== undefined && (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold" style={{ background: rank < 3 ? C.gold : C.bg, color: rank < 3 ? C.bg : C.muted }}>{rank + 1}</div>
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold" style={{ background: rank < 3 ? C.gold : C.bg, color: rank < 3 ? C.onGold : C.muted }}>{rank + 1}</div>
       )}
       <div className="min-w-0 flex-1">
         <span className="truncate text-sm font-semibold">{p.name}</span>
@@ -2150,11 +2150,11 @@ function RestaurantRow({ p, rank, onOpen }) {
       </div>
       <div className="shrink-0 text-right">
         {safeMapsUrl(p.mapsUrl) && (
-          <a href={safeMapsUrl(p.mapsUrl)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="mb-0.5 flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.gold }}>
+          <a href={safeMapsUrl(p.mapsUrl)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="mb-0.5 flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.goldText }}>
             Map <ExternalLink size={10} />
           </a>
         )}
-        <div className="text-lg" style={{ ...display, fontWeight: 700, color: C.gold }}>{p.count}</div>
+        <div className="text-lg" style={{ ...display, fontWeight: 700, color: C.goldText }}>{p.count}</div>
         <div className="text-[10px] uppercase" style={{ color: C.muted, letterSpacing: "0.08em" }}>{p.count === 1 ? "crown" : "crowns"}</div>
       </div>
     </div>
@@ -2203,15 +2203,15 @@ function RestaurantProfileModal({ restaurant, onClose }) {
           {entries && entries.length > 0 && (
             <div className="mb-4 grid grid-cols-3 gap-2">
               <div className="rounded-xl p-3 text-center" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
-                <div className="text-xl" style={{ ...display, fontWeight: 700, color: C.gold }}>{entries.length}</div>
+                <div className="text-xl" style={{ ...display, fontWeight: 700, color: C.goldText }}>{entries.length}</div>
                 <div className="text-xs" style={{ color: C.muted }}>{entries.length === 1 ? "crown" : "crowns"}</div>
               </div>
               <div className="rounded-xl p-3 text-center" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
-                <div className="text-xl" style={{ ...display, fontWeight: 700, color: C.gold }}>{wantingCount === null ? "-" : wantingCount}</div>
+                <div className="text-xl" style={{ ...display, fontWeight: 700, color: C.goldText }}>{wantingCount === null ? "-" : wantingCount}</div>
                 <div className="text-xs" style={{ color: C.muted }}>want to try</div>
               </div>
               <div className="rounded-xl p-3 text-center" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
-                <div className="text-xl" style={{ ...display, fontWeight: 700, color: C.gold }}>{visitCount === null ? "-" : visitCount}</div>
+                <div className="text-xl" style={{ ...display, fontWeight: 700, color: C.goldText }}>{visitCount === null ? "-" : visitCount}</div>
                 <div className="text-xs" style={{ color: C.muted }}>been, not crowned</div>
               </div>
             </div>
@@ -2227,13 +2227,13 @@ function RestaurantProfileModal({ restaurant, onClose }) {
                   <span className="truncate text-sm font-semibold">{e.displayName || (e.username ? `@${e.username}` : "Someone")}</span>
                   {e.cuisine && <span className="ml-1.5 text-xs" style={{ color: C.muted }}>crowned it {e.cuisine}</span>}
                 </div>
-                {e.rating && <span className="flex shrink-0 items-center gap-0.5 text-xs" style={{ color: C.gold }}><Star size={11} fill={C.gold} /> {e.rating}</span>}
+                {e.rating && <span className="flex shrink-0 items-center gap-0.5 text-xs" style={{ color: C.goldText }}><Star size={11} fill={C.gold} /> {e.rating}</span>}
               </div>
               {e.decree && <p className="mt-1.5 text-sm leading-relaxed">{e.decree}</p>}
               <PhotoStrip photos={e.photos} />
               <div className="mt-1.5 flex items-center gap-3 text-xs" style={{ color: C.muted }}>
                 <span>crowned {fmt(e.crownedAt)}</span>
-                {safeMapsUrl(e.mapsUrl) && <a href={safeMapsUrl(e.mapsUrl)} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
+                {safeMapsUrl(e.mapsUrl) && <a href={safeMapsUrl(e.mapsUrl)} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 font-semibold" style={{ color: C.goldText }}>Map <ExternalLink size={10} /></a>}
               </div>
             </div>
           ))}
@@ -2413,7 +2413,7 @@ function FixThroneTool({ cuisines }) {
       <p className="mb-2 text-xs" style={{ color: C.muted }}>Corrects address, neighbourhood, or cuisine on anyone&apos;s crown - never their review text or photos.</p>
       <div className="flex gap-2">
         <input aria-label="Search by restaurant name" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="Search by restaurant name..." className="w-full rounded-lg px-3 py-2 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
-        <button onClick={search} disabled={searching || !query.trim()} className="flex shrink-0 items-center justify-center rounded-lg px-3" style={{ background: C.gold, color: C.bg }}>
+        <button onClick={search} disabled={searching || !query.trim()} className="flex shrink-0 items-center justify-center rounded-lg px-3" style={{ background: C.gold, color: C.onGold }}>
           {searching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
         </button>
       </div>
@@ -2455,7 +2455,7 @@ function FixThroneTool({ cuisines }) {
                   </div>
                   <div className="mt-2 flex gap-2">
                     <button onClick={() => setEditingId(null)} className="rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>Cancel</button>
-                    <button disabled={saving} onClick={() => save(r)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>
+                    <button disabled={saving} onClick={() => save(r)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.onGold }}>
                       {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Save
                     </button>
                   </div>
@@ -2509,7 +2509,7 @@ function ReviewCard({ group: g, saving, hasCoords, entryCount, onChoose, onSkip,
       <div className="mt-2 flex gap-1.5">
         <input aria-label="Search again" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="Search again" className="min-w-0 flex-1 rounded-lg px-2 py-1.5 text-xs outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
         <input aria-label="City" value={city} onChange={(e) => setCity(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="City" className="w-20 rounded-lg px-2 py-1.5 text-xs outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
-        <button onClick={search} disabled={busy || !query.trim()} aria-label="Search" className="flex shrink-0 items-center justify-center rounded-lg px-2.5" style={busy || !query.trim() ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.bg }}>
+        <button onClick={search} disabled={busy || !query.trim()} aria-label="Search" className="flex shrink-0 items-center justify-center rounded-lg px-2.5" style={busy || !query.trim() ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.onGold }}>
           {busy ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
         </button>
       </div>
@@ -2604,7 +2604,7 @@ function PlaceMatchTool() {
       <p className="mb-2 text-xs" style={{ color: C.muted }}>
         Finds the real Google place for saved crowns and Next in Line entries that don&apos;t have one yet. Scanning only looks - nothing is saved until you approve it, and names, addresses and reviews are never changed.
       </p>
-      <button onClick={scan} disabled={phase === "scanning" || saving} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold" style={phase === "scanning" ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.bg }}>
+      <button onClick={scan} disabled={phase === "scanning" || saving} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold" style={phase === "scanning" ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.onGold }}>
         {phase === "scanning" ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
         {phase === "scanning" ? `Checked ${progress.checked} of ${progress.total || "..."}` : phase === "done" ? "Scan again" : "Scan places"}
       </button>
@@ -2621,7 +2621,7 @@ function PlaceMatchTool() {
             {auto.length} clear match{auto.length === 1 ? "" : "es"} · {review.length} to review{failed.length > 0 ? ` · ${failed.length} couldn't be checked` : ""}
           </div>
           {auto.length > 0 && (
-            <button onClick={saveAuto} disabled={saving || phase === "scanning"} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold" style={saving || phase === "scanning" ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.bg }}>
+            <button onClick={saveAuto} disabled={saving || phase === "scanning"} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold" style={saving || phase === "scanning" ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.onGold }}>
               {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
               Save {auto.length} clear match{auto.length === 1 ? "" : "es"} ({auto.reduce((n, g) => n + entryCount(g), 0)} entries)
             </button>
@@ -2751,7 +2751,7 @@ function ClosureCheckTool() {
       <p className="mb-2 text-xs" style={{ color: C.muted }}>
         Asks Google which saved places have permanently closed. Checking only looks - a place is only marked closed when you press the button on it. Marking greys it out for everyone who saved it, takes it off the maps, Best in the Land and recommendations, and tells each of them. Worth running every few months.
       </p>
-      <button onClick={run} disabled={phase === "running"} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold" style={phase === "running" ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.bg }}>
+      <button onClick={run} disabled={phase === "running"} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold" style={phase === "running" ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.onGold }}>
         {phase === "running" ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
         {phase === "running" ? `Checked ${progress.checked} of ${progress.total || "..."}` : phase === "done" ? "Check again" : "Check for closures"}
       </button>
@@ -2915,13 +2915,13 @@ function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji, onChan
       {r ? (<div className="mt-2">
         <h3 className={featured ? "text-2xl" : "text-xl"} style={{ ...display, fontWeight: 700 }}>
           {r.name}
-          <Crown size={featured ? 18 : 16} className="relative -top-0.5 ml-2 inline" style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
+          <Crown size={featured ? 18 : 16} className="relative -top-0.5 ml-2 inline" style={{ color: C.goldText }} fill={C.gold} strokeWidth={0} />
           {closed && <ClosedBadge />}
         </h3>
         <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
           {(r.area || r.address) && (<><MapPin size={11} /> {r.area || r.address}<span className="mx-1">·</span></>)}
           crowned {fmt(r.crownedAt)}
-          {safeMapsUrl(r.mapsUrl) && <a href={safeMapsUrl(r.mapsUrl)} target="_blank" rel="noreferrer" className="ml-1 flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
+          {safeMapsUrl(r.mapsUrl) && <a href={safeMapsUrl(r.mapsUrl)} target="_blank" rel="noreferrer" className="ml-1 flex items-center gap-0.5 font-semibold" style={{ color: C.goldText }}>Map <ExternalLink size={10} /></a>}
         </div>
         {editing ? (
           <div className="mt-2">
@@ -2958,7 +2958,7 @@ function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji, onChan
             {saveErr && <p className="mt-1 text-xs" style={{ color: C.coup }}>{saveErr}</p>}
             <div className="mt-2 flex items-center gap-2">
               <button onClick={() => setEditing(false)} className="rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>Cancel</button>
-              <button disabled={decreeText.trim().length < 30 || saving} onClick={confirmEdit} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={decreeText.trim().length >= 30 ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}>
+              <button disabled={decreeText.trim().length < 30 || saving} onClick={confirmEdit} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={decreeText.trim().length >= 30 ? { background: C.gold, color: C.onGold } : { background: C.cardEdge, color: C.muted }}>
                 {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Save
               </button>
               {/* Un-crown lives here, behind the edit pencil, rather than
@@ -2972,7 +2972,7 @@ function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji, onChan
           </div>
         ) : (
           <p className="mt-2 text-sm leading-relaxed" style={{ color: C.cream + "E6" }}>
-            <ScrollText size={13} className="mr-1 inline" style={{ color: C.gold }} />{r.decree}
+            <ScrollText size={13} className="mr-1 inline" style={{ color: C.goldText }} />{r.decree}
             {(onEditDecree || onMoveCuisine || onEditLocation) && (
               <button onClick={startEdit} aria-label="Edit" title="Edit" className="ml-1.5 inline-flex align-middle rounded p-1" style={{ color: C.muted }}>
                 <Pencil size={12} />
@@ -2988,7 +2988,7 @@ function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji, onChan
       </div>) : (<div className="mt-2">
         <p className="text-sm italic" style={{ color: C.muted }}>{featured ? "No overall favourite crowned yet." : "This throne sits empty."}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button onClick={() => setModal({ cuisineId, cuisineName, mode: "claim" })} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}><Crown size={13} /> {featured ? "Crown your favourite" : "Crown a spot"}</button>
+          <button onClick={() => setModal({ cuisineId, cuisineName, mode: "claim" })} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.onGold }}><Crown size={13} /> {featured ? "Crown your favourite" : "Crown a spot"}</button>
           {onHide && (
             <button onClick={onHide} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><X size={13} /> Hide this cuisine</button>
           )}
@@ -3097,7 +3097,7 @@ function SignInScreen() {
           >
             {theme === "light" ? <Moon size={14} /> : <Sun size={14} />}
           </button>
-          <a href="#sign-in" className="rounded-full px-4 py-2 text-xs font-bold sm:text-sm" style={{ background: C.gold, color: C.bg }}>Open the app</a>
+          <a href="#sign-in" className="rounded-full px-4 py-2 text-xs font-bold sm:text-sm" style={{ background: C.gold, color: C.onGold }}>Open the app</a>
         </div>
       </nav>
 
@@ -3113,7 +3113,7 @@ function SignInScreen() {
           <span style={{ "--r": "-6deg", animation: "nomarchy-float 6.6s ease-in-out infinite 1.2s" }}>🥐</span>
         </div>
 
-        <div className="mb-4 inline-block rounded-full px-3 py-1 text-xs font-bold uppercase" style={{ background: C.card, color: C.gold, letterSpacing: "0.1em", border: `1px solid ${C.cardEdge}` }}>
+        <div className="mb-4 inline-block rounded-full px-3 py-1 text-xs font-bold uppercase" style={{ background: C.card, color: C.goldText, letterSpacing: "0.1em", border: `1px solid ${C.cardEdge}` }}>
           Toronto Beta
         </div>
         <h1 className="text-3xl leading-[1.15] sm:text-5xl" style={{ ...display, fontWeight: 900 }}>
@@ -3124,7 +3124,7 @@ function SignInScreen() {
           One throne per cuisine. When something better comes along, stage a coup. Compare kingdoms with friends, and climb the ranks as your picks earn trust.
         </p>
         <div className="mt-6 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
-          <a href="#sign-in" className="rounded-full px-6 py-3 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>Sign up &mdash; it&apos;s free</a>
+          <a href="#sign-in" className="rounded-full px-6 py-3 text-sm font-bold" style={{ background: C.gold, color: C.onGold }}>Sign up &mdash; it&apos;s free</a>
           <a href="#preview" className="rounded-full px-6 py-3 text-sm font-bold" style={{ border: `1px solid ${C.cardEdge}`, color: C.cream }}>See how it works</a>
         </div>
         <p className="mt-3 text-xs" style={{ color: C.muted }}>Free to use &middot; Toronto beta &middot; No ads, ever</p>
@@ -3168,7 +3168,7 @@ function SignInScreen() {
                 style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
               />
               {error && <p className="text-xs" style={{ color: C.coup }}>{error}</p>}
-              <button type="submit" disabled={verifying} className="flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>
+              <button type="submit" disabled={verifying} className="flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.onGold }}>
                 {verifying ? <Loader2 size={15} className="animate-spin" /> : <Crown size={15} />}
                 {verifying ? "Verifying..." : "Verify and sign in"}
               </button>
@@ -3188,7 +3188,7 @@ function SignInScreen() {
                 onClick={handleGoogle}
                 disabled={googleBusy}
                 className="flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold"
-                style={{ background: C.gold, color: C.bg }}
+                style={{ background: C.gold, color: C.onGold }}
               >
                 {googleBusy ? <Loader2 size={15} className="animate-spin" /> : <GoogleIcon size={16} />}
                 {googleBusy ? "Redirecting..." : "Continue with Google"}
@@ -3254,7 +3254,7 @@ function PhonePreview() {
               <div key={t.cuisine} className="rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.gold}55` }}>
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>{t.cuisine}</span>
-                  <Crown size={12} style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
+                  <Crown size={12} style={{ color: C.goldText }} fill={C.gold} strokeWidth={0} />
                 </div>
                 <p className="mt-1 text-sm" style={{ ...display, fontWeight: 700, color: C.cream }}>{t.name}</p>
                 <p className="mt-0.5 text-xs italic leading-snug" style={{ color: C.muted }}>&ldquo;{t.note}&rdquo;</p>
@@ -3273,10 +3273,10 @@ function PhonePreview() {
             </div>
             <div className="mt-2.5 flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>Challenger</span>
+                <span className="text-[10px] font-bold uppercase" style={{ color: C.goldText, letterSpacing: "0.1em" }}>Challenger</span>
                 <p className="text-sm" style={{ ...display, fontWeight: 700, color: C.cream }}>Pizzeria Libretto</p>
               </div>
-              <span className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.bg }}>
+              <span className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.onGold }}>
                 <Crown size={12} /> Crown it
               </span>
             </div>
@@ -3326,7 +3326,7 @@ function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
   return (
     <div className="fixed inset-0 z-[1100] flex items-center justify-center p-5" style={{ background: "rgba(10,5,16,0.92)" }}>
       <div className="w-full max-w-sm rounded-2xl p-6 text-center" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
-        <Crown size={30} className="mx-auto" style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
+        <Crown size={30} className="mx-auto" style={{ color: C.goldText }} fill={C.gold} strokeWidth={0} />
         <h2 className="mt-2 text-xl" style={{ ...display, fontWeight: 900 }}>Welcome to Nomarchy</h2>
         <p className="mt-1 text-sm" style={{ color: C.muted }}>Long live your favourites. First, make this yours.</p>
 
@@ -3370,7 +3370,7 @@ function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
           disabled={!usernameValid || busy}
           onClick={save}
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold"
-          style={usernameValid ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}
+          style={usernameValid ? { background: C.gold, color: C.onGold } : { background: C.cardEdge, color: C.muted }}
         >
           {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
           Continue
@@ -3396,40 +3396,40 @@ function PromotionModal({ rank, nextRank, score, thrones, reviewCount, profile, 
   return (
     <div data-modal-backdrop className="fixed inset-0 z-[1150] flex items-center justify-center p-5" style={{ background: "rgba(10,5,16,0.92)" }} onClick={onClose}>
       <div role="dialog" aria-modal="true" tabIndex={-1} className="w-full max-w-sm rounded-2xl p-6 text-center" style={{ background: C.card, border: `1px solid ${C.gold}` }} onClick={(e) => e.stopPropagation()}>
-        <Crown size={34} className="mx-auto" style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
-        <p className="mt-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>You've been promoted</p>
+        <Crown size={34} className="mx-auto" style={{ color: C.goldText }} fill={C.gold} strokeWidth={0} />
+        <p className="mt-2 text-xs font-bold uppercase" style={{ color: C.goldText, letterSpacing: "0.14em" }}>You've been promoted</p>
         <h2 className="mt-1 text-2xl" style={{ ...display, fontWeight: 900 }}>{rank.title}</h2>
 
         <p className="mt-4 text-sm italic leading-relaxed" style={{ color: C.cream }}>&ldquo;{proclamation}&rdquo;</p>
 
         <div className="mt-5 grid grid-cols-3 gap-2">
           <div className="rounded-xl p-2.5" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
-            <div className="text-lg" style={{ ...display, fontWeight: 700, color: C.gold }}>{score}</div>
+            <div className="text-lg" style={{ ...display, fontWeight: 700, color: C.goldText }}>{score}</div>
             <div className="text-[10px] uppercase" style={{ color: C.muted, letterSpacing: "0.06em" }}>Credibility</div>
           </div>
           <div className="rounded-xl p-2.5" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
-            <div className="text-lg" style={{ ...display, fontWeight: 700, color: C.gold }}>{thrones}</div>
+            <div className="text-lg" style={{ ...display, fontWeight: 700, color: C.goldText }}>{thrones}</div>
             <div className="text-[10px] uppercase" style={{ color: C.muted, letterSpacing: "0.06em" }}>Thrones</div>
           </div>
           <div className="rounded-xl p-2.5" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
-            <div className="text-lg" style={{ ...display, fontWeight: 700, color: C.gold }}>{reviewCount}</div>
+            <div className="text-lg" style={{ ...display, fontWeight: 700, color: C.goldText }}>{reviewCount}</div>
             <div className="text-[10px] uppercase" style={{ color: C.muted, letterSpacing: "0.06em" }}>Reviews</div>
           </div>
         </div>
 
         {nextRank ? (
           <p className="mt-4 text-xs" style={{ color: C.muted }}>
-            <span style={{ color: C.gold, fontWeight: 700 }}>{nextRank.min - score}</span> more to {nextRank.title}
+            <span style={{ color: C.goldText, fontWeight: 700 }}>{nextRank.min - score}</span> more to {nextRank.title}
           </p>
         ) : (
           <p className="mt-4 text-xs" style={{ color: C.muted }}>There is no higher seat. The realm is yours.</p>
         )}
 
         <div className="mt-5 flex gap-2">
-          <button onClick={onShare} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-3 text-sm font-bold" style={{ border: `1px solid ${C.gold}66`, color: C.gold }}>
+          <button onClick={onShare} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-3 text-sm font-bold" style={{ border: `1px solid ${C.gold}66`, color: C.goldText }}>
             <Share2 size={14} /> Share
           </button>
-          <button onClick={onClose} className="flex-1 rounded-lg py-3 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>
+          <button onClick={onClose} className="flex-1 rounded-lg py-3 text-sm font-bold" style={{ background: C.gold, color: C.onGold }}>
             Long may I reign
           </button>
         </div>
@@ -3450,7 +3450,7 @@ function AdminSection({ title, right, children }) {
   return (
     <div className="border-t pt-3 pb-1 text-left" style={{ borderColor: C.cardEdge }}>
       <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 pb-1">
-        <span className="text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>{title}</span>
+        <span className="text-xs font-bold uppercase" style={{ color: C.goldText, letterSpacing: "0.14em" }}>{title}</span>
         <span className="flex min-w-0 items-center gap-2">
           {right && <span className="truncate text-xs" style={{ color: C.muted }}>{right}</span>}
           <ChevronDown size={15} className="shrink-0 transition-transform" style={{ color: C.muted, transform: open ? "rotate(180deg)" : "none" }} />
@@ -3580,12 +3580,12 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
           <AvatarPicker userId={profile?.id} url={profile?.avatar_url} onChange={onChangeAvatar} />
         </div>
         <div className="mt-3 text-center">
-          <Crown size={30} className="mx-auto" style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
+          <Crown size={30} className="mx-auto" style={{ color: C.goldText }} fill={C.gold} strokeWidth={0} />
           <h2 className="mt-1 text-xl" style={{ ...display, fontWeight: 900 }}>{title}</h2>
           <p className="mt-1 text-sm italic" style={{ color: C.muted }}>
             {profile?.is_owner ? "Nomarchy exists because you built it." : rank.note}
           </p>
-          <div className="mt-3 text-4xl" style={{ ...display, fontWeight: 900, color: C.gold }}>{score}</div>
+          <div className="mt-3 text-4xl" style={{ ...display, fontWeight: 900, color: C.goldText }}>{score}</div>
           <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>Taste credibility</div>
           {nextRank && (<div className="mt-3">
             <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: C.bg }}>
@@ -3603,7 +3603,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
           <div className="grid grid-cols-2 gap-3 text-left">
             {stats.map((s) => (
               <div key={s.label} className="rounded-xl p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
-                <div className="text-xl" style={{ ...display, fontWeight: 700, color: C.gold }}>{s.n}</div>
+                <div className="text-xl" style={{ ...display, fontWeight: 700, color: C.goldText }}>{s.n}</div>
                 <div className="text-xs font-semibold">{s.label}</div>
                 <div className="mt-0.5 text-xs" style={{ color: C.muted }}>{s.hint}</div>
               </div>))}
@@ -3622,13 +3622,13 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
           {conquests && conquests.map((c) => (
             <div key={c.key} className="flex items-center gap-2.5 py-1.5">
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style={{ background: c.completed ? C.gold : C.bg, border: `1px solid ${c.completed ? C.gold : C.cardEdge}` }}>
-                {c.completed ? <Check size={13} style={{ color: C.bg }} /> : <Lock size={11} style={{ color: C.muted }} />}
+                {c.completed ? <Check size={13} style={{ color: C.onGold }} /> : <Lock size={11} style={{ color: C.muted }} />}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold" style={{ color: c.completed ? C.cream : C.muted }}>{c.title}</div>
                 <div className="truncate text-xs" style={{ color: C.muted }}>{c.desc}</div>
               </div>
-              <span className="shrink-0 text-xs font-bold" style={{ color: c.completed ? C.gold : C.muted }}>+{c.points}</span>
+              <span className="shrink-0 text-xs font-bold" style={{ color: c.completed ? C.goldText : C.muted }}>+{c.points}</span>
             </div>
           ))}
         </ProfileSection>
@@ -3679,7 +3679,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
 
         <div className="mt-4 flex items-center justify-between gap-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
           <div className="flex items-start gap-2">
-            {isPublic ? <Globe size={16} className="mt-0.5 shrink-0" style={{ color: C.gold }} /> : <Lock size={16} className="mt-0.5 shrink-0" style={{ color: C.muted }} />}
+            {isPublic ? <Globe size={16} className="mt-0.5 shrink-0" style={{ color: C.goldText }} /> : <Lock size={16} className="mt-0.5 shrink-0" style={{ color: C.muted }} />}
             <div>
               <div className="text-sm font-semibold">{isPublic ? "Public profile" : "Private profile"}</div>
               <div className="mt-0.5 text-xs" style={{ color: C.muted }}>
@@ -3851,7 +3851,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
               onClick={toggleGoogle}
               disabled={linkBusy}
               className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
-              style={googleLinked ? { color: C.muted, border: `1px solid ${C.cardEdge}` } : { background: C.gold, color: C.bg }}
+              style={googleLinked ? { color: C.muted, border: `1px solid ${C.cardEdge}` } : { background: C.gold, color: C.onGold }}
             >
               {linkBusy ? <Loader2 size={13} className="animate-spin" /> : null}
               {googleLinked ? "Unlink" : "Link"}
@@ -3866,7 +3866,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
             {blockedUsers.map((b) => (
               <div key={b.id} className="mt-2 flex items-center justify-between gap-2">
                 <span className="text-sm">{b.name}</span>
-                <button onClick={() => handleUnblock(b.id)} className="text-xs font-semibold" style={{ color: C.gold }}>Unblock</button>
+                <button onClick={() => handleUnblock(b.id)} className="text-xs font-semibold" style={{ color: C.goldText }}>Unblock</button>
               </div>
             ))}
           </div>
@@ -3878,7 +3878,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
           disabled={!usernameValid || busy}
           onClick={save}
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold"
-          style={usernameValid ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}
+          style={usernameValid ? { background: C.gold, color: C.onGold } : { background: C.cardEdge, color: C.muted }}
         >
           {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
           Save
@@ -3944,7 +3944,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
                   disabled={!deleteConfirmed || deleting}
                   onClick={confirmDelete}
                   className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold"
-                  style={deleteConfirmed ? { background: C.coup, color: C.cream } : { background: C.cardEdge, color: C.muted }}
+                  style={deleteConfirmed ? { background: C.coup, color: C.onCoup } : { background: C.cardEdge, color: C.muted }}
                 >
                   {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                   Delete my account
@@ -3999,7 +3999,7 @@ function PersonRow({ p, onFollow, busy, hint }) {
           onClick={() => onFollow(p)}
           disabled={busy}
           className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
-          style={{ background: C.gold, color: C.bg }}
+          style={{ background: C.gold, color: C.onGold }}
         >
           {busy ? <Loader2 size={11} className="animate-spin" /> : <UserPlus size={11} />} Follow
         </button>
@@ -4059,7 +4059,7 @@ function FriendKingdomModal({ friend: f, closedIds, onClose, onEndorse, onAddToL
               </h3>
               <span
                 className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
-                style={{ background: C.bg, color: C.gold, letterSpacing: "0.06em" }}
+                style={{ background: C.bg, color: C.goldText, letterSpacing: "0.06em" }}
               >
                 {getTitle(f.isOwner, f.score)}
               </span>
@@ -4068,7 +4068,7 @@ function FriendKingdomModal({ friend: f, closedIds, onClose, onEndorse, onAddToL
               </p>
               {specialty && (
                 <p className="mt-0.5 text-xs" style={{ color: C.muted }}>
-                  Known for <span style={{ color: C.gold, fontWeight: 700 }}>{specialty.cuisine}</span>
+                  Known for <span style={{ color: C.goldText, fontWeight: 700 }}>{specialty.cuisine}</span>
                   {specialty.endorsements > 0 && ` · pick endorsed by ${specialty.endorsements}`}
                 </p>
               )}
@@ -4085,7 +4085,7 @@ function FriendKingdomModal({ friend: f, closedIds, onClose, onEndorse, onAddToL
             <div className="mt-0.5 flex items-center justify-between gap-2">
               <div><span style={{ ...display, fontWeight: 700 }} className="text-base">{p.name}</span><span className="ml-2 text-xs" style={{ color: C.muted }}>{p.area}</span>{p.googlePlaceId && closedIds?.has(p.googlePlaceId) && <span className="ml-2"><ClosedBadge /></span>}</div>
               <button onClick={() => onEndorse(p.id, p.endorsedByMe)} className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
-                style={p.endorsedByMe ? { background: C.gold, color: C.bg } : { border: `1px solid ${C.cardEdge}`, color: C.muted }}>
+                style={p.endorsedByMe ? { background: C.gold, color: C.onGold } : { border: `1px solid ${C.cardEdge}`, color: C.muted }}>
                 <Crown size={12} /> {p.endorsedByMe ? "Endorsed" : "Endorse"}
               </button>
             </div>
@@ -4093,7 +4093,7 @@ function FriendKingdomModal({ friend: f, closedIds, onClose, onEndorse, onAddToL
             <PhotoStrip photos={p.photos} />
             {!(p.googlePlaceId && closedIds?.has(p.googlePlaceId)) && (
               <button onClick={() => onAddToList(f.name, p)}
-                className="mt-2 flex items-center gap-1.5 text-xs font-bold" style={{ color: C.gold }}><Bookmark size={12} /> Add to my list</button>
+                className="mt-2 flex items-center gap-1.5 text-xs font-bold" style={{ color: C.goldText }}><Bookmark size={12} /> Add to my list</button>
             )}
           </div>
         ))}
@@ -4137,7 +4137,7 @@ function FriendKingdomModal({ friend: f, closedIds, onClose, onEndorse, onAddToL
               />
               <div className="mt-2 flex gap-2">
                 <button onClick={() => setReporting(false)} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ border: `1px solid ${C.cardEdge}`, color: C.muted }}>Cancel</button>
-                <button onClick={submitReport} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ background: C.coup, color: C.cream }}>Send report</button>
+                <button onClick={submitReport} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ background: C.coup, color: C.onCoup }}>Send report</button>
               </div>
             </div>
           ) : confirmingBlock ? (
@@ -4147,7 +4147,7 @@ function FriendKingdomModal({ friend: f, closedIds, onClose, onEndorse, onAddToL
               </p>
               <div className="mt-2 flex gap-2">
                 <button onClick={() => setConfirmingBlock(false)} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ border: `1px solid ${C.cardEdge}`, color: C.muted }}>Cancel</button>
-                <button onClick={onBlock} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ background: C.coup, color: C.cream }}>Block</button>
+                <button onClick={onBlock} className="flex-1 rounded-lg py-2 text-xs font-bold" style={{ background: C.coup, color: C.onCoup }}>Block</button>
               </div>
             </div>
           ) : (
@@ -4198,7 +4198,7 @@ function MembersModal({ userId, onFollow, onClose }) {
 
         {suggested && suggested.length > 0 && (
           <div className="mt-4">
-            <div className="text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>Suggested for you</div>
+            <div className="text-xs font-bold uppercase" style={{ color: C.goldText, letterSpacing: "0.1em" }}>Suggested for you</div>
             <p className="mt-0.5 text-xs" style={{ color: C.muted }}>People your Court already follows.</p>
             <div className="mt-1">
               {suggested.map((p) => (
@@ -4210,7 +4210,7 @@ function MembersModal({ userId, onFollow, onClose }) {
         )}
 
         <div className="mt-4">
-          <div className="text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>Public profiles</div>
+          <div className="text-xs font-bold uppercase" style={{ color: C.goldText, letterSpacing: "0.1em" }}>Public profiles</div>
           <p className="mt-0.5 text-xs" style={{ color: C.muted }}>People who&apos;ve chosen to be discoverable by anyone.</p>
           {!members && <RowSkeleton count={4} />}
           {members?.length === 0 && <p className="mt-3 text-sm" style={{ color: C.muted }}>No one&apos;s opted into this yet.</p>}
@@ -4255,7 +4255,7 @@ function FeedbackModal({ onClose, onSubmit, initialMessage = "" }) {
           <div className="mt-4 text-center">
             <Check size={22} className="mx-auto" style={{ color: C.green }} />
             <p className="mt-2 text-sm" style={{ color: C.muted }}>Got it, thank you.</p>
-            <button onClick={onClose} className="mt-4 w-full rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>Close</button>
+            <button onClick={onClose} className="mt-4 w-full rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.onGold }}>Close</button>
           </div>
         ) : (
           <>
@@ -4276,7 +4276,7 @@ function FeedbackModal({ onClose, onSubmit, initialMessage = "" }) {
               disabled={!message.trim() || busy}
               onClick={send}
               className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold"
-              style={message.trim() ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}
+              style={message.trim() ? { background: C.gold, color: C.onGold } : { background: C.cardEdge, color: C.muted }}
             >
               {busy ? <Loader2 size={15} className="animate-spin" /> : <MessageSquare size={15} />}
               Send
@@ -4377,7 +4377,7 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
 
         {isCoup && reigning && (
           <p className="mt-2 rounded-lg p-2.5 text-xs" style={{ background: C.bg, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
-            <Crown size={11} className="mr-1 inline" style={{ color: C.gold }} />{reigning.name} holds this throne. Your decree must say why the new spot takes it.
+            <Crown size={11} className="mr-1 inline" style={{ color: C.goldText }} />{reigning.name} holds this throne. Your decree must say why the new spot takes it.
           </p>)}
 
         {(isPretender || prefill) && (<div className="mt-3">
@@ -4395,17 +4395,17 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
             <input aria-label="Restaurant name to search" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && find()} placeholder="Restaurant name" className="w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
             <input aria-label="City" value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="w-24 rounded-lg px-2 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
           </div>
-          <button onClick={find} disabled={searching || !query.trim()} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold" style={searching || !query.trim() ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.bg }}>
+          <button onClick={find} disabled={searching || !query.trim()} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold" style={searching || !query.trim() ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.onGold }}>
             {searching ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}{searching ? "Searching the realm..." : "Look it up"}
           </button>
           {err && <p className="mt-2 text-xs" style={{ color: C.coup }}>{err}</p>}
           {fuzzy && results.length > 0 && (
-            <p className="mt-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>Did you mean?</p>
+            <p className="mt-2 text-xs font-bold uppercase" style={{ color: C.goldText, letterSpacing: "0.1em" }}>Did you mean?</p>
           )}
           {results.map((r, i) => (
             <button key={i} onClick={() => choose(r)} disabled={isClosedResult(r)} className="mt-2 w-full rounded-lg p-2.5 text-left" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, opacity: isClosedResult(r) ? 0.55 : 1 }}>
               <div className="flex items-center justify-between gap-2"><span className="flex flex-wrap items-center gap-1.5 text-sm font-bold">{r.name}{isClosedResult(r) && <ClosedBadge />}</span>
-                {r.rating && <span className="flex items-center gap-0.5 text-xs" style={{ color: C.gold }}><Star size={11} fill={C.gold} /> {r.rating}</span>}</div>
+                {r.rating && <span className="flex items-center gap-0.5 text-xs" style={{ color: C.goldText }}><Star size={11} fill={C.gold} /> {r.rating}</span>}</div>
               <div className="mt-0.5 text-xs" style={{ color: C.muted }}>{[r.neighbourhood, r.address].filter(Boolean).join(" · ")}</div>
             </button>))}
           {fromGoogle && results.length > 0 && (
@@ -4431,7 +4431,7 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
 
         <button disabled={!valid || submitting} onClick={handleSubmit}
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold"
-          style={valid && !submitting ? { background: isCoup ? C.coup : C.gold, color: isCoup ? C.cream : C.bg } : { background: C.cardEdge, color: C.muted }}>
+          style={valid && !submitting ? { background: isCoup ? C.coup : C.gold, color: isCoup ? C.onCoup : C.onGold } : { background: C.cardEdge, color: C.muted }}>
           {submitting ? <Loader2 size={15} className="animate-spin" /> : isPretender ? <Bookmark size={15} /> : isCoup ? <Swords size={15} /> : <Crown size={15} />}
           {submitting ? "Saving..." : isPretender ? "Add to Next in Line" : isCoup ? "Dethrone and crown" : "Crown this spot"}
         </button>
@@ -4513,7 +4513,7 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
           )}
           {err && <p className="mt-1 text-xs" style={{ color: C.coup }}>{err}</p>}
           <button onClick={parse} disabled={working || !raw.trim()} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold"
-            style={working || !raw.trim() ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.bg }}>
+            style={working || !raw.trim() ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.onGold }}>
             {working ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />}
             {working ? "Reading your list..." : "Sort this out"}
           </button>
@@ -4533,7 +4533,7 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
                     style={{ color: C.cream }}
                   />
                   <button onClick={() => update(r._id, "_keep", !r._keep)} className="flex h-5 w-5 shrink-0 items-center justify-center rounded"
-                    style={r._keep ? { background: C.gold, color: C.bg } : { border: `1px solid ${C.cardEdge}` }}>
+                    style={r._keep ? { background: C.gold, color: C.onGold } : { border: `1px solid ${C.cardEdge}` }}>
                     {r._keep && <Check size={12} strokeWidth={3} />}
                   </button>
                 </div>
@@ -4563,7 +4563,7 @@ function ImportModal({ cuisineNames, onClose, onImport }) {
             <button onClick={() => setRows(null)} className="rounded-lg px-4 py-3 text-sm font-bold" style={{ border: `1px solid ${C.cardEdge}`, color: C.muted }}>Back</button>
             <button disabled={!keeping.length || confirming} onClick={() => confirmImport(keeping.map(({ _id, _keep, ...r }) => r))}
               className="flex flex-1 items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold"
-              style={keeping.length && !confirming ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}>
+              style={keeping.length && !confirming ? { background: C.gold, color: C.onGold } : { background: C.cardEdge, color: C.muted }}>
               {confirming ? <Loader2 size={15} className="animate-spin" /> : <Bookmark size={15} />}
               {confirming ? "Adding..." : `Add ${keeping.length} to Next in Line`}
             </button>

@@ -97,7 +97,7 @@ export default function PrivacyContent() {
         <Section title="Your rights">
           You can ask to see the personal information we hold about you, ask us to correct it, ask us to
           delete it, or withdraw your consent to how we use it. Email{" "}
-          <a href="mailto:hello@nomarchy.ca" style={{ color: C.gold }}>hello@nomarchy.ca</a> and we’ll respond
+          <a href="mailto:hello@nomarchy.ca" style={{ color: C.goldText }}>hello@nomarchy.ca</a> and we’ll respond
           within 30 days. If you live in Quebec you have some additional rights under its privacy law - ask
           us about any of them. If you’re not satisfied with our response, you can contact the Office of the
           Privacy Commissioner of Canada (priv.gc.ca) or, in Quebec, the Commission d’accès à l’information
@@ -107,7 +107,7 @@ export default function PrivacyContent() {
         <Section title="Who is responsible">
           Nomarchy’s founder is responsible for how personal information is handled here and is the person to
           contact about this policy, at{" "}
-          <a href="mailto:hello@nomarchy.ca" style={{ color: C.gold }}>hello@nomarchy.ca</a>.
+          <a href="mailto:hello@nomarchy.ca" style={{ color: C.goldText }}>hello@nomarchy.ca</a>.
         </Section>
 
         <Section title="If something goes wrong">
@@ -125,13 +125,13 @@ export default function PrivacyContent() {
 
         <Section title="Contact">
           Questions about this policy or your data? Reach out at{" "}
-          <a href="mailto:hello@nomarchy.ca" style={{ color: C.gold }}>hello@nomarchy.ca</a>.
+          <a href="mailto:hello@nomarchy.ca" style={{ color: C.goldText }}>hello@nomarchy.ca</a>.
         </Section>
 
         <p className="mt-10 text-center text-xs" style={{ color: C.muted }}>
-          <Link href="/" style={{ color: C.gold }}>Back to Nomarchy</Link>
+          <Link href="/" style={{ color: C.goldText }}>Back to Nomarchy</Link>
           {" · "}
-          <Link href="/terms" style={{ color: C.gold }}>Terms of Service</Link>
+          <Link href="/terms" style={{ color: C.goldText }}>Terms of Service</Link>
         </p>
       </div>
     </FontShell>
@@ -141,7 +141,7 @@ export default function PrivacyContent() {
 function Section({ title, children }) {
   return (
     <div className="mt-6">
-      <h2 className="text-sm font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>{title}</h2>
+      <h2 className="text-sm font-bold uppercase" style={{ color: C.goldText, letterSpacing: "0.1em" }}>{title}</h2>
       <div className="mt-2 text-sm leading-relaxed" style={{ color: C.cream + "CC" }}>{children}</div>
     </div>
   );

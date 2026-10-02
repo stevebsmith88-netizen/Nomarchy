@@ -256,7 +256,7 @@ export default function FaqContent() {
             to its right, sat flush against the edge instead of where
             it sits on the landing page. */}
         <div className="flex items-center gap-4">
-          <Link href="/faq" className="hidden text-sm font-semibold sm:inline" style={{ color: C.gold }}>FAQ</Link>
+          <Link href="/faq" className="hidden text-sm font-semibold sm:inline" style={{ color: C.goldText }}>FAQ</Link>
           <button
             type="button"
             onClick={toggleTheme}
@@ -266,7 +266,7 @@ export default function FaqContent() {
           >
             {theme === "light" ? <Moon size={14} /> : <Sun size={14} />}
           </button>
-          <Link href="/#sign-in" className="rounded-full px-4 py-2 text-xs font-bold sm:text-sm" style={{ background: C.gold, color: C.bg }}>Open the app</Link>
+          <Link href="/#sign-in" className="rounded-full px-4 py-2 text-xs font-bold sm:text-sm" style={{ background: C.gold, color: C.onGold }}>Open the app</Link>
         </div>
       </nav>
 
@@ -283,13 +283,13 @@ export default function FaqContent() {
         </div>
 
         <p className="mt-10 text-center text-xs" style={{ color: C.muted }}>
-          <Link href="/" style={{ color: C.gold }}>Back to Nomarchy</Link>
+          <Link href="/" style={{ color: C.goldText }}>Back to Nomarchy</Link>
           {" · "}
-          <Link href="/terms" style={{ color: C.gold }}>Terms</Link>
+          <Link href="/terms" style={{ color: C.goldText }}>Terms</Link>
           {" · "}
-          <Link href="/privacy" style={{ color: C.gold }}>Privacy Policy</Link>
+          <Link href="/privacy" style={{ color: C.goldText }}>Privacy Policy</Link>
           {" · "}
-          <a href="https://www.instagram.com/nomarchyapp" target="_blank" rel="noopener noreferrer" style={{ color: C.gold }}>Instagram</a>
+          <a href="https://www.instagram.com/nomarchyapp" target="_blank" rel="noopener noreferrer" style={{ color: C.goldText }}>Instagram</a>
         </p>
       </div>
     </FontShell>
@@ -306,7 +306,7 @@ function FaqItem({ question, isOpen, onToggle, children }) {
         style={{ ...display, color: C.cream }}
       >
         {question}
-        <ChevronDown size={16} className="shrink-0 transition-transform" style={{ color: C.gold, transform: isOpen ? "rotate(180deg)" : "none" }} />
+        <ChevronDown size={16} className="shrink-0 transition-transform" style={{ color: C.goldText, transform: isOpen ? "rotate(180deg)" : "none" }} />
       </button>
       {isOpen && (
         <div className="px-4 pb-4 text-sm leading-relaxed" style={{ color: C.cream + "CC" }}>

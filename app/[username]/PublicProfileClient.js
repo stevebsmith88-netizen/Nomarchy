@@ -119,9 +119,9 @@ export default function PublicProfileClient({ username }) {
     return (
       <FontShell>
         <div className="flex min-h-screen flex-col items-center justify-center px-5 text-center">
-          <Crown size={28} style={{ color: C.gold }} />
+          <Crown size={28} style={{ color: C.goldText }} />
           <p className="mt-3 text-sm" style={{ color: C.muted }}>No kingdom at @{username}.</p>
-          <Link href="/" className="mt-4 text-sm font-semibold" style={{ color: C.gold }}>Back to Nomarchy</Link>
+          <Link href="/" className="mt-4 text-sm font-semibold" style={{ color: C.goldText }}>Back to Nomarchy</Link>
         </div>
       </FontShell>
     );
@@ -150,7 +150,7 @@ export default function PublicProfileClient({ username }) {
             {(profile.display_name || profile.username)}&apos;s Kingdom is private
           </h1>
           <p className="mt-1 text-sm" style={{ color: C.muted }}>@{profile.username} isn&apos;t sharing this publicly.</p>
-          <Link href="/" className="mt-4 text-sm font-semibold" style={{ color: C.gold }}>Back to Nomarchy</Link>
+          <Link href="/" className="mt-4 text-sm font-semibold" style={{ color: C.goldText }}>Back to Nomarchy</Link>
         </div>
       </FontShell>
     );
@@ -180,7 +180,7 @@ export default function PublicProfileClient({ username }) {
         </p>
 
         <div className="mt-3 flex items-center justify-center gap-2">
-          <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: C.card, color: C.gold, border: `1px solid ${C.cardEdge}` }}>
+          <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: C.card, color: C.goldText, border: `1px solid ${C.cardEdge}` }}>
             {title}
           </span>
           {authChecked && viewer && !isSelf && (
@@ -188,7 +188,7 @@ export default function PublicProfileClient({ username }) {
               onClick={handleFollow}
               disabled={following || followBusy}
               className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold"
-              style={following ? { background: C.green + "22", color: C.green, border: `1px solid ${C.green}66` } : { background: C.gold, color: C.bg }}
+              style={following ? { background: C.green + "22", color: C.green, border: `1px solid ${C.green}66` } : { background: C.gold, color: C.onGold }}
             >
               {followBusy ? <Loader2 size={12} className="animate-spin" /> : following ? <Check size={12} /> : <UserPlus size={12} />}
               {following ? "Following" : "Follow"}
@@ -198,7 +198,7 @@ export default function PublicProfileClient({ username }) {
         {followErr && <p className="mt-2 text-xs" style={{ color: C.coup }}>{followErr}</p>}
         {authChecked && !viewer && (
           <p className="mt-2 text-xs" style={{ color: C.muted }}>
-            <Link href="/" style={{ color: C.gold }}>Sign in to Nomarchy</Link> to follow @{profile.username}.
+            <Link href="/" style={{ color: C.goldText }}>Sign in to Nomarchy</Link> to follow @{profile.username}.
           </p>
         )}
       </header>
@@ -211,10 +211,10 @@ export default function PublicProfileClient({ username }) {
             <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
               {(overall.area || overall.address) && (<><MapPin size={11} /> {overall.area || overall.address}<span className="mx-1">·</span></>)}
               crowned {fmt(overall.crownedAt)}
-              {overall.mapsUrl && <a href={overall.mapsUrl} target="_blank" rel="noreferrer" className="ml-1 flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
+              {overall.mapsUrl && <a href={overall.mapsUrl} target="_blank" rel="noreferrer" className="ml-1 flex items-center gap-0.5 font-semibold" style={{ color: C.goldText }}>Map <ExternalLink size={10} /></a>}
             </div>
             <p className="mt-2 text-sm leading-relaxed" style={{ color: C.cream + "E6" }}>
-              <ScrollText size={13} className="mr-1 inline" style={{ color: C.gold }} />{overall.decree}
+              <ScrollText size={13} className="mr-1 inline" style={{ color: C.goldText }} />{overall.decree}
             </p>
             <PhotoStrip photos={overall.photos} />
           </div>
@@ -232,16 +232,16 @@ export default function PublicProfileClient({ username }) {
                 <div key={cuisineName} className="rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.gold}55` }}>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>{cuisineName}</span>
-                    <Crown size={16} style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
+                    <Crown size={16} style={{ color: C.goldText }} fill={C.gold} strokeWidth={0} />
                   </div>
                   <h3 className="mt-2 text-xl" style={{ ...display, fontWeight: 700 }}>{r.name}</h3>
                   <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
                     {(r.area || r.address) && (<><MapPin size={11} /> {r.area || r.address}<span className="mx-1">·</span></>)}
                     crowned {fmt(r.crownedAt)}
-                    {r.mapsUrl && <a href={r.mapsUrl} target="_blank" rel="noreferrer" className="ml-1 flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
+                    {r.mapsUrl && <a href={r.mapsUrl} target="_blank" rel="noreferrer" className="ml-1 flex items-center gap-0.5 font-semibold" style={{ color: C.goldText }}>Map <ExternalLink size={10} /></a>}
                   </div>
                   <p className="mt-2 text-sm leading-relaxed" style={{ color: C.cream + "E6" }}>
-                    <ScrollText size={13} className="mr-1 inline" style={{ color: C.gold }} />{r.decree}
+                    <ScrollText size={13} className="mr-1 inline" style={{ color: C.goldText }} />{r.decree}
                   </p>
                   <PhotoStrip photos={r.photos} />
                 </div>
@@ -251,7 +251,7 @@ export default function PublicProfileClient({ username }) {
         )}
 
         <p className="mt-8 text-center text-xs" style={{ color: C.muted }}>
-          <Link href="/" style={{ color: C.gold }}>Start your own kingdom on Nomarchy</Link>
+          <Link href="/" style={{ color: C.goldText }}>Start your own kingdom on Nomarchy</Link>
         </p>
       </main>
     </FontShell>

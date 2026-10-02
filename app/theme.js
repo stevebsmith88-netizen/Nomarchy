@@ -8,9 +8,12 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Crown, Sparkles } from "lucide-react";
 
+// gold = fills, crowns, borders and icons; goldText = gold used for words
+// (links, labels, badges); onGold = text sitting on a gold fill (buttons).
+// In dark mode they're all the same bright gold on dark plum.
 const DARK = {
   bg: "#1D1326", card: "#2A1E38", cardEdge: "#41305A",
-  gold: "#E2B340", cream: "#F5ECDE", muted: "#A795BD",
+  gold: "#E2B340", goldText: "#E2B340", onGold: "#1D1326", onCoup: "#1D1326", cream: "#F5ECDE", muted: "#A795BD",
   coup: "#E85D4A", green: "#7FB069",
 };
 
@@ -27,7 +30,7 @@ const DARK = {
 // including on their own pale tint, which badges sit on.
 const LIGHT = {
   bg: "#F5ECDE", card: "#FFFFFF", cardEdge: "#E4D6BE",
-  gold: "#775912", cream: "#2A1E38", muted: "#6B5C7D",
+  gold: "#775912", goldText: "#775912", onGold: "#F5ECDE", onCoup: "#FFFFFF", cream: "#2A1E38", muted: "#6B5C7D",
   coup: "#A8352A", green: "#3D6A2E",
 };
 
@@ -75,7 +78,7 @@ export function ThemeProvider({ children }) {
     if (!restored) return;
     const root = document.documentElement;
     root.style.setProperty("--page-bg", C.bg);
-    root.style.setProperty("--focus-ring", C.gold);
+    root.style.setProperty("--focus-ring", C.goldText);
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", C.bg);
     root.removeAttribute("data-theme-pending");
@@ -196,7 +199,7 @@ export function OwnerBadge({ size = 14 }) {
   return (
     <Sparkles
       size={size}
-      style={{ color: C.gold }}
+      style={{ color: C.goldText }}
       fill={C.gold}
       strokeWidth={0}
       title="Founder"

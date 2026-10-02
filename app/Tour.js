@@ -157,7 +157,7 @@ export default function Tour({ steps = TOUR_STEPS, onSetTab, onDone }) {
           {index > 0 && (
             <button onClick={() => setIndex((i) => i - 1)} className="rounded-lg px-3 py-2 text-sm font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>Back</button>
           )}
-          <button ref={nextRef} onClick={() => (last ? finish() : setIndex((i) => i + 1))} className="rounded-lg px-4 py-2 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>
+          <button ref={nextRef} onClick={() => (last ? finish() : setIndex((i) => i + 1))} className="rounded-lg px-4 py-2 text-sm font-bold" style={{ background: C.gold, color: C.onGold }}>
             {last ? "Done" : "Next"}
           </button>
         </div>
