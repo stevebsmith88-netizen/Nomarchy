@@ -470,19 +470,21 @@ create policy "restaurants readable" on restaurants for select using (true);
 -- REPLACE FUNCTION refuses to change RETURNS TABLE's shape at all, append
 -- or not.
 -- "%" and "<->" are the trigram operators the restaurants_name_trgm_idx
--- index can serve (a bare similarity() > x reads every row); the threshold
--- is set on the function itself, so the matching is the same as before.
+-- index can serve (a bare similarity() > x reads every row). "%" narrows to
+-- names at least 0.3 similar using the index; the similarity() check then
+-- applies this function's own stricter cut-off, so matching is the same as
+-- before. (Supabase doesn't allow changing the "%" threshold itself.)
 drop function if exists match_restaurant(text);
 create function match_restaurant(search_name text)
 returns table (name text, address text, neighbourhood text, lat numeric, lng numeric, city text)
 language sql
 stable
-set pg_trgm.similarity_threshold = 0.4
 as $$
   select r.name, r.address, r.neighbourhood, r.lat, r.lng, r.city
   from restaurants r
   where r.city = 'Toronto'
     and r.name % search_name
+    and similarity(r.name, search_name) > 0.4
   order by r.name <-> search_name
   limit 1;
 $$;
@@ -504,12 +506,12 @@ create or replace function search_restaurants_fuzzy(search_name text)
 returns table (name text, address text, neighbourhood text)
 language sql
 stable
-set pg_trgm.similarity_threshold = 0.3
 as $$
   select r.name, r.address, r.neighbourhood
   from restaurants r
   where r.city = 'Toronto'
     and r.name % search_name
+    and similarity(r.name, search_name) > 0.3
   order by r.name <-> search_name
   limit 3;
 $$;
