@@ -70,7 +70,7 @@ function renderEmail(name) {
       <p style="margin-top:8px;font-size:13px;color:#333;">Follow along on Instagram: <a href="https://www.instagram.com/nomarchyapp" style="color:#333;text-decoration:underline;">@nomarchyapp</a>.</p>
     </div>
     <p style="font-size:11px;color:#999;padding:0 24px 24px;">
-      Sent once, when you join. No recurring emails from us.${MAILING_ADDRESS ? `<br/>Nomarchy, ${MAILING_ADDRESS}` : ""}
+      This welcome is sent once. If you go quiet for a while, we may send an occasional reminder, which you can switch off.${MAILING_ADDRESS ? `<br/>Nomarchy, ${MAILING_ADDRESS}` : ""}
     </p>
   </div>`;
 }

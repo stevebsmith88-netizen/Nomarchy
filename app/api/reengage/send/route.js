@@ -157,9 +157,12 @@ export async function GET(request) {
           // A highlights reel, not a full changelog - someone gone a year
           // doesn't need every single thing that shipped since, just enough
           // to feel like "oh, it's changed" and want to look. Always the
-          // 4 most recent entries, regardless of how long they've been
-          // away or whether all of them postdate their last visit.
-          const changes = CHANGELOG.slice(-4);
+          // 4 most recent entries flagged `featured` in lib/changelog.js
+          // (the ones worth headlining), regardless of how long they've
+          // been away. Falls back to the 4 most recent overall if nothing
+          // is flagged, so the section never silently disappears.
+          const featured = CHANGELOG.filter((c) => c.featured);
+          const changes = (featured.length > 0 ? featured : CHANGELOG).slice(-4);
           const html = renderEmail({
             name: p.display_name || p.username,
             unsubscribeUrl: `${SITE_URL}/api/reengage/unsubscribe?token=${p.unsubscribe_token}`,
