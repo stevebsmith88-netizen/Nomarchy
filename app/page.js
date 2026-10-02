@@ -21,6 +21,7 @@ import {
   loadAdminOverview,
 } from "@/lib/data";
 import { claimSignupSource } from "@/lib/signupSource";
+import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
 import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell, useTheme } from "./theme";
 
 // Leaflet touches window/document at load time, which breaks server-side
@@ -3646,6 +3647,8 @@ function FeedbackModal({ onClose, onSubmit }) {
 function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning, defaultCity, userId, onClose, onSubmit }) {
   const isCoup = mode === "coup"; const isPretender = mode === "pretender";
   const [cz, setCz] = useState(cuisineId);
+  const [czTouched, setCzTouched] = useState(false);
+  const [czSuggested, setCzSuggested] = useState("");
   const [query, setQuery] = useState(prefill?.name || "");
   const [city, setCity] = useState(defaultCity || "Toronto");
   const [results, setResults] = useState([]);
@@ -3704,7 +3707,17 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
     setSearching(false);
   };
 
-  const choose = (r) => { setSel(r); setName(r.name || ""); setArea(r.neighbourhood || ""); setResults([]); setFuzzy(false); };
+  // For Next in Line, a Google result also suggests the cuisine from its
+  // category - but never over one the person picked themselves, and only
+  // when the name matches a cuisine in their own list.
+  const choose = (r) => {
+    setSel(r); setName(r.name || ""); setArea(r.neighbourhood || ""); setResults([]); setFuzzy(false);
+    if (isPretender && !czTouched) {
+      const suggested = suggestCuisineName(r.primaryType, r.types);
+      const match = suggested && cuisines.find((c) => c.name.toLowerCase() === suggested.toLowerCase());
+      if (match) { setCz(match.id); setCzSuggested(match.name); }
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[1100] flex items-end justify-center sm:items-center" style={{ background: "rgba(10,5,16,0.78)" }} onClick={onClose}>
@@ -3723,10 +3736,11 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
 
         {(isPretender || prefill) && (<div className="mt-3">
           <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Cuisine</label>
-          <select value={cz} onChange={(e) => setCz(e.target.value)} className="mt-1 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: cz ? C.cream : C.muted }}>
+          <select value={cz} onChange={(e) => { setCz(e.target.value); setCzTouched(true); setCzSuggested(""); }} className="mt-1 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: cz ? C.cream : C.muted }}>
             {!cz && <option value="">Choose a cuisine...</option>}
             {cuisines.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
+          {czSuggested && <p className="mt-1 text-[10px]" style={{ color: C.muted }}>Suggested from Google: {czSuggested}. Change it if that&apos;s not right.</p>}
         </div>)}
 
         <div className="mt-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
