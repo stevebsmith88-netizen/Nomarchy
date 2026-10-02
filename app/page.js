@@ -2411,8 +2411,10 @@ function PlaceMatchTool() {
             <details className="mt-2">
               <summary className="cursor-pointer text-xs font-semibold" style={{ color: C.muted }}>See the clear matches</summary>
               {auto.map((g) => (
-                <div key={g.key} className="mt-1.5 text-xs" style={{ color: C.muted }}>
-                  <span style={{ color: C.cream, fontWeight: 600 }}>{g.name}</span> → {g.match.name}{g.match.address ? ` · ${g.match.address}` : ""}
+                <div key={g.key} className="mt-2 text-xs" style={{ color: C.muted }}>
+                  <div><span style={{ color: C.cream, fontWeight: 600 }}>{g.name}</span>{g.address ? ` · ${g.address}` : ""}</div>
+                  <div>→ {g.match.name}{g.match.address ? ` · ${g.match.address}` : ""}</div>
+                  {g.evidence && <div style={{ color: C.green }}>{g.evidence}</div>}
                 </div>
               ))}
             </details>
