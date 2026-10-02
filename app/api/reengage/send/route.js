@@ -106,6 +106,13 @@ export async function GET(request) {
   if (!process.env.SENDGRID_API_KEY) {
     return NextResponse.json({ error: "SENDGRID_API_KEY not configured" }, { status: 500 });
   }
+  // Canada's anti-spam law (CASL) requires a mailing address in marketing-
+  // style emails like this reminder. Rather than send them without one, the
+  // job does nothing until MAILING_ADDRESS is set in Vercel.
+  if (!MAILING_ADDRESS) {
+    console.error("MAILING_ADDRESS is not set - skipping reminder emails");
+    return NextResponse.json({ sent: 0, skipped: "MAILING_ADDRESS is not set" });
+  }
 
   const supabase = admin();
   const cutoff = new Date(Date.now() - QUIET_MS).toISOString();

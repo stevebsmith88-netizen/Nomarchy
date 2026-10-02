@@ -33,7 +33,23 @@ const CUISINE_EMOJI = {
   "Special Occasion": "🥂",
   "Quick Bite": "⚡",
   "Overall Favourite": "👑",
+  // Common custom cuisines, so they have a sensible icon before anyone
+  // picks one (a pick, below, always wins).
+  "Bar": "🍺",
+  "Bar Food": "🍟",
+  "Diner": "🍳",
+  "Asian Fusion": "🍱",
+  "Contemporary": "🍴",
 };
+
+// Icons people have picked for cuisines they created, by cuisine name.
+// Filled from the database once the app loads (setCuisineEmojis) and
+// consulted before the built-in list above.
+let pickedEmojis = {};
+
+export function setCuisineEmojis(map) {
+  pickedEmojis = map || {};
+}
 
 // A custom cuisine someone's added themselves, or anything that doesn't
 // match the list above, still needs a pin - a generic plate rather than
@@ -41,7 +57,7 @@ const CUISINE_EMOJI = {
 const DEFAULT_EMOJI = "🍽️";
 
 export function getCuisineEmoji(cuisine) {
-  return CUISINE_EMOJI[cuisine] || DEFAULT_EMOJI;
+  return pickedEmojis[cuisine] || CUISINE_EMOJI[cuisine] || DEFAULT_EMOJI;
 }
 
 // A fixed dark badge regardless of the app's own light/dark theme - it
@@ -63,13 +79,13 @@ export const PIN_BLUE = "#4A80C7";
 // keep in sync per cuisine. The element's bottom-centre (the tip of the
 // tail) sits on the place's coordinates. Built with the DOM, never an HTML
 // string, so a cuisine name can't inject anything.
-export function cuisinePinElement(cuisine, ringColor) {
+export function cuisinePinElement(cuisine, ringColor, emoji) {
   const wrap = document.createElement("div");
   wrap.style.cssText = "position:relative;width:30px;height:38px;cursor:pointer;";
 
   const badge = document.createElement("div");
   badge.style.cssText = `box-sizing:border-box;width:30px;height:30px;border-radius:50%;background:${BADGE_BG};border:2.5px solid ${ringColor};display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,.45);`;
-  badge.textContent = getCuisineEmoji(cuisine);
+  badge.textContent = emoji || getCuisineEmoji(cuisine);
 
   const tail = document.createElement("div");
   tail.style.cssText = `position:absolute;left:50%;bottom:0;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:8px solid ${ringColor};transform:translateX(-50%);`;

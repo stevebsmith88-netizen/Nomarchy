@@ -122,7 +122,7 @@ export default function PinMap({ pins }) {
         const marker = new AdvancedMarkerElement({
           map,
           position: { lat: pin.lat, lng: pin.lng },
-          content: cuisinePinElement(pin.cuisine, pin.ring),
+          content: cuisinePinElement(pin.cuisine, pin.ring, pin.emoji),
           title: pin.name,
         });
         const open = () => {

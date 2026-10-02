@@ -61,6 +61,16 @@ const QUESTIONS = [
     ),
   },
   {
+    q: "Can I add my own cuisine?",
+    a: (
+      <p>
+        Yes - at the bottom of your Kingdom, tap <strong>Add a cuisine</strong>, name it, and pick an icon
+        for it (tap the plate). That icon is what shows on its map pins, for you and for friends who see it.
+        You can change the icon later by tapping it on that cuisine&apos;s throne.
+      </p>
+    ),
+  },
+  {
     q: "What's Next in Line for?",
     a: (
       <p>

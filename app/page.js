@@ -18,13 +18,14 @@ import {
   moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
   uploadReviewPhoto, deleteReviewPhoto, uploadAvatar, MAX_REVIEW_PHOTOS,
   loadCourt, toggleEndorsement, followByUsername, loadStanding, loadConquestProgress, blockUser, unblockUser, loadBlockedUsers,
-  loadAdminOverview, adminPlaceMatch, adminCheckClosures, adminClosedPlace, loadClosedPlaceIds, loadClosedPlaceRows, loadTourSeen, markTourSeen,
+  loadAdminOverview, adminPlaceMatch, adminCheckClosures, adminClosedPlace, loadClosedPlaceIds, loadClosedPlaceRows, loadTourSeen, markTourSeen, loadCuisineEmojis, setCuisineEmoji,
 } from "@/lib/data";
 import { claimSignupSource } from "@/lib/signupSource";
 import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
 import { safeMapsUrl } from "@/lib/safeUrl";
 import { shouldAutoStartTour, tourSeenLocally, rememberTourLocally } from "@/lib/tour";
 import Tour from "./Tour";
+import { getCuisineEmoji, setCuisineEmojis } from "./cuisineIcons";
 import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell, useTheme } from "./theme";
 
 // The Google map loader touches window/document, which breaks server-side
@@ -133,6 +134,8 @@ export default function Nomarchy() {
   const [courtModalFriendId, setCourtModalFriendId] = useState(null);
   const [newCuisine, setNewCuisine] = useState("");
   const [addingCuisine, setAddingCuisine] = useState(false);
+  const [newCuisineEmoji, setNewCuisineEmoji] = useState("");
+  const [pickingNewEmoji, setPickingNewEmoji] = useState(false);
   const [onlyCrowned, setOnlyCrowned] = useState(false);
   const [kingdomView, setKingdomView] = useState("grid");
   const [hiddenCuisinesOpen, setHiddenCuisinesOpen] = useState(false);
@@ -243,6 +246,8 @@ export default function Nomarchy() {
           loadClosedPlaceIds(),
         ]);
         setClosedIds(closed);
+        // Icons people picked for their own cuisines, so pins and cards show them.
+        setCuisineEmojis(await loadCuisineEmojis());
         setSlots(k); setPretenders(n); setCuisineList(c);
         setStanding(s); setCourt(crt); setFollowers(flw); setProfile(p);
         const notifs = await loadNotifications(user.id, p.notifications_seen_at, p);
@@ -619,12 +624,24 @@ export default function Nomarchy() {
       return;
     }
     try {
-      await addCuisine(user.id, v);
+      await addCuisine(user.id, v, newCuisineEmoji || undefined);
+      setCuisineEmojis(await loadCuisineEmojis());
       await refreshCuisines();
     } catch (err) {
       flash(err.message);
     }
-    setNewCuisine(""); setAddingCuisine(false);
+    setNewCuisine(""); setAddingCuisine(false); setNewCuisineEmoji(""); setPickingNewEmoji(false);
+  };
+
+  const handleChangeCuisineEmoji = async (cuisineId, emoji) => {
+    try {
+      await setCuisineEmoji(cuisineId, emoji);
+      setCuisineEmojis(await loadCuisineEmojis());
+      await refreshCuisines();
+      flash("Icon updated");
+    } catch (err) {
+      flash(err.message || "Couldn't change that icon");
+    }
   };
 
   const handleHideCuisine = async (cuisineId) => {
@@ -1150,6 +1167,8 @@ export default function Nomarchy() {
                   cuisineId={thisId}
                   slot={slots[cuisineName]}
                   closed={isClosed(slots[cuisineName]?.current?.googlePlaceId)}
+                  cuisineEmoji={getCuisineEmoji(cuisineName)}
+                  onChangeEmoji={(() => { const c = selectableCuisines.find((x) => x.name === cuisineName); return c && !c.is_default ? (emoji) => handleChangeCuisineEmoji(c.id, emoji) : undefined; })()}
                   historyOpen={historyOpen}
                   setHistoryOpen={setHistoryOpen}
                   setModal={setModal}
@@ -1168,9 +1187,15 @@ export default function Nomarchy() {
             })}
 
             {!onlyCrowned && (<div className="flex min-h-28 flex-col items-center justify-center rounded-xl p-4" style={{ border: `1px dashed ${C.cardEdge}` }}>
-              {addingCuisine ? (<div className="flex w-full gap-2">
+              {addingCuisine ? (<div className="w-full"><div className="flex w-full gap-2">
+                <button type="button" onClick={() => setPickingNewEmoji((v) => !v)} aria-label="Pick an icon" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg" style={{ background: C.bg, border: `1px solid ${pickingNewEmoji ? C.gold : C.cardEdge}` }}>
+                  {newCuisineEmoji || "🍽️"}
+                </button>
                 <input autoFocus value={newCuisine} onChange={(e) => setNewCuisine(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddCuisine()} placeholder="e.g. Pho, Wings" className="w-full rounded-lg px-3 py-2 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
                 <button onClick={handleAddCuisine} className="rounded-lg px-3 text-sm font-bold" style={{ background: C.gold, color: C.bg }}>Add</button>
+              </div>
+              {pickingNewEmoji && <CuisineEmojiGrid onPick={(e) => { setNewCuisineEmoji(e); setPickingNewEmoji(false); }} />}
+              {!pickingNewEmoji && !newCuisineEmoji && <p className="mt-1.5 text-xs" style={{ color: C.muted }}>Tap the plate to pick an icon for its map pins.</p>}
               </div>) : (<button onClick={() => setAddingCuisine(true)} className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: C.muted }}><Plus size={15} /> Add a cuisine</button>)}
             </div>)}
           </div>
@@ -2773,6 +2798,38 @@ function ClosureCheckTool() {
   );
 }
 
+// A curated set of food, drink and kitchen icons for a cuisine someone has
+// created - the same idea as the avatar picker, but food-first. The choice
+// shows on that cuisine's map pins.
+const CUISINE_EMOJI_CHOICES = [
+  "🍔", "🍕", "🌭", "🌮", "🌯", "🥪", "🍟", "🍗",
+  "🍖", "🥩", "🥓", "🍳", "🥞", "🧇", "🥐", "🍞",
+  "🍣", "🍱", "🍙", "🍜", "🍲", "🥘", "🍛", "🍝",
+  "🥗", "🥙", "🧆", "🥟", "🍤", "🦞", "🍢", "🥡",
+  "🧀", "🥑", "🌶️", "🍅", "🍄", "🥦", "🥕", "🫓",
+  "🍰", "🧁", "🍩", "🍪", "🍦", "🍫", "🍷", "🍸",
+  "🍺", "🥂", "🍹", "🥃", "☕", "🍵", "🍽️", "🔥",
+];
+
+function CuisineEmojiGrid({ onPick }) {
+  return (
+    <div className="mt-2 grid grid-cols-8 gap-1 rounded-xl p-2" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+      {CUISINE_EMOJI_CHOICES.map((emoji) => (
+        <button
+          key={emoji}
+          type="button"
+          onClick={() => onPick(emoji)}
+          aria-label={`Use ${emoji}`}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-lg"
+          style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}
+        >
+          {emoji}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // Shown wherever a place the owner has confirmed as permanently closed
 // appears on a card or in a search result.
 function ClosedBadge() {
@@ -2783,7 +2840,7 @@ function ClosedBadge() {
   );
 }
 
-function ThroneCard({ cuisineName, cuisineId, slot, closed, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown, onEditDecree, onEditLocation, onEditPhotos, onHide, userId }) {
+function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji, onChangeEmoji, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown, onEditDecree, onEditLocation, onEditPhotos, onHide, userId }) {
   const r = slot?.current;
 
   // One edit panel covers both the decree text and the cuisine it's filed
@@ -2791,6 +2848,7 @@ function ThroneCard({ cuisineName, cuisineId, slot, closed, featured, historyOpe
   // category?"), which just meant hunting for the right one. A pencil icon
   // reads as "edit" on its own, so there's no need to spell it out either.
   const [editing, setEditing] = useState(false);
+  const [pickingEmoji, setPickingEmoji] = useState(false);
   const [decreeText, setDecreeText] = useState("");
   const [targetCuisineId, setTargetCuisineId] = useState("");
   const [addressText, setAddressText] = useState("");
@@ -2838,11 +2896,19 @@ function ThroneCard({ cuisineName, cuisineId, slot, closed, featured, historyOpe
       }}
     >
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>{cuisineName}</span>
+        <span className="flex items-center gap-1.5">
+          {onChangeEmoji && (
+            <button type="button" onClick={() => setPickingEmoji((v) => !v)} aria-label="Change this cuisine's icon" className="flex h-6 w-6 items-center justify-center rounded-full text-sm" style={{ background: C.bg, border: `1px solid ${pickingEmoji ? C.gold : C.cardEdge}` }}>
+              {cuisineEmoji}
+            </button>
+          )}
+          <span className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>{cuisineName}</span>
+        </span>
         {r && (
           <button onClick={() => sharePick(cuisineName, r)} aria-label="Share" className="p-1" style={{ color: C.muted }}><Share2 size={15} /></button>
         )}
       </div>
+      {pickingEmoji && onChangeEmoji && <CuisineEmojiGrid onPick={(emoji) => { onChangeEmoji(emoji); setPickingEmoji(false); }} />}
       {r ? (<div className="mt-2">
         <h3 className={featured ? "text-2xl" : "text-xl"} style={{ ...display, fontWeight: 700 }}>
           {r.name}

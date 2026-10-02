@@ -1,7 +1,7 @@
 "use client";
 
 import { C } from "./theme";
-import { PIN_GOLD, PIN_BLUE } from "./cuisineIcons";
+import { PIN_GOLD, PIN_BLUE, getCuisineEmoji } from "./cuisineIcons";
 import PinMap from "./PinMap";
 
 // Two ring colours, two meanings: gold matches "crowned/favourite"
@@ -20,8 +20,8 @@ export default function NextInLineMap({ beenPins, wantPins }) {
   }
 
   const pins = [
-    ...beenPins.map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine, ring: PIN_GOLD, details: [p.cuisine, "Been"] })),
-    ...wantPins.map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine, ring: PIN_BLUE, details: [p.cuisine, "Still to try"] })),
+    ...beenPins.map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine, emoji: getCuisineEmoji(p.cuisine), ring: PIN_GOLD, details: [p.cuisine, "Been"] })),
+    ...wantPins.map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine, emoji: getCuisineEmoji(p.cuisine), ring: PIN_BLUE, details: [p.cuisine, "Still to try"] })),
   ];
 
   return (

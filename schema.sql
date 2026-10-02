@@ -1173,3 +1173,38 @@ update storage.buckets
 set file_size_limit = 5242880,
     allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']
 where id in ('avatars', 'review-photos');
+
+-- ------------------------------------------------------------
+-- CUISINE ICONS (a picked emoji for a cuisine someone created)
+-- Shown on that cuisine's map pins. Null means "use the default icon".
+-- The creator may change the icon, and ONLY the icon: the trigger below
+-- refuses any other change, so nobody can rename a cuisine under their
+-- friends or turn their own into a shared default.
+-- ------------------------------------------------------------
+alter table cuisines add column if not exists emoji text;
+alter table cuisines drop constraint if exists cuisines_emoji_length;
+alter table cuisines add constraint cuisines_emoji_length check (emoji is null or char_length(emoji) <= 8);
+
+drop policy if exists "cuisines icon updatable by creator" on cuisines;
+create policy "cuisines icon updatable by creator" on cuisines for update
+  using (auth.uid() = created_by) with check (auth.uid() = created_by);
+
+create or replace function protect_cuisine_fields()
+returns trigger
+language plpgsql
+as $$
+begin
+  if current_user <> 'postgres'
+     and (new.name is distinct from old.name
+          or new.is_default is distinct from old.is_default
+          or new.created_by is distinct from old.created_by) then
+    raise exception 'Only the icon of a cuisine can be changed';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_cuisine_fields_trigger on cuisines;
+create trigger protect_cuisine_fields_trigger
+  before update on cuisines
+  for each row execute function protect_cuisine_fields();

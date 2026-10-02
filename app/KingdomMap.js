@@ -1,7 +1,7 @@
 "use client";
 
 import { C } from "./theme";
-import { PIN_GOLD } from "./cuisineIcons";
+import { PIN_GOLD, getCuisineEmoji } from "./cuisineIcons";
 import PinMap from "./PinMap";
 
 export default function KingdomMap({ pins, emptyMessage }) {
@@ -20,6 +20,7 @@ export default function KingdomMap({ pins, emptyMessage }) {
         lng: p.lng,
         name: p.name,
         cuisine: p.cuisine,
+        emoji: getCuisineEmoji(p.cuisine),
         ring: PIN_GOLD,
         details: [p.friend ? `${p.cuisine} · crowned by ${p.friend}` : p.cuisine],
       }))}
