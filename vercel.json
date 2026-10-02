@@ -3,6 +3,10 @@
     {
       "path": "/api/reengage/send",
       "schedule": "0 13 1 * *"
+    },
+    {
+      "path": "/api/refresh-coords",
+      "schedule": "17 6 * * *"
     }
   ]
 }

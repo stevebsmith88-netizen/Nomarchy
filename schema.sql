@@ -1058,3 +1058,57 @@ $$;
 
 revoke all on function google_usage_summary() from public;
 grant execute on function google_usage_summary() to authenticated;
+
+-- ------------------------------------------------------------
+-- COORDINATE REFRESH (keeping stored Google coordinates fresh)
+-- Google's terms allow keeping a place's coordinates for only about 30
+-- days, so a daily job (app/api/refresh-coords) re-confirms them. This
+-- records when each saved place's coordinates were last confirmed.
+-- Null means "not confirmed yet", which the job treats as due first.
+-- ------------------------------------------------------------
+alter table thrones add column if not exists coords_refreshed_at timestamptz;
+alter table next_in_line add column if not exists coords_refreshed_at timestamptz;
+
+-- Stamps the time automatically whenever coordinates are first saved or
+-- change (a new crown, a new Next in Line entry), unless the caller set
+-- the time itself (the refresh job does).
+create or replace function stamp_coords_refreshed()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.lat is null or new.lng is null then return new; end if;
+  if tg_op = 'INSERT' then
+    if new.coords_refreshed_at is null then new.coords_refreshed_at := now(); end if;
+  elsif (new.lat is distinct from old.lat or new.lng is distinct from old.lng)
+        and new.coords_refreshed_at is not distinct from old.coords_refreshed_at then
+    new.coords_refreshed_at := now();
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists stamp_coords_thrones on thrones;
+create trigger stamp_coords_thrones
+  before insert or update on thrones
+  for each row execute function stamp_coords_refreshed();
+
+drop trigger if exists stamp_coords_nil on next_in_line;
+create trigger stamp_coords_nil
+  before insert or update on next_in_line
+  for each row execute function stamp_coords_refreshed();
+
+-- Places Google could no longer find when the job asked. Left exactly as
+-- they are in people's kingdoms; listed here (owner-only) so the owner can
+-- decide what to do. Only the server writes to it.
+create table if not exists place_refresh_issues (
+  google_place_id text primary key,
+  place_name      text not null,
+  noted_at        timestamptz not null default now()
+);
+
+alter table place_refresh_issues enable row level security;
+
+drop policy if exists "owner reads place refresh issues" on place_refresh_issues;
+create policy "owner reads place refresh issues" on place_refresh_issues for select
+  using (exists (select 1 from profiles p where p.id = auth.uid() and p.is_owner));

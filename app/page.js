@@ -1533,6 +1533,21 @@ export default function Nomarchy() {
               </>)}
             </div>
 
+            {adminData.placeIssues?.length > 0 && (<>
+              <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Places Google can&apos;t find</h3>
+              <div className="mb-4 rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+                {adminData.placeIssues.map((p, i) => (
+                  <div key={`${p.name}-${p.notedAt}`} className="flex items-center justify-between gap-3 px-3 py-2 text-sm" style={{ borderTop: i > 0 ? `1px solid ${C.cardEdge}` : "none" }}>
+                    <span className="truncate font-semibold">{p.name}</span>
+                    <span className="shrink-0 text-xs" style={{ color: C.muted }}>{new Date(p.notedAt).toLocaleDateString()}</span>
+                  </div>
+                ))}
+                <p className="px-3 py-2 text-xs leading-relaxed" style={{ color: C.muted, borderTop: `1px solid ${C.cardEdge}` }}>
+                  The daily location check couldn&apos;t find these on Google (often a closed or renamed restaurant). Nothing has been changed on anyone&apos;s kingdom - they&apos;re listed so you can decide.
+                </p>
+              </div>
+            </>)}
+
             <FixThroneTool cuisines={selectableCuisines} />
             <PlaceMatchTool />
 
