@@ -1652,10 +1652,9 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
             {p.mapsUrl && <a href={p.mapsUrl} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-4">
-          {onShare && <button onClick={() => onShare(p)} aria-label="Share" className="p-1" style={{ color: C.muted }}><Share2 size={15} /></button>}
-          <button onClick={() => onRemove(p.id)} aria-label="Remove" className="p-1" style={{ color: C.muted }}><Trash2 size={15} /></button>
-        </div>
+        {onShare && (
+          <button onClick={() => onShare(p)} aria-label="Share" className="shrink-0 p-1" style={{ color: C.muted }}><Share2 size={15} /></button>
+        )}
       </div>
       {friendMatches && friendMatches.length > 0 && (
         <div className="mt-2 rounded-lg p-2.5" style={{ background: C.bg, border: `1px dashed ${C.gold}66` }}>
@@ -1721,6 +1720,10 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
           style={p.visitedAt ? { background: C.green + "22", color: C.green, border: `1px solid ${C.green}66` } : { color: C.muted, border: `1px solid ${C.cardEdge}` }}>
           <Check size={13} /> {p.visitedAt ? "Been here" : "Mark as been"}
         </button>
+        {/* Delete sits alone at the far end of the action row, away from
+            Share at the top of the card - the two used to be side by side,
+            which made it easy to hit the destructive one by mistake. */}
+        <button onClick={() => onRemove(p.id)} aria-label="Remove" className="ml-auto p-1.5" style={{ color: C.muted }}><Trash2 size={15} /></button>
       </div>
     </div>
   );
