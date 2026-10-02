@@ -18,7 +18,7 @@ export default function TermsContent() {
         </Link>
 
         <h1 className="mt-8 text-2xl" style={{ ...display, fontWeight: 800 }}>Terms of Service</h1>
-        <p className="mt-1 text-sm" style={{ color: C.muted }}>Last updated: September 2026</p>
+        <p className="mt-1 text-sm" style={{ color: C.muted }}>Last updated: October 2026</p>
 
         <Section title="Using Nomarchy">
           By creating an account, you agree to these terms and to our{" "}
@@ -42,8 +42,10 @@ export default function TermsContent() {
 
         <Section title="Ending your account">
           <p className="text-sm leading-relaxed" style={{ color: C.cream + "CC" }}>
-            You can delete your own account at any time from Your Profile - this is permanent and removes
-            everything tied to it. We may also suspend or remove an account that violates these terms.
+            You can delete your own account at any time from Your Profile - this is permanent. You choose
+            whether your crowns, reviews and photos are deleted with it or stay up without your name (see the{" "}
+            <Link href="/privacy" style={{ color: C.gold }}>Privacy Policy</Link>). We may also suspend or
+            remove an account that violates these terms.
           </p>
         </Section>
 

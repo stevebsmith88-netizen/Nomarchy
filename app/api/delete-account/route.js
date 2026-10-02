@@ -1,53 +1,39 @@
 // ============================================================
-// Deletes the calling user's own account - but NOT their crowns and
-// reviews. Those are real, useful data about real restaurants (and, on
-// a shared throne's decree, potentially the only record of why a place
-// earned its spot) - deleting the person shouldn't delete the review.
+// Deletes the calling user's own account. The person chooses how far:
 //
-// This used to just delete the auth.users row and let cascades clean up
-// everything downstream (profiles, and from there thrones, fallen,
-// next_in_line, endorsements, follows). That's exactly the problem:
-// profiles.id references auth.users ON DELETE CASCADE, and thrones/fallen
-// reference profiles the same way, so deleting the auth user took every
-// throne and decree down with it. There is no way to delete auth.users
-// and keep the profiles row alive - the cascade isn't optional per-row.
+//   eraseContent: true  - everything goes: the account, name, avatar,
+//     Next in Line, crowns, past crowns, decrees, review photos,
+//     endorsements, follows, feedback - all of it. Photo and avatar files
+//     are removed from storage first (Supabase won't delete a user who
+//     still owns files), then the sign-in itself is deleted, which cascades
+//     through the profile to everything hanging off it.
 //
-// So instead: the profiles row survives, anonymized (display name becomes
-// "No longer a user", avatar cleared, is_public forced true so their
-// thrones/fallen stay visible to everyone the way they always were -
-// otherwise the RLS policy that already hides a private profile's
-// content from everyone but its owner would hide this content from
-// literally everyone, defeating the point). Removed from both sides of
-// `follows`, so they stop appearing as an active, comparable friend in
-// anyone's Court the moment this runs - the actual crown counts on
-// Trending/Best in the Land are untouched by that, since those aggregate
-// independently of any follow relationship. Sign-in is revoked via a
-// long ban (Supabase has no literal "permanent", ~100 years is the
-// standard stand-in) rather than deleting auth.users, which is what
-// keeps the profiles row - and everything hanging off it - alive.
+//   eraseContent: false (or not sent) - the account is closed and the
+//     person's name is removed, but their crowns and reviews stay up for
+//     others. Those rows survive because thrones/fallen hang off the
+//     profile row, so the profile is kept but anonymized: a random
+//     placeholder username replaces the one built from their email, the
+//     display name becomes "No longer a user", the avatar and its file are
+//     removed, and every purely personal record (follows, blocks, Next in
+//     Line, feedback, signup source, conquests, rank history, endorsements
+//     they gave, notification dismissals) is deleted. The crowns that stay
+//     are still stored under an internal id - pseudonymous, not shown with
+//     any name. The privacy policy says exactly this.
 //
-// Their real email is also removed, not just the account disabled: it's
-// overwritten on auth.users (the field Supabase actually checks for
-// sign-in/magic links) with a generated placeholder, and any linked OAuth
-// identity (Google) - which independently stores a copy of whatever
-// email/name/photo that provider handed over - is unlinked first, while
-// their own session is still valid (unlinkIdentity has to run as the
-// user, not the admin client). One caveat, a Supabase Auth platform
-// limit rather than a choice made here: unlinkIdentity refuses to remove
-// someone's LAST remaining identity, so the primary one (almost always
-// "email") can't be unlinked this way - overwriting auth.users.email
-// below is what actually neutralizes it, since that's the address
-// Supabase would check on any future sign-in attempt.
+// Either way their email is gone (deleted outright, or overwritten with a
+// placeholder), any linked Google identity is unlinked first (while their
+// own session is still valid - unlinkIdentity has to run as the user), and
+// sign-in is blocked.
 //
 // The anon key can never do any of this - it all needs the service role
 // key, which must never reach the browser. This route is the only place
-// that key is used, and only after verifying (via the caller's own
-// token, on the anon-key client) which user is asking - never trusting a
-// user id passed in the request body.
+// that key is used for it, and only after verifying (via the caller's own
+// token) which user is asking - never trusting a user id from the body.
 // ============================================================
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { randomBytes } from "node:crypto";
 
 // Supabase's ban_duration has no "forever" value - a duration this long
 // is the documented way to get a permanent-in-practice ban.
@@ -86,17 +72,42 @@ export async function POST(request) {
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
   );
+  const userId = data.user.id;
+
+  const body = await request.json().catch(() => ({}));
+  const eraseContent = body?.eraseContent === true;
+
+  // Their uploaded files first, in both modes for the avatar and in full
+  // mode for review photos too.
+  await removeFolder(admin, "avatars", userId);
+  if (eraseContent) await removeFolder(admin, "review-photos", userId);
+
+  // Feedback they sent can contain personal text; remove it either way.
+  await admin.from("feedback").delete().eq("user_id", userId);
+
+  if (eraseContent) {
+    // Deleting the sign-in cascades through profiles to thrones, fallen,
+    // next_in_line, endorsements, follows, blocks, conquests, rank history,
+    // dismissed notifications, signup source and AI call log.
+    const { error: delErr } = await admin.auth.admin.deleteUser(userId);
+    if (delErr) {
+      return NextResponse.json({ error: "Couldn't delete your account" }, { status: 500 });
+    }
+    return NextResponse.json({ deleted: true, erased: true });
+  }
 
   const { error: profileErr } = await admin
     .from("profiles")
     .update({
+      username: `former-member-${randomBytes(5).toString("hex")}`,
       display_name: "No longer a user",
+      city: null,
       avatar_url: null,
       is_public: true,
       discoverable: false,
       is_owner: false,
     })
-    .eq("id", data.user.id);
+    .eq("id", userId);
   if (profileErr) {
     return NextResponse.json({ error: "Couldn't delete your account" }, { status: 500 });
   }
@@ -104,19 +115,27 @@ export async function POST(request) {
   const { error: followsErr } = await admin
     .from("follows")
     .delete()
-    .or(`follower_id.eq.${data.user.id},followee_id.eq.${data.user.id}`);
+    .or(`follower_id.eq.${userId},followee_id.eq.${userId}`);
   if (followsErr) {
     return NextResponse.json({ error: "Couldn't delete your account" }, { status: 500 });
   }
 
-  // Private data with no reason to survive the account - unlike thrones/
-  // fallen, nothing else on the app reads or displays these once the
-  // owner's gone.
-  await admin.from("next_in_line").delete().eq("user_id", data.user.id);
-  await admin.from("ai_calls").delete().eq("user_id", data.user.id);
+  // Personal records with no reason to survive the account. Nothing else in
+  // the app reads or shows these once the owner is gone.
+  await Promise.all([
+    admin.from("blocks").delete().or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`),
+    admin.from("next_in_line").delete().eq("user_id", userId),
+    admin.from("ai_calls").delete().eq("user_id", userId),
+    admin.from("signup_sources").delete().eq("user_id", userId),
+    admin.from("conquests").delete().eq("user_id", userId),
+    admin.from("rank_promotions").delete().eq("user_id", userId),
+    admin.from("dismissed_notifications").delete().eq("user_id", userId),
+    admin.from("endorsements").delete().eq("endorser_id", userId),
+    admin.from("google_api_calls").update({ user_id: null }).eq("user_id", userId),
+  ]);
 
-  const { error: authErr } = await admin.auth.admin.updateUserById(data.user.id, {
-    email: `deleted-${data.user.id}@deleted.invalid`,
+  const { error: authErr } = await admin.auth.admin.updateUserById(userId, {
+    email: `deleted-${userId}@deleted.invalid`,
     email_confirm: true,
     user_metadata: {},
     ban_duration: PERMANENT_BAN,
@@ -125,5 +144,18 @@ export async function POST(request) {
     return NextResponse.json({ error: "Couldn't delete your account" }, { status: 500 });
   }
 
-  return NextResponse.json({ deleted: true });
+  return NextResponse.json({ deleted: true, erased: false });
+}
+
+// Removes every file in a user's folder ("{user_id}/...") in a storage
+// bucket. Best effort per page; a failure stops that bucket's cleanup but
+// never blocks the deletion itself.
+async function removeFolder(admin, bucket, userId) {
+  for (let page = 0; page < 20; page++) {
+    const { data: files, error } = await admin.storage.from(bucket).list(userId, { limit: 100 });
+    if (error || !files || files.length === 0) return;
+    const paths = files.filter((f) => f.name).map((f) => `${userId}/${f.name}`);
+    const { error: rmErr } = await admin.storage.from(bucket).remove(paths);
+    if (rmErr || files.length < 100) return;
+  }
 }

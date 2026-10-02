@@ -42,7 +42,7 @@ export default function PrivacyContent() {
             "To run the app: show your kingdom, your friends' picks, and comparisons between you.",
             "To let you look up a restaurant by name when adding one - your search text (and the city you type, if any) is sent to Google's Places service to find a real matching place. In a small number of cases, and when you import a list, it is sent to Anthropic's Claude API instead. Neither service is given your name or email as part of that request.",
             "To show your places on a map - maps are provided by Google Maps, so opening a map sends your device's IP address and basic browser details to Google, as with any website that embeds Google Maps.",
-            "To send you sign-in emails (a one-time code or link) so you can access your account.",
+            "To send you emails: sign-in codes or links so you can access your account; a one-time welcome email when you finish setting up; and, if you've been quiet for a month or more, an occasional reminder with a few highlights of what's new. You can switch the reminders off in Your Profile, or with the link at the bottom of any reminder, and each one includes our contact details.",
             "To improve the app based on feedback you submit.",
           ]} />
           <p className="mt-2 text-sm leading-relaxed" style={{ color: C.cream + "CC" }}>
@@ -68,6 +68,20 @@ export default function PrivacyContent() {
             coordinates to OpenStreetMap’s free lookup service to determine your general area - your exact
             coordinates aren’t stored.
           </p>
+          <p className="mt-2 text-sm leading-relaxed" style={{ color: C.cream + "CC" }}>
+            Some of these providers (including SendGrid, Vercel, Google and Anthropic) may store or process
+            information outside Canada, including in the United States, where it can be accessed under that
+            country’s laws. We use established providers and share only what each one needs to do its job.
+          </p>
+        </Section>
+
+        <Section title="How long we keep it">
+          We keep your information while your account is open. If you delete your account, your name, email,
+          Next in Line, follows and other personal records are removed right away, and you choose whether
+          your crowns, reviews and photos are deleted too, or stay up without your name (credited to “No
+          longer a user” and stored under an internal ID that isn’t linked to your name or email). Feedback
+          you’ve sent is deleted with your account. Copies may remain for a short time in our providers’
+          routine backups before they’re overwritten.
         </Section>
 
         <Section title="Your choices">
@@ -75,12 +89,34 @@ export default function PrivacyContent() {
             "Edit your username, city, profile photo, and privacy setting (Public/Private) any time from Your Profile.",
             "Edit or delete any review, photo, or entry you've added.",
             "Unfollow anyone, or ask someone to stop following you.",
-            "Delete your account entirely from Your Profile - this permanently removes your profile and everything tied to it (thrones, reviews, photos, follows) with no manual cleanup needed and no way to undo it.",
+            "Turn off reminder emails in Your Profile, or with the link in any reminder.",
+            "Delete your account from Your Profile - this is permanent and can’t be undone. You choose whether your crowns, reviews and photos are deleted with it, or stay up without your name.",
           ]} />
         </Section>
 
+        <Section title="Your rights">
+          You can ask to see the personal information we hold about you, ask us to correct it, ask us to
+          delete it, or withdraw your consent to how we use it. Email{" "}
+          <a href="mailto:hello@nomarchy.ca" style={{ color: C.gold }}>hello@nomarchy.ca</a> and we’ll respond
+          within 30 days. If you live in Quebec you have some additional rights under its privacy law - ask
+          us about any of them. If you’re not satisfied with our response, you can contact the Office of the
+          Privacy Commissioner of Canada (priv.gc.ca) or, in Quebec, the Commission d’accès à l’information
+          (cai.gouv.qc.ca).
+        </Section>
+
+        <Section title="Who is responsible">
+          Nomarchy’s founder is responsible for how personal information is handled here and is the person to
+          contact about this policy, at{" "}
+          <a href="mailto:hello@nomarchy.ca" style={{ color: C.gold }}>hello@nomarchy.ca</a>.
+        </Section>
+
+        <Section title="If something goes wrong">
+          If a security incident puts your information at real risk of significant harm, we’ll tell you and
+          the Privacy Commissioner as the law requires, and keep a record of what happened.
+        </Section>
+
         <Section title="Children">
-          Nomarchy isn’t directed at children, and we don’t knowingly collect information from anyone under 13.
+          Nomarchy isn’t directed at children, and we don’t knowingly collect information from anyone under 14.
         </Section>
 
         <Section title="Changes to this policy">

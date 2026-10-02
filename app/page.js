@@ -677,9 +677,11 @@ export default function Nomarchy() {
     setProfile(updated);
   };
 
-  const handleDeleteAccount = async () => {
-    await deleteAccount();
-    await signOut();
+  const handleDeleteAccount = async (eraseContent) => {
+    await deleteAccount(eraseContent);
+    // The sign-in may already be gone server-side; clearing it here is only
+    // tidying up this device, so a failure doesn't matter.
+    try { await signOut(); } catch {}
   };
 
   const handleSubmitFeedback = async (message) => {
@@ -3423,6 +3425,8 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteText, setDeleteText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  // Defaults to the most private choice: remove everything.
+  const [eraseContent, setEraseContent] = useState(true);
   const [deleteErr, setDeleteErr] = useState("");
 
   const [providers, setProviders] = useState(null);
@@ -3486,7 +3490,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
     if (!deleteConfirmed || deleting) return;
     setDeleting(true); setDeleteErr("");
     try {
-      await onDeleteAccount();
+      await onDeleteAccount(eraseContent);
     } catch (e) {
       setDeleteErr(e.message || "Couldn't delete your account. Try again.");
       setDeleting(false);
@@ -3822,8 +3826,32 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
           ) : (
             <div>
               <p className="text-xs leading-relaxed" style={{ color: C.coup }}>
-                This removes your access, your name, and your Next in Line for good - you'll be signed out and unfollowed everywhere. Your crowns and reviews stay up for others, credited to &ldquo;No longer a user&rdquo; instead of you. This cannot be undone.
+                This closes your account for good - you&apos;ll be signed out, your name and Next in Line are removed, and you&apos;re unfollowed everywhere. It cannot be undone. Choose what happens to your crowns and reviews:
               </p>
+              <div className="mt-2 space-y-1.5" role="radiogroup" aria-label="What happens to your crowns and reviews">
+                {[
+                  [true, "Delete everything", "Your crowns, past crowns, reviews and photos are removed too."],
+                  [false, "Keep my crowns and reviews up", "They stay up for others, credited to \u201cNo longer a user\u201d instead of you."],
+                ].map(([value, label, hint]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    role="radio"
+                    aria-checked={eraseContent === value}
+                    onClick={() => setEraseContent(value)}
+                    className="flex w-full items-start gap-2 rounded-lg p-2.5 text-left"
+                    style={{ background: C.bg, border: `1px solid ${eraseContent === value ? C.coup : C.cardEdge}` }}
+                  >
+                    <span className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full" style={{ border: `1.5px solid ${eraseContent === value ? C.coup : C.muted}` }}>
+                      {eraseContent === value && <span className="h-1.5 w-1.5 rounded-full" style={{ background: C.coup }} />}
+                    </span>
+                    <span>
+                      <span className="block text-xs font-bold" style={{ color: C.cream }}>{label}</span>
+                      <span className="block text-xs" style={{ color: C.muted }}>{hint}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
               <p className="mt-2 text-xs" style={{ color: C.muted }}>
                 Type <span style={{ color: C.cream, fontWeight: 700 }}>{profile?.username}</span> to confirm.
               </p>

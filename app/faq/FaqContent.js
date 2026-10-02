@@ -199,9 +199,10 @@ const QUESTIONS = [
     q: "How do I delete my account?",
     a: (
       <p>
-        Your Profile has a &ldquo;Delete my account&rdquo; option at the bottom of Settings - it&apos;s permanent and
-        removes everything tied to your account (crowns, reviews, follows, everything) with nothing left
-        behind.
+        Your Profile has a &ldquo;Delete my account&rdquo; option at the bottom of Settings - it&apos;s
+        permanent. You choose what happens to your crowns and reviews: delete everything (crowns, past
+        crowns, reviews and photos included), or keep them up for others, credited to &ldquo;No longer a
+        user&rdquo; instead of your name. Either way, your name, email, Next in Line and follows are removed.
       </p>
     ),
   },
