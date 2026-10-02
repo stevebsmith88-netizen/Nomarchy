@@ -2015,7 +2015,7 @@ function PhotoStrip({ photos, onRemove }) {
 // "save" - simpler state, and it means a review's photos are never lost to
 // a closed tab mid-edit. Removing one is a local array change the caller
 // persists (immediately for an existing review, or on submit for a new one).
-function PhotoPicker({ userId, photos, onChange, action }) {
+function PhotoPicker({ userId, photos, onChange, action, canRemove = true }) {
   const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState("");
 
@@ -2036,7 +2036,7 @@ function PhotoPicker({ userId, photos, onChange, action }) {
 
   return (
     <div className="mt-2">
-      <PhotoStrip photos={photos} onRemove={(i) => { deleteReviewPhoto(photos[i]); onChange(photos.filter((_, idx) => idx !== i)); }} />
+      <PhotoStrip photos={photos} onRemove={canRemove ? (i) => { deleteReviewPhoto(photos[i]); onChange(photos.filter((_, idx) => idx !== i)); } : undefined} />
       {(photos.length < MAX_REVIEW_PHOTOS || action) && (
         <div className="mt-2 flex items-end justify-between gap-2">
           {photos.length < MAX_REVIEW_PHOTOS ? (
@@ -2307,7 +2307,7 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
         {/* Coup shares a row with Add photo whenever photos are editable -
             otherwise it sat alone on its own row with a dead gap beside it. */}
         {onEditPhotos
-          ? <PhotoPicker userId={userId} photos={r.photos || []} onChange={(photos) => onEditPhotos(photos)} action={coupButton} />
+          ? <PhotoPicker userId={userId} photos={r.photos || []} onChange={(photos) => onEditPhotos(photos)} action={coupButton} canRemove={editing || !(onEditDecree || onMoveCuisine || onEditLocation)} />
           : <div className="mt-3 flex justify-end">{coupButton}</div>}
       </div>) : (<div className="mt-2">
         <p className="text-sm italic" style={{ color: C.muted }}>{featured ? "No overall favourite crowned yet." : "This throne sits empty."}</p>
