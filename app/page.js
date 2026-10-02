@@ -1484,17 +1484,17 @@ export default function Nomarchy() {
 
             <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Signups by source</h3>
             <div className="mb-4 rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
-              <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 px-3 py-2 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>
+              <div className="grid grid-cols-[1fr_5.5rem_5rem] gap-x-4 px-3 py-2 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>
                 <span>Source</span><span className="text-right">This week</span><span className="text-right">All time</span>
               </div>
               {adminData.signupSources.rows.map((r) => (
-                <div key={r.source} className="grid grid-cols-[1fr_auto_auto] gap-x-4 px-3 py-2 text-sm" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
+                <div key={r.source} className="grid grid-cols-[1fr_5.5rem_5rem] gap-x-4 px-3 py-2 text-sm" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
                   <span className="truncate font-semibold">{r.source}</span>
                   <span className="text-right" style={{ color: C.gold }}>{r.week}</span>
                   <span className="text-right" style={{ color: C.gold }}>{r.allTime}</span>
                 </div>
               ))}
-              <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 px-3 py-2 text-sm" style={{ borderTop: `1px solid ${C.cardEdge}`, color: C.muted }}>
+              <div className="grid grid-cols-[1fr_5.5rem_5rem] gap-x-4 px-3 py-2 text-sm" style={{ borderTop: `1px solid ${C.cardEdge}`, color: C.muted }}>
                 <span>Unknown / direct</span>
                 <span className="text-right">{adminData.signupSources.unknown.week}</span>
                 <span className="text-right">{adminData.signupSources.unknown.allTime}</span>
