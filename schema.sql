@@ -1132,3 +1132,23 @@ alter table place_refresh_issues enable row level security;
 drop policy if exists "owner reads place refresh issues" on place_refresh_issues;
 create policy "owner reads place refresh issues" on place_refresh_issues for select
   using (exists (select 1 from profiles p where p.id = auth.uid() and p.is_owner));
+
+-- ------------------------------------------------------------
+-- CLOSED PLACES (places the owner has confirmed are permanently closed)
+-- Marked by hand from the Admin tab after the closure check - never
+-- automatically, so a wrong status from Google can't label anyone's crown.
+-- Keyed on the Google place ID, so every crown or list entry for that
+-- place is covered, whoever saved it. Readable by anyone (a place ID and
+-- the fact it closed aren't sensitive; the app needs it to grey things out
+-- and hide pins); only the server, acting for the owner, writes to it.
+-- ------------------------------------------------------------
+create table if not exists closed_places (
+  google_place_id text primary key,
+  place_name      text not null,
+  closed_at       timestamptz not null default now()
+);
+
+alter table closed_places enable row level security;
+
+drop policy if exists "closed places readable" on closed_places;
+create policy "closed places readable" on closed_places for select using (true);

@@ -140,6 +140,20 @@ const QUESTIONS = [
     ),
   },
   {
+    q: "What does \u201cPermanently closed\u201d mean?",
+    a: (
+      <p>
+        When a restaurant is confirmed to have permanently closed, it&apos;s marked as such. If it was
+        one of your crowns, it stays on your throne with a &ldquo;Permanently closed&rdquo; label so you can
+        decide when to pick a new favourite - nothing is removed for you. A closed place on your Next in
+        Line is greyed out. Closed places no longer appear on the maps, in Best in the Land, or in Privy
+        Council suggestions, and can&apos;t be added again. You&apos;ll get a notification when one of
+        yours is marked. If you think it&apos;s wrong, use the &ldquo;report it here&rdquo; link in that
+        notification, or send Feedback from Your Profile.
+      </p>
+    ),
+  },
+  {
     q: "What's the difference between Public, Private, and Discoverable?",
     a: (
       <>

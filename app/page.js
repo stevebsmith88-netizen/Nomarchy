@@ -18,7 +18,7 @@ import {
   moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
   uploadReviewPhoto, deleteReviewPhoto, uploadAvatar, MAX_REVIEW_PHOTOS,
   loadCourt, toggleEndorsement, followByUsername, loadStanding, loadConquestProgress, blockUser, unblockUser, loadBlockedUsers,
-  loadAdminOverview, adminPlaceMatch, adminCheckClosures,
+  loadAdminOverview, adminPlaceMatch, adminCheckClosures, adminClosedPlace, loadClosedPlaceIds, loadClosedPlaceRows,
 } from "@/lib/data";
 import { claimSignupSource } from "@/lib/signupSource";
 import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
@@ -160,6 +160,9 @@ export default function Nomarchy() {
 
   const [editingProfile, setEditingProfile] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackPrefill, setFeedbackPrefill] = useState("");
+  // Google place IDs the owner has confirmed as permanently closed.
+  const [closedIds, setClosedIds] = useState(() => new Set());
   const [showMembers, setShowMembers] = useState(false);
 
   const [top25, setTop25] = useState(null);
@@ -201,7 +204,7 @@ export default function Nomarchy() {
     if (!user) return;
     (async () => {
       try {
-        const [k, n, c, s, crt, flw, p] = await Promise.all([
+        const [k, n, c, s, crt, flw, p, closed] = await Promise.all([
           loadKingdom(user.id),
           loadNextInLine(user.id),
           loadCuisines(user.id),
@@ -209,7 +212,9 @@ export default function Nomarchy() {
           loadCourt(user.id),
           loadFollowers(user.id),
           getProfile(user.id),
+          loadClosedPlaceIds(),
         ]);
+        setClosedIds(closed);
         setSlots(k); setPretenders(n); setCuisineList(c);
         setStanding(s); setCourt(crt); setFollowers(flw); setProfile(p);
         const notifs = await loadNotifications(user.id, p.notifications_seen_at, p);
@@ -748,15 +753,20 @@ export default function Nomarchy() {
   // suggestion two provinces away. A pick with no city on file (older
   // data, from before city was captured) is kept rather than dropped,
   // since we can't actually tell it's wrong.
+  // A place the owner has confirmed permanently closed: greyed out, no pin,
+  // never recommended, and out of Best in the Land.
+  const isClosed = (googlePlaceId) => !!googlePlaceId && closedIds.has(googlePlaceId);
+
   const councilLocalPool = [
     ...court.flatMap((f) => [
       ...f.picks.map((p) => ({ name: p.name, area: p.area, address: p.address, city: p.city, googlePlaceId: p.googlePlaceId, lat: p.lat, lng: p.lng, cuisine: p.cuisine, cuisineId: p.cuisineId, quote: p.decree, from: f.name, mine: false })),
-      ...f.reviews.map((r) => ({ name: r.name, area: r.area, address: r.address, city: r.city, cuisine: r.cuisine, cuisineId: null, quote: r.note, from: f.name, mine: false })),
+      ...f.reviews.map((r) => ({ name: r.name, area: r.area, address: r.address, city: r.city, googlePlaceId: r.googlePlaceId, cuisine: r.cuisine, cuisineId: null, quote: r.note, from: f.name, mine: false })),
     ]),
     ...pretenders
       .filter((p) => !p.visitedAt)
-      .map((p) => ({ name: p.name, area: p.area, address: p.address, city: p.city, cuisine: p.cuisine, cuisineId: p.cuisineId, quote: p.note, from: null, mine: true })),
-  ].filter((c) => !c.city || !profile?.city || c.city === profile.city);
+      .map((p) => ({ name: p.name, area: p.area, address: p.address, city: p.city, googlePlaceId: p.googlePlaceId, cuisine: p.cuisine, cuisineId: p.cuisineId, quote: p.note, from: null, mine: true })),
+  ].filter((c) => !c.city || !profile?.city || c.city === profile.city)
+    .filter((c) => !isClosed(c.googlePlaceId));
   // Cuisine options are only what's actually local, same reasoning as
   // nilCuisineOptions above - no point offering a cuisine nobody in your
   // own city has tried.
@@ -770,7 +780,7 @@ export default function Nomarchy() {
     !nilCuisineFilter || (nilCuisineFilter === "__uncategorized__" ? !cuisineName : cuisineName === nilCuisineFilter);
 
   const kingdomPins = Object.entries(slots)
-    .filter(([cuisineName, slot]) => slot.current?.lat && slot.current?.lng && matchesNilCuisine(cuisineName))
+    .filter(([cuisineName, slot]) => slot.current?.lat && slot.current?.lng && !isClosed(slot.current.googlePlaceId) && matchesNilCuisine(cuisineName))
     .map(([cuisineName, slot]) => ({ lat: slot.current.lat, lng: slot.current.lng, name: slot.current.name, cuisine: cuisineName }));
   // Two buckets for the Next in Line map, matching "where I've been" vs
   // "where I still want to go" - a crowned favourite counts as "been"
@@ -778,15 +788,15 @@ export default function Nomarchy() {
   // not it ever became a throne.
   const beenPins = [
     ...kingdomPins,
-    ...pretenders.filter((p) => p.lat && p.lng && p.visitedAt && matchesNilCuisine(p.cuisine)).map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine || "Uncategorized" })),
+    ...pretenders.filter((p) => p.lat && p.lng && !isClosed(p.googlePlaceId) && p.visitedAt && matchesNilCuisine(p.cuisine)).map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine || "Uncategorized" })),
   ];
   const wantPins = pretenders
-    .filter((p) => p.lat && p.lng && !p.visitedAt && matchesNilCuisine(p.cuisine))
+    .filter((p) => p.lat && p.lng && !isClosed(p.googlePlaceId) && !p.visitedAt && matchesNilCuisine(p.cuisine))
     .map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine || "Uncategorized" }));
   // Crowned picks only, not visited-but-not-crowned reviews - this is
   // "where my friends' favourites are," same scope as Kingdom's own map.
   const courtPins = court.flatMap((f) =>
-    f.picks.filter((p) => p.lat && p.lng).map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine, friend: f.name }))
+    f.picks.filter((p) => p.lat && p.lng && !isClosed(p.googlePlaceId)).map((p) => ({ lat: p.lat, lng: p.lng, name: p.name, cuisine: p.cuisine, friend: f.name }))
   );
 
   const pretenderQuery = pretenderSearch.trim().toLowerCase();
@@ -865,13 +875,13 @@ export default function Nomarchy() {
     return place === -1 ? null : [C.gold, "#9AA5B1", "#B7762E"][place];
   };
   const scopedTop25 = top25 && (top25Scope === "friends" ? top25.filter((t) => followedIds.has(t.user_id)) : top25);
-  const trendingList = scopedTop25 && groupCrownedThrones(scopedTop25.filter((t) => new Date(t.crowned_at).getTime() >= trendingCutoff));
+  const trendingList = scopedTop25 && groupCrownedThrones(scopedTop25.filter((t) => new Date(t.crowned_at).getTime() >= trendingCutoff && !isClosed(t.google_place_id)));
   // Search ignores the range/rank window entirely - "find any restaurant
   // anyone's crowned" shouldn't be limited to the top 25 most-crowned or
   // to whatever time range happens to be selected.
   const restaurantSearchQuery = restaurantSearch.trim().toLowerCase();
   const restaurantSearchResults = scopedTop25 && restaurantSearchQuery
-    ? groupCrownedThrones(scopedTop25).filter((p) => p.name.toLowerCase().includes(restaurantSearchQuery))
+    ? groupCrownedThrones(scopedTop25.filter((t) => !isClosed(t.google_place_id))).filter((p) => p.name.toLowerCase().includes(restaurantSearchQuery))
     : null;
   // A restaurant already showing up above (someone's crowned it) shouldn't
   // also show up down here as "not yet crowned".
@@ -940,6 +950,19 @@ export default function Nomarchy() {
                           {n.type === "review" && <><span style={{ fontWeight: 700 }}>{n.name}</span> tried <span style={{ color: C.gold }}>{n.place}</span>{n.cuisine ? ` for ${n.cuisine}` : ""}</>}
                           {n.type === "endorse" && <><span style={{ fontWeight: 700 }}>{n.name}</span> endorsed your <span style={{ color: C.gold }}>{n.place}</span> pick</>}
                           {n.type === "promotion" && <><span style={{ fontWeight: 700 }}>{n.name}</span> was promoted to <span style={{ color: C.gold, fontWeight: 700 }}>{n.rank}</span></>}
+                          {n.type === "closed" && n.kind === "crown" && <><span style={{ color: C.gold }}>{n.place}</span> has permanently closed. Time to pick a new favourite?</>}
+                          {n.type === "closed" && n.kind === "list" && (<>
+                            <span style={{ color: C.gold }}>{n.place}</span> on your Next in Line has been marked as permanently closed. If this is an error,{" "}
+                            <button
+                              className="font-bold underline"
+                              style={{ color: C.gold }}
+                              onClick={() => {
+                                setShowNotifications(false);
+                                setFeedbackPrefill(`${n.place} was marked as permanently closed, but I think that's a mistake: `);
+                                setShowFeedback(true);
+                              }}
+                            >report it here</button>.
+                          </>)}
                           {n.type === "announcement" && <><span style={{ fontWeight: 700, color: C.gold }}>What's new:</span> {n.text}</>}
                         </div>
                         <div className="mt-0.5 text-[10px]" style={{ color: C.muted }}>{timeAgo(n.at)}</div>
@@ -1029,6 +1052,7 @@ export default function Nomarchy() {
                 cuisineName={OVERALL_FAVOURITE_NAME}
                 cuisineId={overallCuisine.id}
                 slot={slots[OVERALL_FAVOURITE_NAME]}
+                closed={isClosed(slots[OVERALL_FAVOURITE_NAME]?.current?.googlePlaceId)}
                 historyOpen={historyOpen}
                 setHistoryOpen={setHistoryOpen}
                 setModal={setModal}
@@ -1093,6 +1117,7 @@ export default function Nomarchy() {
                   cuisineName={cuisineName}
                   cuisineId={thisId}
                   slot={slots[cuisineName]}
+                  closed={isClosed(slots[cuisineName]?.current?.googlePlaceId)}
                   historyOpen={historyOpen}
                   setHistoryOpen={setHistoryOpen}
                   setModal={setModal}
@@ -1235,7 +1260,7 @@ export default function Nomarchy() {
               <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Still to try</h3>
               {stillToTry.map((p) => (
                 <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines} userId={user.id}
-                  friendMatches={friendMatchesFor(p)}
+                  friendMatches={friendMatchesFor(p)} closed={isClosed(p.googlePlaceId)}
                   onShare={sharePretender}
                   onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
                   onChangeCuisine={handleChangePretenderCuisine} onChangePhotos={handleChangePretenderPhotos} onToggleVisited={handleToggleVisited}
@@ -1254,7 +1279,7 @@ export default function Nomarchy() {
               <h3 className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Been to</h3>
               {beenTo.map((p) => (
                 <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines} userId={user.id}
-                  friendMatches={friendMatchesFor(p)}
+                  friendMatches={friendMatchesFor(p)} closed={isClosed(p.googlePlaceId)}
                   onShare={sharePretender}
                   onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
                   onChangeCuisine={handleChangePretenderCuisine} onChangePhotos={handleChangePretenderPhotos} onToggleVisited={handleToggleVisited}
@@ -1651,6 +1676,7 @@ export default function Nomarchy() {
           reigning={slots[modal.cuisineName]?.current}
           defaultCity={profile?.city || "Toronto"}
           userId={user.id}
+          closedIds={closedIds}
           onClose={() => setModal(null)}
           onSubmit={(cid, entry) => crown(cid, entry, modal.pretenderId)}
         />
@@ -1670,6 +1696,7 @@ export default function Nomarchy() {
         return (
           <FriendKingdomModal
             friend={f}
+            closedIds={closedIds}
             onClose={() => setCourtModalFriendId(null)}
             onEndorse={handleEndorse}
             onAddToList={addFriendPickToPretenders}
@@ -1687,6 +1714,7 @@ export default function Nomarchy() {
           cuisines={selectableCuisines}
           prefill={addPretenderPrefillName ? { name: addPretenderPrefillName } : null}
           defaultCity={profile?.city || "Toronto"}
+          closedIds={closedIds}
           onClose={() => { setAddPretender(false); setAddPretenderPrefillName(""); }}
           onSubmit={(cid, entry) => addToPretenders(cid, entry)}
         />
@@ -1740,7 +1768,8 @@ export default function Nomarchy() {
 
       {showFeedback && (
         <FeedbackModal
-          onClose={() => setShowFeedback(false)}
+          initialMessage={feedbackPrefill}
+          onClose={() => { setShowFeedback(false); setFeedbackPrefill(""); }}
           onSubmit={handleSubmitFeedback}
         />
       )}
@@ -1782,13 +1811,14 @@ function RankLadder({ score }) {
   );
 }
 
-function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onChangePhotos, onToggleVisited, onChangeVerdict, onCrown, onShare, userId, friendMatches }) {
+function PretenderCard({ p, closed, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onChangePhotos, onToggleVisited, onChangeVerdict, onCrown, onShare, userId, friendMatches }) {
   return (
-    <div className="mb-3 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, opacity: p.visitedAt ? 0.7 : 1 }}>
+    <div className="mb-3 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, opacity: closed ? 0.5 : p.visitedAt ? 0.7 : 1 }}>
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h3 className="flex items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
+          <h3 className="flex flex-wrap items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
             {p.name}
+            {closed && <ClosedBadge />}
             {p.visitedAt && <Check size={14} style={{ color: C.green }} />}
             {p.verdict && (
               <span
@@ -2535,9 +2565,10 @@ function PlaceMatchTool() {
   );
 }
 
-// Owner-run, read-only: asks Google which saved places are now permanently
-// closed. Nothing is saved or changed - the result only lives on this screen.
-// See /api/admin/check-closures.
+// Owner-run: asks Google which saved places are now permanently closed.
+// Checking only looks - nothing is saved. A place is only marked closed when
+// the owner presses "Mark as closed" on it, and that can be undone below.
+// See /api/admin/check-closures and /api/admin/closed-places.
 function ClosureCheckTool() {
   const [phase, setPhase] = useState("idle");
   const [progress, setProgress] = useState({ checked: 0, total: 0 });
@@ -2545,6 +2576,15 @@ function ClosureCheckTool() {
   const [gone, setGone] = useState([]);
   const [errors, setErrors] = useState(0);
   const [err, setErr] = useState("");
+  const [marked, setMarked] = useState(null); // rows already marked closed
+  const [busyId, setBusyId] = useState(null);
+  const [actionErr, setActionErr] = useState("");
+
+  useEffect(() => {
+    loadClosedPlaceRows().then(setMarked).catch(() => setMarked([]));
+  }, []);
+
+  const markedIds = new Set((marked || []).map((m) => m.placeId));
 
   const run = async () => {
     setPhase("running"); setErr(""); setClosed([]); setGone([]); setErrors(0); setProgress({ checked: 0, total: 0 });
@@ -2569,6 +2609,18 @@ function ClosureCheckTool() {
     setPhase("done");
   };
 
+  const change = async (action, placeId) => {
+    if (busyId) return;
+    setBusyId(placeId); setActionErr("");
+    try {
+      await adminClosedPlace(action, placeId);
+      setMarked(await loadClosedPlaceRows());
+    } catch (e) {
+      setActionErr(e.message || "Couldn't update that place.");
+    }
+    setBusyId(null);
+  };
+
   const entryText = (p) => {
     const parts = [];
     if (p.crowns) parts.push(`${p.crowns} crown${p.crowns === 1 ? "" : "s"}`);
@@ -2576,9 +2628,18 @@ function ClosureCheckTool() {
     return parts.join(" · ");
   };
   const placeRow = (p, i) => (
-    <div key={`${p.name}-${i}`} className="mt-2 text-xs" style={{ color: C.muted }}>
-      <span style={{ color: C.cream, fontWeight: 600 }}>{p.name}</span>{p.address ? ` · ${p.address}` : ""}
-      <div>{entryText(p)}</div>
+    <div key={`${p.placeId}-${i}`} className="mt-2 flex items-start justify-between gap-3 text-xs" style={{ color: C.muted }}>
+      <div className="min-w-0">
+        <span style={{ color: C.cream, fontWeight: 600 }}>{p.name}</span>{p.address ? ` · ${p.address}` : ""}
+        <div>{entryText(p)}</div>
+      </div>
+      {markedIds.has(p.placeId) ? (
+        <span className="shrink-0 font-bold" style={{ color: C.green }}>Marked</span>
+      ) : (
+        <button onClick={() => change("mark", p.placeId)} disabled={!!busyId} className="shrink-0 rounded-lg px-2.5 py-1.5 font-bold" style={busyId ? { background: C.cardEdge, color: C.muted } : { background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}>
+          {busyId === p.placeId ? "..." : "Mark as closed"}
+        </button>
+      )}
     </div>
   );
 
@@ -2586,13 +2647,14 @@ function ClosureCheckTool() {
     <div className="mb-5">
       <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Check for closures</h3>
       <p className="mb-2 text-xs" style={{ color: C.muted }}>
-        Asks Google which saved places have permanently closed. It only looks - nothing is saved or changed on anyone&apos;s kingdom, and the result disappears when you leave this screen. Worth running every few months.
+        Asks Google which saved places have permanently closed. Checking only looks - a place is only marked closed when you press the button on it. Marking greys it out for everyone who saved it, takes it off the maps, Best in the Land and recommendations, and tells each of them. Worth running every few months.
       </p>
       <button onClick={run} disabled={phase === "running"} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold" style={phase === "running" ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.bg }}>
         {phase === "running" ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
         {phase === "running" ? `Checked ${progress.checked} of ${progress.total || "..."}` : phase === "done" ? "Check again" : "Check for closures"}
       </button>
       {err && <p className="mt-2 text-xs" style={{ color: C.coup }}>{err}</p>}
+      {actionErr && <p className="mt-2 text-xs" style={{ color: C.coup }}>{actionErr}</p>}
 
       {phase === "done" && !err && (
         <div className="mt-3 rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
@@ -2616,11 +2678,38 @@ function ClosureCheckTool() {
           )}
         </div>
       )}
+
+      {marked && marked.length > 0 && (
+        <div className="mt-3 rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+          <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Marked as closed ({marked.length})</div>
+          {marked.map((m) => (
+            <div key={m.placeId} className="mt-2 flex items-center justify-between gap-3 text-xs" style={{ color: C.muted }}>
+              <span className="min-w-0 truncate"><span style={{ color: C.cream, fontWeight: 600 }}>{m.name}</span> · {new Date(m.closedAt).toLocaleDateString()}</span>
+              <button onClick={() => change("reopen", m.placeId)} disabled={!!busyId} className="shrink-0 rounded-lg px-2.5 py-1.5 font-bold" style={{ border: `1px solid ${C.cardEdge}`, color: C.muted }}>
+                {busyId === m.placeId ? "..." : "Reopen"}
+              </button>
+            </div>
+          ))}
+          <p className="mt-2 text-[11px] leading-relaxed" style={{ color: C.muted }}>
+            Reopening removes the grey-out straight away and brings the map pins back within a day.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
 
-function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown, onEditDecree, onEditLocation, onEditPhotos, onHide, userId }) {
+// Shown wherever a place the owner has confirmed as permanently closed
+// appears on a card or in a search result.
+function ClosedBadge() {
+  return (
+    <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: C.coup + "22", color: C.coup, letterSpacing: "0.06em" }}>
+      Permanently closed
+    </span>
+  );
+}
+
+function ThroneCard({ cuisineName, cuisineId, slot, closed, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown, onEditDecree, onEditLocation, onEditPhotos, onHide, userId }) {
   const r = slot?.current;
 
   // One edit panel covers both the decree text and the cuisine it's filed
@@ -2683,6 +2772,7 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
         <h3 className={featured ? "text-2xl" : "text-xl"} style={{ ...display, fontWeight: 700 }}>
           {r.name}
           <Crown size={featured ? 18 : 16} className="relative -top-0.5 ml-2 inline" style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
+          {closed && <ClosedBadge />}
         </h3>
         <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
           {(r.area || r.address) && (<><MapPin size={11} /> {r.area || r.address}<span className="mx-1">·</span></>)}
@@ -3737,7 +3827,7 @@ function knownFor(f) {
   return { cuisine: best[0], endorsements: pick?.endorsements || 0 };
 }
 
-function FriendKingdomModal({ friend: f, onClose, onEndorse, onAddToList, onBlock, onReport }) {
+function FriendKingdomModal({ friend: f, closedIds, onClose, onEndorse, onAddToList, onBlock, onReport }) {
   const specialty = knownFor(f);
   const [reporting, setReporting] = useState(false);
   const [reportText, setReportText] = useState("");
@@ -3787,7 +3877,7 @@ function FriendKingdomModal({ friend: f, onClose, onEndorse, onAddToList, onBloc
           <div key={p.id} className="mt-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
             <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>{p.cuisine}</div>
             <div className="mt-0.5 flex items-center justify-between gap-2">
-              <div><span style={{ ...display, fontWeight: 700 }} className="text-base">{p.name}</span><span className="ml-2 text-xs" style={{ color: C.muted }}>{p.area}</span></div>
+              <div><span style={{ ...display, fontWeight: 700 }} className="text-base">{p.name}</span><span className="ml-2 text-xs" style={{ color: C.muted }}>{p.area}</span>{p.googlePlaceId && closedIds?.has(p.googlePlaceId) && <span className="ml-2"><ClosedBadge /></span>}</div>
               <button onClick={() => onEndorse(p.id, p.endorsedByMe)} className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
                 style={p.endorsedByMe ? { background: C.gold, color: C.bg } : { border: `1px solid ${C.cardEdge}`, color: C.muted }}>
                 <Crown size={12} /> {p.endorsedByMe ? "Endorsed" : "Endorse"}
@@ -3795,8 +3885,10 @@ function FriendKingdomModal({ friend: f, onClose, onEndorse, onAddToList, onBloc
             </div>
             <p className="mt-1.5 text-sm italic leading-relaxed" style={{ color: C.cream + "CC" }}>&ldquo;{p.decree}&rdquo;</p>
             <PhotoStrip photos={p.photos} />
-            <button onClick={() => onAddToList(f.name, p)}
-              className="mt-2 flex items-center gap-1.5 text-xs font-bold" style={{ color: C.gold }}><Bookmark size={12} /> Add to my list</button>
+            {!(p.googlePlaceId && closedIds?.has(p.googlePlaceId)) && (
+              <button onClick={() => onAddToList(f.name, p)}
+                className="mt-2 flex items-center gap-1.5 text-xs font-bold" style={{ color: C.gold }}><Bookmark size={12} /> Add to my list</button>
+            )}
           </div>
         ))}
 
@@ -3927,8 +4019,8 @@ function MembersModal({ userId, onFollow, onClose }) {
   );
 }
 
-function FeedbackModal({ onClose, onSubmit }) {
-  const [message, setMessage] = useState("");
+function FeedbackModal({ onClose, onSubmit, initialMessage = "" }) {
+  const [message, setMessage] = useState(initialMessage);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [sent, setSent] = useState(false);
@@ -3990,7 +4082,7 @@ function FeedbackModal({ onClose, onSubmit }) {
   );
 }
 
-function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning, defaultCity, userId, onClose, onSubmit }) {
+function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning, defaultCity, userId, closedIds, onClose, onSubmit }) {
   const isCoup = mode === "coup"; const isPretender = mode === "pretender";
   const [cz, setCz] = useState(cuisineId);
   const [czTouched, setCzTouched] = useState(false);
@@ -4056,7 +4148,9 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
   // For Next in Line, a Google result also suggests the cuisine from its
   // category - but never over one the person picked themselves, and only
   // when the name matches a cuisine in their own list.
+  const isClosedResult = (r) => !!r?.googlePlaceId && !!closedIds?.has(r.googlePlaceId);
   const choose = (r) => {
+    if (isClosedResult(r)) return;
     setSel(r); setName(r.name || ""); setArea(r.neighbourhood || ""); setResults([]); setFuzzy(false);
     if (isPretender && !czTouched) {
       const suggested = suggestCuisineName(r.primaryType, r.types);
@@ -4103,8 +4197,8 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
             <p className="mt-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>Did you mean?</p>
           )}
           {results.map((r, i) => (
-            <button key={i} onClick={() => choose(r)} className="mt-2 w-full rounded-lg p-2.5 text-left" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
-              <div className="flex items-center justify-between"><span className="text-sm font-bold">{r.name}</span>
+            <button key={i} onClick={() => choose(r)} disabled={isClosedResult(r)} className="mt-2 w-full rounded-lg p-2.5 text-left" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, opacity: isClosedResult(r) ? 0.55 : 1 }}>
+              <div className="flex items-center justify-between gap-2"><span className="flex flex-wrap items-center gap-1.5 text-sm font-bold">{r.name}{isClosedResult(r) && <ClosedBadge />}</span>
                 {r.rating && <span className="flex items-center gap-0.5 text-xs" style={{ color: C.gold }}><Star size={11} fill={C.gold} /> {r.rating}</span>}</div>
               <div className="mt-0.5 text-xs" style={{ color: C.muted }}>{[r.neighbourhood, r.address].filter(Boolean).join(" · ")}</div>
             </button>))}
