@@ -136,6 +136,10 @@ export default function Nomarchy() {
   const [kingdomView, setKingdomView] = useState("grid");
   const [hiddenCuisinesOpen, setHiddenCuisinesOpen] = useState(false);
   const [nilView, setNilView] = useState("grid");
+  // Next in Line shows one list at a time, and the Privy Council starts
+  // folded away to a single line.
+  const [nilList, setNilList] = useState("want");
+  const [councilOpen, setCouncilOpen] = useState(false);
   const [nilCuisineFilter, setNilCuisineFilter] = useState("");
   const [pcCuisine, setPcCuisine] = useState("");
   const [pcIndex, setPcIndex] = useState(0);
@@ -827,7 +831,8 @@ export default function Nomarchy() {
     const matchesQuery = !pretenderQuery || [p.name, p.cuisine, p.area, p.note].some((f) => f && f.toLowerCase().includes(pretenderQuery));
     return matchesQuery && matchesNilCuisine(p.cuisine);
   });
-  const sortByName = (a, b) => a.name.localeCompare(b.name);
+  // Closed places sink to the bottom of their list.
+  const sortByName = (a, b) => (isClosed(a.googlePlaceId) - isClosed(b.googlePlaceId)) || a.name.localeCompare(b.name);
   const stillToTry = filteredPretenders.filter((p) => !p.visitedAt).sort(sortByName);
   const beenTo = filteredPretenders.filter((p) => p.visitedAt).sort(sortByName);
 
@@ -1173,11 +1178,17 @@ export default function Nomarchy() {
         {tab === "pretenders" && (<div>
           <p className="mb-3 text-sm" style={{ color: C.muted }}>The places waiting for their shot at a throne. Go, eat, then decide.</p>
 
-          <div className="mb-4 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.gold}66` }}>
-            <div className="flex items-center gap-1.5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>
-              <Crown size={12} /> The Privy Council
-            </div>
-            <p className="mt-1 text-sm" style={{ color: C.cream }}>Can&apos;t decide what to eat this evening?</p>
+          <div className="mb-4 rounded-xl" style={{ background: C.card, border: `1px solid ${C.gold}66` }}>
+            <button onClick={() => setCouncilOpen((v) => !v)} aria-expanded={councilOpen} className="flex w-full items-center justify-between gap-3 p-4 text-left">
+              <span>
+                <span className="flex items-center gap-1.5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.1em" }}>
+                  <Crown size={12} /> The Privy Council
+                </span>
+                <span className="mt-1 block text-sm" style={{ color: C.cream }}>Can&apos;t decide what to eat this evening?</span>
+              </span>
+              <ChevronDown size={16} className="shrink-0 transition-transform" style={{ color: C.muted, transform: councilOpen ? "rotate(180deg)" : "none" }} />
+            </button>
+            {councilOpen && (<div className="px-4 pb-4">
             {councilLocalPool.length === 0 ? (
               <p className="mt-2 text-sm" style={{ color: C.muted }}>Follow a few friends in Court, or add something to Next in Line, and the Council will have something to work with.</p>
             ) : (<>
@@ -1212,6 +1223,7 @@ export default function Nomarchy() {
                 <p className="mt-2 text-sm" style={{ color: C.muted }}>Nobody in your Court has crowned or tried {pcCuisine || "anything"} yet, and nothing&apos;s on your own list either{pcCuisine ? " - try Any cuisine" : ""}.</p>
               )}
             </>)}
+            </div>)}
           </div>
 
           <div className="mb-3 flex gap-2">
@@ -1280,44 +1292,41 @@ export default function Nomarchy() {
               )}
             </div>
           ) : (<>
-            {stillToTry.length > 0 && (<>
-              <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Still to try</h3>
-              {stillToTry.map((p) => (
-                <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines} userId={user.id}
-                  friendMatches={friendMatchesFor(p)} closed={isClosed(p.googlePlaceId)}
-                  onShare={sharePretender}
-                  onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
-                  onChangeCuisine={handleChangePretenderCuisine} onChangePhotos={handleChangePretenderPhotos} onToggleVisited={handleToggleVisited}
-                  onChangeVerdict={handleChangePretenderVerdict}
-                  onCrown={(prefill) => setModal({
-                    cuisineId: prefill.cuisineId || "",
-                    cuisineName: prefill.cuisine || "",
-                    mode: prefill.cuisine && slots[prefill.cuisine]?.current ? "coup" : "claim",
-                    prefill,
-                    pretenderId: prefill.id,
-                  })}
-                />
+            <div className="mb-3 flex overflow-hidden rounded-xl" style={{ border: `1px solid ${C.cardEdge}` }} role="tablist">
+              {[["want", "Still to try", stillToTry.length], ["been", "Been to", beenTo.length]].map(([id, label, n], i) => (
+                <button
+                  key={id}
+                  role="tab"
+                  aria-selected={nilList === id}
+                  onClick={() => setNilList(id)}
+                  className="flex-1 py-2 text-sm font-semibold"
+                  style={{ background: nilList === id ? C.gold : C.card, color: nilList === id ? C.bg : C.muted, borderLeft: i > 0 ? `1px solid ${C.cardEdge}` : "none" }}
+                >
+                  {label} ({n})
+                </button>
               ))}
-            </>)}
-            {beenTo.length > 0 && (<>
-              <h3 className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Been to</h3>
-              {beenTo.map((p) => (
-                <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines} userId={user.id}
-                  friendMatches={friendMatchesFor(p)} closed={isClosed(p.googlePlaceId)}
-                  onShare={sharePretender}
-                  onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
-                  onChangeCuisine={handleChangePretenderCuisine} onChangePhotos={handleChangePretenderPhotos} onToggleVisited={handleToggleVisited}
-                  onChangeVerdict={handleChangePretenderVerdict}
-                  onCrown={(prefill) => setModal({
-                    cuisineId: prefill.cuisineId || "",
-                    cuisineName: prefill.cuisine || "",
-                    mode: prefill.cuisine && slots[prefill.cuisine]?.current ? "coup" : "claim",
-                    prefill,
-                    pretenderId: prefill.id,
-                  })}
-                />
-              ))}
-            </>)}
+            </div>
+            {(nilList === "want" ? stillToTry : beenTo).length === 0 && (
+              <p className="rounded-xl p-5 text-center text-sm" style={{ background: C.card, border: `1px dashed ${C.cardEdge}`, color: C.muted }}>
+                {nilList === "want" ? "Nothing still to try here - add a place above." : "Nothing marked as been yet - mark a place as been once you've eaten there."}
+              </p>
+            )}
+            {(nilList === "want" ? stillToTry : beenTo).map((p) => (
+              <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines} userId={user.id}
+                friendMatches={friendMatchesFor(p)} closed={isClosed(p.googlePlaceId)}
+                onShare={sharePretender}
+                onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
+                onChangeCuisine={handleChangePretenderCuisine} onChangePhotos={handleChangePretenderPhotos} onToggleVisited={handleToggleVisited}
+                onChangeVerdict={handleChangePretenderVerdict}
+                onCrown={(prefill) => setModal({
+                  cuisineId: prefill.cuisineId || "",
+                  cuisineName: prefill.cuisine || "",
+                  mode: prefill.cuisine && slots[prefill.cuisine]?.current ? "coup" : "claim",
+                  prefill,
+                  pretenderId: prefill.id,
+                })}
+              />
+            ))}
           </>)}
           </>)}
         </div>)}
@@ -1855,11 +1864,17 @@ function RankLadder({ score }) {
 }
 
 function PretenderCard({ p, closed, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onChangePhotos, onToggleVisited, onChangeVerdict, onCrown, onShare, userId, friendMatches }) {
+  // Compact by default - name, cuisine and area - and opens on tap to show
+  // the note, photos, verdict and actions. Leaving it closed keeps a long
+  // list scannable.
+  const [open, setOpen] = useState(false);
+  const cuisineName = selectableCuisines.find((c) => c.id === p.cuisineId)?.name || p.cuisine || null;
+  const courtCount = friendMatches?.length || 0;
   return (
-    <div className="mb-3 rounded-xl p-4" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, opacity: closed ? 0.5 : p.visitedAt ? 0.7 : 1 }}>
+    <div className="mb-2 rounded-xl p-3.5" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, opacity: closed ? 0.5 : p.visitedAt ? 0.7 : 1 }}>
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <h3 className="flex flex-wrap items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
+        <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="min-w-0 flex-1 text-left">
+          <h3 className="flex flex-wrap items-center gap-1.5 text-base" style={{ ...display, fontWeight: 700 }}>
             {p.name}
             {closed && <ClosedBadge />}
             {p.visitedAt && <Check size={14} style={{ color: C.green }} />}
@@ -1871,16 +1886,31 @@ function PretenderCard({ p, closed, selectableCuisines, onRemove, onChangeNote, 
                 {p.verdict === "worth_it" ? "Worth it" : "Not for me"}
               </span>
             )}
+            {courtCount > 0 && !open && (
+              <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: C.gold + "22", color: C.gold }}>
+                <Crown size={10} /> {courtCount} from Court
+              </span>
+            )}
           </h3>
-          <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
-            {(p.area || p.address) && <><MapPin size={11} /> {p.area || p.address}</>}
-            {p.mapsUrl && <a href={p.mapsUrl} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs" style={{ color: C.muted }}>
+            {[cuisineName, p.area || p.address].filter(Boolean).join(" · ") || "Uncategorized"}
           </div>
+        </button>
+        <div className="flex shrink-0 items-center gap-0.5">
+          {open && onShare && (
+            <button onClick={() => onShare(p)} aria-label="Share" className="p-1" style={{ color: C.muted }}><Share2 size={15} /></button>
+          )}
+          <button onClick={() => setOpen((v) => !v)} aria-label={open ? "Close details" : "Open details"} className="p-1" style={{ color: C.muted }}>
+            <ChevronDown size={16} className="transition-transform" style={{ transform: open ? "rotate(180deg)" : "none" }} />
+          </button>
         </div>
-        {onShare && (
-          <button onClick={() => onShare(p)} aria-label="Share" className="shrink-0 p-1" style={{ color: C.muted }}><Share2 size={15} /></button>
-        )}
       </div>
+      {open && (<>
+        {p.mapsUrl && (
+          <a href={p.mapsUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.gold }}>
+            <MapPin size={11} /> Map <ExternalLink size={10} />
+          </a>
+        )}
       {friendMatches && friendMatches.length > 0 && (
         <div className="mt-2 rounded-lg p-2.5" style={{ background: C.bg, border: `1px dashed ${C.gold}66` }}>
           {friendMatches.slice(0, 2).map((m, i) => (
@@ -1950,6 +1980,7 @@ function PretenderCard({ p, closed, selectableCuisines, onRemove, onChangeNote, 
             which made it easy to hit the destructive one by mistake. */}
         <button onClick={() => onRemove(p.id)} aria-label="Remove" className="ml-auto p-1.5" style={{ color: C.muted }}><Trash2 size={15} /></button>
       </div>
+      </>)}
     </div>
   );
 }
