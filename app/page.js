@@ -1528,7 +1528,7 @@ export default function Nomarchy() {
                   </div>
                 ))}
                 <p className="px-3 py-2 text-xs leading-relaxed" style={{ color: C.muted, borderTop: `1px solid ${C.cardEdge}` }}>
-                  Our own count of calls to Google since counting began (UTC days and months). Place searches get roughly 5,000 free a month - check Google&apos;s pricing page for the exact figure. Google&apos;s billing page is what you&apos;re actually charged on. Map loads aren&apos;t counted yet.
+                  Our own count of calls to Google since counting began (UTC days and months). Place searches get roughly 5,000 free a month - check Google&apos;s pricing page for the exact figure. Google&apos;s billing page is what you&apos;re actually charged on.
                 </p>
               </>)}
             </div>
