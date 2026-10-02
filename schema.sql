@@ -1251,3 +1251,11 @@ create index if not exists nil_google_place_idx on next_in_line (google_place_id
 create index if not exists cuisines_created_by_idx on cuisines (created_by) where created_by is not null;
 -- Best in the Land filters crowns by date
 create index if not exists thrones_crowned_at_idx on thrones (crowned_at);
+
+-- ------------------------------------------------------------
+-- ACCESSIBILITY CHOICES (Your Profile > Accessibility)
+-- Reduce motion, calmer celebrations, larger text, messages that stay -
+-- saved on the account so they follow the person to any device. Empty
+-- means "all defaults".
+-- ------------------------------------------------------------
+alter table profiles add column if not exists a11y_prefs jsonb not null default '{}';

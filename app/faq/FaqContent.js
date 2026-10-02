@@ -174,6 +174,17 @@ const QUESTIONS = [
     ),
   },
   {
+    q: "Can I make Nomarchy easier to use?",
+    a: (
+      <p>
+        Yes - tap your name at the top and open <strong>Accessibility</strong>. You can reduce motion (or match
+        your phone&apos;s setting), swap the full-screen rank celebration for a short message, make all text
+        larger, and keep pop-up messages on screen until you close them. Your choices are saved to your account,
+        so they follow you to any device. Nomarchy also works with a keyboard and with screen readers.
+      </p>
+    ),
+  },
+  {
     q: "What's the difference between Public, Private, and Discoverable?",
     a: (
       <>

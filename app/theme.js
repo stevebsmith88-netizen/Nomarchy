@@ -25,12 +25,13 @@ const DARK = {
 // text tone, not literally cream - the role stays the same, the hex
 // underneath just serves whichever theme is active.
 //
-// Gold, red and green are deeper here than in dark mode so text in them
-// meets the WCAG AA contrast ratio (4.5:1) on both the page and on cards -
-// including on their own pale tint, which badges sit on.
+// A true bright gold for fills, crowns and borders (with dark plum text on
+// gold buttons, 7:1), and a deeper gold only for small gold words, so text
+// meets the WCAG AA contrast ratio (4.5:1) without the whole palette going
+// brown. Red and green are deeper than in dark mode for the same reason.
 const LIGHT = {
   bg: "#F5ECDE", card: "#FFFFFF", cardEdge: "#E4D6BE",
-  gold: "#775912", goldText: "#775912", onGold: "#F5ECDE", onCoup: "#FFFFFF", cream: "#2A1E38", muted: "#6B5C7D",
+  gold: "#D6A637", goldText: "#775912", onGold: "#2A1E38", onCoup: "#FFFFFF", cream: "#2A1E38", muted: "#6B5C7D",
   coup: "#A8352A", green: "#3D6A2E",
 };
 

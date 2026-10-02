@@ -18,11 +18,12 @@ import {
   moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
   uploadReviewPhoto, deleteReviewPhoto, uploadAvatar, MAX_REVIEW_PHOTOS,
   loadCourt, toggleEndorsement, followByUsername, loadStanding, loadConquestProgress, blockUser, unblockUser, loadBlockedUsers,
-  loadAdminOverview, adminPlaceMatch, adminCheckClosures, adminClosedPlace, loadClosedPlaceIds, loadClosedPlaceRows, loadTourSeen, markTourSeen, loadCuisineEmojis, setCuisineEmoji,
+  loadAdminOverview, adminPlaceMatch, adminCheckClosures, adminClosedPlace, loadClosedPlaceIds, loadClosedPlaceRows, loadTourSeen, markTourSeen, loadCuisineEmojis, setCuisineEmoji, loadA11yPrefs, saveA11yPrefs,
 } from "@/lib/data";
 import { claimSignupSource } from "@/lib/signupSource";
 import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
 import { safeMapsUrl } from "@/lib/safeUrl";
+import { A11Y_DEFAULTS, readLocalA11y, applyA11y, normalizeA11y, isDefaultA11y } from "@/lib/a11yPrefs";
 import { shouldAutoStartTour, tourSeenLocally, rememberTourLocally } from "@/lib/tour";
 import Tour from "./Tour";
 import { getCuisineEmoji, setCuisineEmojis } from "./cuisineIcons";
@@ -174,6 +175,9 @@ export default function Nomarchy() {
   // First-time walkthrough (see Tour.js). Starts by itself once for new
   // accounts; anyone can replay it from Your Profile.
   const [tourOpen, setTourOpen] = useState(false);
+  // Accessibility choices (Your Profile > Accessibility). Read from this
+  // device straight away; the account's saved copy wins once loaded.
+  const [a11y, setA11y] = useState(() => (typeof window === "undefined" ? { ...A11Y_DEFAULTS } : readLocalA11y()));
   const tourChecked = useRef(false);
   // Google place IDs the owner has confirmed as permanently closed.
   const [closedIds, setClosedIds] = useState(() => new Set());
@@ -246,6 +250,16 @@ export default function Nomarchy() {
           loadClosedPlaceIds(),
         ]);
         setClosedIds(closed);
+        const saved = await loadA11yPrefs(user.id);
+        if (saved.databaseOk) {
+          if (saved.prefs && Object.keys(saved.prefs).length > 0) {
+            setA11y(applyA11y(saved.prefs));
+          } else {
+            // Nothing on the account yet: keep any choice made on this device.
+            const local = readLocalA11y();
+            if (!isDefaultA11y(local)) saveA11yPrefs(user.id, local);
+          }
+        }
         // Icons people picked for their own cuisines, so pins and cards show them.
         setCuisineEmojis(await loadCuisineEmojis());
         setSlots(k); setPretenders(n); setCuisineList(c);
@@ -270,7 +284,9 @@ export default function Nomarchy() {
     if (!profile || !standing) return;
     const currentRank = getRank(standing.score ?? 0);
     if (currentRank.min > 0 && currentRank.min > (profile.last_rank_min ?? 0)) {
-      setPromotion(currentRank);
+      // Calmer celebrations: a short message instead of the full-screen takeover.
+      if (a11y.calmCelebrations) flash(`You've been promoted to ${currentRank.title}`);
+      else setPromotion(currentRank);
       handleUpdateProfile({ last_rank_min: currentRank.min }).catch(() => {});
       // Best-effort and independent of the line above - a friend never
       // seeing this in their feed shouldn't stop the celebration itself,
@@ -279,8 +295,20 @@ export default function Nomarchy() {
     }
   }, [profile, standing]);
 
-  // Long enough to read without rushing (2.2s was too quick for many people).
-  const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 4500); };
+  // Long enough to read without rushing (2.2s was too quick for many
+  // people) - or, if they've chosen it, it stays until they dismiss it.
+  const flash = (m) => setToast(m);
+  useEffect(() => {
+    if (!toast || a11y.stickyMessages) return;
+    const timer = setTimeout(() => setToast(""), 4500);
+    return () => clearTimeout(timer);
+  }, [toast, a11y.stickyMessages]);
+
+  const updateA11y = (patch) => {
+    const next = applyA11y(normalizeA11y({ ...a11y, ...patch }));
+    setA11y(next);
+    if (user) saveA11yPrefs(user.id, next);
+  };
 
   const refreshKingdom = async () => setSlots(await loadKingdom(user.id));
   const refreshPretenders = async () => setPretenders(await loadNextInLine(user.id));
@@ -1742,8 +1770,9 @@ export default function Nomarchy() {
       {/* Always in the page, so screen readers announce each message. */}
       <div role="status" aria-live="polite" className="sr-only">{toast}</div>
       {toast && (
-        <div aria-hidden="true" className="fixed bottom-5 left-1/2 z-[1200] -translate-x-1/2 rounded-full px-4 py-2 text-sm font-semibold shadow-lg" style={{ background: C.gold, color: C.onGold }}>
-          <Check size={14} className="mr-1 inline" />{toast}
+        <div className="fixed bottom-5 left-1/2 z-[1200] flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-2 rounded-full py-2 pl-4 pr-2 text-sm font-semibold shadow-lg" style={{ background: C.gold, color: C.onGold }}>
+          <span aria-hidden="true"><Check size={14} className="mr-1 inline" />{toast}</span>
+          <button onClick={() => setToast("")} aria-label="Dismiss message" className="rounded-full p-1"><X size={14} /></button>
         </div>)}
 
       {modal && (
@@ -1844,6 +1873,8 @@ export default function Nomarchy() {
           onDeleteAccount={handleDeleteAccount}
           onFeedback={() => { setEditingProfile(false); setShowFeedback(true); }}
           onTour={() => { setEditingProfile(false); setTourOpen(true); }}
+          a11y={a11y}
+          onChangeA11y={updateA11y}
         />
       )}
 
@@ -3097,7 +3128,7 @@ function SignInScreen() {
           >
             {theme === "light" ? <Moon size={14} /> : <Sun size={14} />}
           </button>
-          <a href="#sign-in" className="rounded-full px-4 py-2 text-xs font-bold sm:text-sm" style={{ background: C.gold, color: C.onGold }}>Open the app</a>
+          <a href="#sign-in" className="whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold sm:text-sm" style={{ background: C.gold, color: C.onGold }}>Open the app</a>
         </div>
       </nav>
 
@@ -3477,7 +3508,7 @@ function ProfileSection({ title, right, className = "", children }) {
   );
 }
 
-function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, onSubmit, onChangeAvatar, onDeleteAccount, onFeedback, onTour }) {
+function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, onSubmit, onChangeAvatar, onDeleteAccount, onFeedback, onTour, a11y, onChangeA11y }) {
   const { theme, toggleTheme } = useTheme();
   const [username, setUsername] = useState(profile?.username || "");
   const [displayName, setDisplayName] = useState(profile?.display_name || "");
@@ -3632,6 +3663,54 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
             </div>
           ))}
         </ProfileSection>
+
+        {a11y && onChangeA11y && (
+          <ProfileSection title="Accessibility">
+            <p className="text-xs" style={{ color: C.muted }}>Changes apply straight away and are saved to your account.</p>
+            <div className="mt-2 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+              <div className="text-sm font-semibold">Reduce motion</div>
+              <div className="mt-0.5 text-xs" style={{ color: C.muted }}>Stops spinning, sliding and floating animations.</div>
+              <div className="mt-2 flex overflow-hidden rounded-lg" role="radiogroup" aria-label="Reduce motion" style={{ border: `1px solid ${C.cardEdge}` }}>
+                {[["system", "Match my phone"], ["on", "On"], ["off", "Off"]].map(([value, label], i) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={a11y.motion === value}
+                    onClick={() => onChangeA11y({ motion: value })}
+                    className="flex-1 py-1.5 text-xs font-semibold"
+                    style={{ background: a11y.motion === value ? C.gold : C.card, color: a11y.motion === value ? C.onGold : C.muted, borderLeft: i > 0 ? `1px solid ${C.cardEdge}` : "none" }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {[
+              ["calmCelebrations", "Calmer celebrations", "A short message when you climb a rank, instead of the full-screen celebration."],
+              ["largerText", "Larger text", "Makes all text bigger, including the small labels."],
+              ["stickyMessages", "Messages stay until dismissed", "Pop-up messages wait for you to close them instead of disappearing."],
+            ].map(([key, label, hint]) => (
+              <div key={key} className="mt-2 flex items-center justify-between gap-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+                <div>
+                  <div className="text-sm font-semibold">{label}</div>
+                  <div className="mt-0.5 text-xs" style={{ color: C.muted }}>{hint}</div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={a11y[key]}
+                  aria-label={label}
+                  onClick={() => onChangeA11y({ [key]: !a11y[key] })}
+                  className="relative h-6 w-11 shrink-0 overflow-hidden rounded-full transition-colors"
+                  style={{ background: a11y[key] ? C.gold : C.cardEdge }}
+                >
+                  <span className="absolute left-0 top-0.5 h-5 w-5 rounded-full transition-transform" style={{ background: C.bg, transform: a11y[key] ? "translateX(22px)" : "translateX(2px)" }} />
+                </button>
+              </div>
+            ))}
+          </ProfileSection>
+        )}
 
         <ProfileSection title="Settings">
         <div>

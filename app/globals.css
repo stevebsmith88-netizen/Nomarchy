@@ -69,15 +69,37 @@ html[data-theme-pending] body {
   outline: none;
 }
 
-/* Respect the phone's "reduce motion" setting: no spinning, sliding or
-   floating animations for people who find motion uncomfortable. */
+/* Reduce motion: no spinning, sliding or floating animations for people who
+   find motion uncomfortable. Follows the phone's setting unless the person
+   has chosen otherwise in Your Profile > Accessibility (data-motion on
+   <html>: "reduce" forces it on, "full" keeps motion despite the phone). */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  html:not([data-motion="full"]) *,
+  html:not([data-motion="full"]) *::before,
+  html:not([data-motion="full"]) *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+html[data-motion="reduce"] *,
+html[data-motion="reduce"] *::before,
+html[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Larger text: everything sized in rem (nearly all of the app) grows about
+   15%, and the few fixed tiny labels are lifted to a readable size. */
+html[data-text="large"] {
+  font-size: 115%;
+}
+html[data-text="large"] .text-\[10px\] {
+  font-size: 0.75rem;
+}
+html[data-text="large"] .text-\[11px\] {
+  font-size: 0.8125rem;
 }
