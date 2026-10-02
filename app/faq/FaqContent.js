@@ -39,6 +39,18 @@ const QUESTIONS = [
     ),
   },
   {
+    q: "How does searching for a restaurant work?",
+    a: (
+      <p>
+        Type a name (and a city, if it&apos;s not your own) and the search is powered by Google, so it finds
+        almost any restaurant, anywhere. When you add a place to Next in Line, we&apos;ll also suggest a
+        cuisine based on what Google knows about it - it&apos;s only a suggestion, so you can change it to
+        whatever you like. Photos, Share and Edit all live on the throne card itself: Share is the small icon
+        in the corner, and to remove a photo, open <strong>Edit</strong> and tap the small x on it.
+      </p>
+    ),
+  },
+  {
     q: "What's Next in Line for?",
     a: (
       <p>
@@ -101,8 +113,8 @@ const QUESTIONS = [
     a: (
       <p>
         One-time achievements for things like crowning your first place, holding two different cuisines, or
-        filling every slot in your Kingdom - see the full checklist, and how much each is worth, in your
-        profile. Each one only ever pays out once.
+        filling every slot in your Kingdom - open the <strong>Conquests</strong> section of Your Profile to see the
+        full checklist, and how much each is worth. Each one only ever pays out once.
       </p>
     ),
   },
@@ -131,7 +143,7 @@ const QUESTIONS = [
     q: "What's the difference between Public, Private, and Discoverable?",
     a: (
       <>
-        <p>These are two separate switches in Your Profile under Settings, and it&apos;s easy to mix them up:</p>
+        <p>These are two separate switches in Your Profile - open the <strong>Settings</strong> section - and it&apos;s easy to mix them up:</p>
         <ul className="mt-2 list-disc pl-5">
           <li><strong>Public / Private</strong> controls whether people who already have your profile link (or already follow you) can actually see your kingdom. Private hides it from everyone but you, even friends in Court.</li>
           <li><strong>Discoverable</strong> is separate and off by default - it controls whether strangers can find you at all, by browsing <strong>Find People</strong>. Being &ldquo;Public&rdquo; does not make you Discoverable; they&apos;re independent settings, on purpose.</li>
