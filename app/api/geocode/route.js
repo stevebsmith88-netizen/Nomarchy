@@ -31,7 +31,8 @@ export async function POST(request) {
   const { data } = await supabaseForToken(token).auth.getUser(token);
   if (!data.user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") return NextResponse.json({ error: "Bad request" }, { status: 400 });
 
   if (body.mode === "forward") {
     if (!body.address?.trim()) return NextResponse.json({ error: "Missing address" }, { status: 400 });

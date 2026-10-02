@@ -22,6 +22,11 @@ const QUIET_MS = 30 * 24 * 60 * 60 * 1000;
 // it included (Settings -> Environment Variables -> MAILING_ADDRESS).
 const MAILING_ADDRESS = process.env.MAILING_ADDRESS || "";
 
+// Names are typed by users; never drop them into email HTML as-is.
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 function admin() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
@@ -47,7 +52,7 @@ function renderEmail({ name, unsubscribeUrl, friendCrownCount, changes }) {
       <div style="font-size:20px;font-weight:900;letter-spacing:3px;color:#E2B340;margin-top:10px;">NOMARCHY</div>
     </div>
     <div style="padding:24px;">
-      <p style="font-size:16px;color:#1D1326;margin-top:0;">Your kingdom&rsquo;s been quiet, ${name}.</p>
+      <p style="font-size:16px;color:#1D1326;margin-top:0;">Your kingdom&rsquo;s been quiet, ${escapeHtml(name)}.</p>
       ${friendCrownCount > 0 ? `
       <div style="margin-top:14px;padding:14px 16px;background:#F5ECDE;border-radius:10px;">
         <p style="font-size:14px;color:#1D1326;margin:0;">
@@ -65,7 +70,7 @@ function renderEmail({ name, unsubscribeUrl, friendCrownCount, changes }) {
       <div style="margin-top:24px;padding-top:20px;border-top:1px solid #eee;">
         <p style="font-size:13px;font-weight:700;color:#1D1326;margin-bottom:8px;">So much has changed since you last looked:</p>
         <ul style="font-size:13px;color:#333;line-height:1.8;padding-left:20px;margin:0;">
-          ${changes.map((c) => `<li><strong>${c.title}</strong> - ${c.desc}</li>`).join("")}
+          ${changes.map((c) => `<li><strong>${escapeHtml(c.title)}</strong> - ${escapeHtml(c.desc)}</li>`).join("")}
         </ul>
       </div>` : ""}
     </div>

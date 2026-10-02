@@ -22,6 +22,11 @@ const SITE_URL = "https://nomarchy.ca";
 // it included (Settings -> Environment Variables -> MAILING_ADDRESS).
 const MAILING_ADDRESS = process.env.MAILING_ADDRESS || "";
 
+// Names are typed by users; never drop them into email HTML as-is.
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 function admin() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
@@ -34,7 +39,7 @@ function renderEmail(name) {
       <div style="font-size:20px;font-weight:900;letter-spacing:3px;color:#E2B340;margin-top:10px;">NOMARCHY</div>
     </div>
     <div style="padding:24px;">
-      <p style="font-size:18px;font-weight:700;color:#1D1326;margin-top:0;">Your kingdom awaits, ${name}.</p>
+      <p style="font-size:18px;font-weight:700;color:#1D1326;margin-top:0;">Your kingdom awaits, ${escapeHtml(name)}.</p>
       <p style="font-size:14px;color:#333;line-height:1.6;">
         Nomarchy is where you crown your favourite restaurant in every cuisine, stage a coup when
         something better comes along, and compare your kingdom with friends.

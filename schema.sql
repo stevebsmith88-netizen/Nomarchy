@@ -1161,3 +1161,15 @@ create policy "closed places readable" on closed_places for select using (true);
 -- people are never interrupted (they can replay it from Your Profile).
 -- ------------------------------------------------------------
 alter table profiles add column if not exists tour_seen_at timestamptz;
+
+-- ------------------------------------------------------------
+-- UPLOAD LIMITS (security hardening)
+-- The browser already checks size and type, but anyone can call the
+-- storage API directly, so the buckets themselves refuse anything that
+-- isn't an ordinary photo up to 5 MB. Without this, someone could host
+-- arbitrary files (HTML, scripts, large videos) in the public buckets.
+-- ------------------------------------------------------------
+update storage.buckets
+set file_size_limit = 5242880,
+    allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']
+where id in ('avatars', 'review-photos');

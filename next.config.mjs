@@ -10,6 +10,9 @@ const securityHeaders = [
   // Don't leak the full referring URL (which can contain a username) to
   // external sites linked from the app, e.g. a restaurant's maps link.
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  // Nomarchy only ever needs the device's location (for "near me"); switch
+  // off everything else the browser could otherwise be asked for.
+  { key: "Permissions-Policy", value: "geolocation=(self), camera=(), microphone=(), payment=(), usb=()" },
   {
     key: "Content-Security-Policy",
     value: [

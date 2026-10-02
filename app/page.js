@@ -22,6 +22,7 @@ import {
 } from "@/lib/data";
 import { claimSignupSource } from "@/lib/signupSource";
 import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
+import { safeMapsUrl } from "@/lib/safeUrl";
 import { shouldAutoStartTour, tourSeenLocally, rememberTourLocally } from "@/lib/tour";
 import Tour from "./Tour";
 import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell, useTheme } from "./theme";
@@ -1908,8 +1909,8 @@ function PretenderCard({ p, closed, selectableCuisines, onRemove, onChangeNote, 
         </div>
       </div>
       {open && (<>
-        {p.mapsUrl && (
-          <a href={p.mapsUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.gold }}>
+        {safeMapsUrl(p.mapsUrl) && (
+          <a href={safeMapsUrl(p.mapsUrl)} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.gold }}>
             <MapPin size={11} /> Map <ExternalLink size={10} />
           </a>
         )}
@@ -2120,8 +2121,8 @@ function RestaurantRow({ p, rank, onOpen }) {
         <div className="truncate text-xs" style={{ color: C.muted }}>{[p.area, p.address].filter(Boolean).join(" · ")}</div>
       </div>
       <div className="shrink-0 text-right">
-        {p.mapsUrl && (
-          <a href={p.mapsUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="mb-0.5 flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.gold }}>
+        {safeMapsUrl(p.mapsUrl) && (
+          <a href={safeMapsUrl(p.mapsUrl)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="mb-0.5 flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.gold }}>
             Map <ExternalLink size={10} />
           </a>
         )}
@@ -2204,7 +2205,7 @@ function RestaurantProfileModal({ restaurant, onClose }) {
               <PhotoStrip photos={e.photos} />
               <div className="mt-1.5 flex items-center gap-3 text-xs" style={{ color: C.muted }}>
                 <span>crowned {fmt(e.crownedAt)}</span>
-                {e.mapsUrl && <a href={e.mapsUrl} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
+                {safeMapsUrl(e.mapsUrl) && <a href={safeMapsUrl(e.mapsUrl)} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
               </div>
             </div>
           ))}
@@ -2851,7 +2852,7 @@ function ThroneCard({ cuisineName, cuisineId, slot, closed, featured, historyOpe
         <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
           {(r.area || r.address) && (<><MapPin size={11} /> {r.area || r.address}<span className="mx-1">·</span></>)}
           crowned {fmt(r.crownedAt)}
-          {r.mapsUrl && <a href={r.mapsUrl} target="_blank" rel="noreferrer" className="ml-1 flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
+          {safeMapsUrl(r.mapsUrl) && <a href={safeMapsUrl(r.mapsUrl)} target="_blank" rel="noreferrer" className="ml-1 flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
         </div>
         {editing ? (
           <div className="mt-2">
@@ -4344,7 +4345,7 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
           {sel && (<div className="mt-2 flex items-start justify-between rounded-lg p-2.5" style={{ border: `1px solid ${C.green}66`, background: C.green + "11" }}>
             <div><div className="text-sm font-bold" style={{ color: C.green }}>{sel.name}</div>
               <div className="text-xs" style={{ color: C.muted }}>{[sel.neighbourhood || sel.area, sel.address].filter(Boolean).join(" · ")}</div></div>
-            {sel.mapsUrl && <a href={sel.mapsUrl} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.green }}>Map <ExternalLink size={10} /></a>}
+            {safeMapsUrl(sel.mapsUrl) && <a href={safeMapsUrl(sel.mapsUrl)} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.green }}>Map <ExternalLink size={10} /></a>}
           </div>)}
           {sel?.googlePlaceId && <p className="mt-1.5 text-right text-[10px]" style={{ color: C.muted }}>Place details from Google Maps</p>}
         </div>

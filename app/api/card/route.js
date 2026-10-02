@@ -75,9 +75,13 @@ export async function GET(request) {
   const cuisine = (searchParams.get("cuisine") || "").slice(0, 60);
   const name = (searchParams.get("name") || "").slice(0, 80);
   const area = (searchParams.get("area") || "").slice(0, 60);
-  const rating = searchParams.get("rating") || "";
+  const rating = (searchParams.get("rating") || "").slice(0, 8);
   const blurb = (searchParams.get("blurb") || "").slice(0, 220);
-  const username = (searchParams.get("username") || "").slice(0, 40);
+  // Only a plain username can go into the QR link, so a crafted address
+  // can't point the code anywhere odd (usernames are lowercase letters,
+  // numbers and hyphens).
+  const rawUsername = (searchParams.get("username") || "").slice(0, 40);
+  const username = /^[a-z0-9-]+$/i.test(rawUsername) ? rawUsername : "";
   const status = searchParams.get("status") || "crowned";
   const considering = status === "considering";
   // A rank promotion isn't about a restaurant at all - same card shell

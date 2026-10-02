@@ -100,7 +100,11 @@ export async function POST(request) {
     return NextResponse.json({ error: "Slow down, try again later" }, { status: 429 });
   }
 
-  const { mode, query, city, raw, cuisines } = await request.json();
+  const payload = await request.json().catch(() => null);
+  if (!payload || typeof payload !== "object") {
+    return NextResponse.json({ error: "Bad request" }, { status: 400 });
+  }
+  const { mode, query, city, raw, cuisines } = payload;
 
   try {
     let result;
@@ -122,7 +126,10 @@ export async function POST(request) {
     }
     return NextResponse.json(result);
   } catch (err) {
-    return NextResponse.json({ error: err.message ?? "Something went wrong" }, { status: 502 });
+    // The real error can contain provider details; keep it in the server
+    // logs and give the browser something generic.
+    console.error("AI route failed", err?.message);
+    return NextResponse.json({ error: "Something went wrong - try again" }, { status: 502 });
   }
 }
 
