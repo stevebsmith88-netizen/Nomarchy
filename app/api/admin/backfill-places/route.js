@@ -18,10 +18,10 @@
 // ============================================================
 
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { searchGooglePlaces } from "../../../../lib/googlePlaces";
 import { logGoogleCall } from "../../../../lib/googleUsage";
 import { decide, groupKey } from "../../../../lib/placeMatch";
+import { requireOwner } from "../../../../lib/requireOwner";
 
 export const maxDuration = 60;
 
@@ -29,29 +29,6 @@ const BATCH_SIZE = 12;
 const CONCURRENCY = 4;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PLACE_ID = /^[A-Za-z0-9_-]{10,200}$/;
-
-async function requireOwner(request) {
-  const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (!token) return { error: NextResponse.json({ error: "Not signed in" }, { status: 401 }) };
-
-  const anon = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-  const { data: userData } = await anon.auth.getUser(token);
-  if (!userData.user) return { error: NextResponse.json({ error: "Not signed in" }, { status: 401 }) };
-
-  const { data: profile, error: profileErr } = await anon
-    .from("profiles")
-    .select("is_owner")
-    .eq("id", userData.user.id)
-    .single();
-  if (profileErr || !profile?.is_owner) {
-    return { error: NextResponse.json({ error: "Not authorized" }, { status: 403 }) };
-  }
-  return { admin: createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY) };
-}
 
 // Every unmatched saved place, grouped so one real-world restaurant is one
 // group no matter how many people saved it. Sorted so batches are stable

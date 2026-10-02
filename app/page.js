@@ -18,7 +18,7 @@ import {
   moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
   uploadReviewPhoto, deleteReviewPhoto, uploadAvatar, MAX_REVIEW_PHOTOS,
   loadCourt, toggleEndorsement, followByUsername, loadStanding, loadConquestProgress, blockUser, unblockUser, loadBlockedUsers,
-  loadAdminOverview, adminPlaceMatch,
+  loadAdminOverview, adminPlaceMatch, adminCheckClosures,
 } from "@/lib/data";
 import { claimSignupSource } from "@/lib/signupSource";
 import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
@@ -1569,6 +1569,7 @@ export default function Nomarchy() {
 
             <FixThroneTool cuisines={selectableCuisines} />
             <PlaceMatchTool />
+            <ClosureCheckTool />
 
             <h3 className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>All users ({adminData.users.length})</h3>
             <div className="max-h-96 overflow-y-auto rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
@@ -2387,6 +2388,7 @@ const GOOGLE_USAGE_LABELS = {
   search: "Place searches",
   backfill_search: "Backfill searches",
   place_refresh: "Coordinate refreshes",
+  closure_check: "Closure checks",
   map_load: "Map loads",
 };
 
@@ -2528,6 +2530,91 @@ function PlaceMatchTool() {
         <p className="mt-2 text-xs" style={{ color: C.muted }}>
           Couldn&apos;t be checked (Google error - try scanning again): {failed.map((g) => g.name).join(", ")}.
         </p>
+      )}
+    </div>
+  );
+}
+
+// Owner-run, read-only: asks Google which saved places are now permanently
+// closed. Nothing is saved or changed - the result only lives on this screen.
+// See /api/admin/check-closures.
+function ClosureCheckTool() {
+  const [phase, setPhase] = useState("idle");
+  const [progress, setProgress] = useState({ checked: 0, total: 0 });
+  const [closed, setClosed] = useState([]);
+  const [gone, setGone] = useState([]);
+  const [errors, setErrors] = useState(0);
+  const [err, setErr] = useState("");
+
+  const run = async () => {
+    setPhase("running"); setErr(""); setClosed([]); setGone([]); setErrors(0); setProgress({ checked: 0, total: 0 });
+    try {
+      let offset = 0;
+      let checked = 0;
+      let closedAll = [], goneAll = [], errorCount = 0;
+      for (;;) {
+        const data = await adminCheckClosures(offset);
+        closedAll = closedAll.concat(data.closed);
+        goneAll = goneAll.concat(data.gone);
+        errorCount += data.errors;
+        checked = data.nextOffset == null ? data.total : data.nextOffset;
+        setClosed(closedAll); setGone(goneAll); setErrors(errorCount);
+        setProgress({ checked, total: data.total });
+        if (data.nextOffset == null) break;
+        offset = data.nextOffset;
+      }
+    } catch (e) {
+      setErr(e.message || "The check stopped early.");
+    }
+    setPhase("done");
+  };
+
+  const entryText = (p) => {
+    const parts = [];
+    if (p.crowns) parts.push(`${p.crowns} crown${p.crowns === 1 ? "" : "s"}`);
+    if (p.lists) parts.push(`${p.lists} on a list`);
+    return parts.join(" · ");
+  };
+  const placeRow = (p, i) => (
+    <div key={`${p.name}-${i}`} className="mt-2 text-xs" style={{ color: C.muted }}>
+      <span style={{ color: C.cream, fontWeight: 600 }}>{p.name}</span>{p.address ? ` · ${p.address}` : ""}
+      <div>{entryText(p)}</div>
+    </div>
+  );
+
+  return (
+    <div className="mb-5">
+      <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Check for closures</h3>
+      <p className="mb-2 text-xs" style={{ color: C.muted }}>
+        Asks Google which saved places have permanently closed. It only looks - nothing is saved or changed on anyone&apos;s kingdom, and the result disappears when you leave this screen. Worth running every few months.
+      </p>
+      <button onClick={run} disabled={phase === "running"} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold" style={phase === "running" ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.bg }}>
+        {phase === "running" ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+        {phase === "running" ? `Checked ${progress.checked} of ${progress.total || "..."}` : phase === "done" ? "Check again" : "Check for closures"}
+      </button>
+      {err && <p className="mt-2 text-xs" style={{ color: C.coup }}>{err}</p>}
+
+      {phase === "done" && !err && (
+        <div className="mt-3 rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+          <div className="text-xs" style={{ color: C.muted }}>
+            Checked {progress.total} place{progress.total === 1 ? "" : "s"} · {closed.length} permanently closed · {gone.length} Google can&apos;t find{errors > 0 ? ` · ${errors} couldn't be checked (try again)` : ""}
+          </div>
+          {closed.length === 0 && gone.length === 0 && (
+            <p className="mt-2 text-sm" style={{ color: C.green }}>No closures found.</p>
+          )}
+          {closed.length > 0 && (
+            <div className="mt-3">
+              <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Permanently closed ({closed.length})</div>
+              {closed.map(placeRow)}
+            </div>
+          )}
+          {gone.length > 0 && (
+            <div className="mt-3">
+              <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Google can&apos;t find ({gone.length})</div>
+              {gone.map(placeRow)}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
