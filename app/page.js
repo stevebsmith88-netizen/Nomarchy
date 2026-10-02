@@ -2226,7 +2226,12 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
     >
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>{cuisineName}</span>
-        {r && <Crown size={16} style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />}
+        {r && (
+          <div className="flex items-center gap-3">
+            <Crown size={16} style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />
+            <button onClick={() => sharePick(cuisineName, r)} aria-label="Share" className="p-1" style={{ color: C.muted }}><Share2 size={15} /></button>
+          </div>
+        )}
       </div>
       {r ? (<div className="mt-2">
         <h3 className={featured ? "text-2xl" : "text-xl"} style={{ ...display, fontWeight: 700 }}>{r.name}</h3>
@@ -2268,11 +2273,18 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
               </div>
             )}
             {saveErr && <p className="mt-1 text-xs" style={{ color: C.coup }}>{saveErr}</p>}
-            <div className="mt-2 flex gap-2">
+            <div className="mt-2 flex items-center gap-2">
               <button onClick={() => setEditing(false)} className="rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>Cancel</button>
               <button disabled={decreeText.trim().length < 30 || saving} onClick={confirmEdit} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={decreeText.trim().length >= 30 ? { background: C.gold, color: C.bg } : { background: C.cardEdge, color: C.muted }}>
                 {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Save
               </button>
+              {/* Un-crown lives here, behind the edit pencil, rather than
+                  sitting on the card at all times - it's the one action
+                  here that takes the pick off the throne, so it should
+                  take a deliberate step to reach. */}
+              {onUnCrown && (
+                <button onClick={() => { setEditing(false); onUnCrown(); }} className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><RotateCcw size={13} /> Un-crown</button>
+              )}
             </div>
           </div>
         ) : (
@@ -2286,19 +2298,15 @@ function ThroneCard({ cuisineName, cuisineId, slot, featured, historyOpen, setHi
           </p>
         )}
         {onEditPhotos && <PhotoPicker userId={userId} photos={r.photos || []} onChange={(photos) => onEditPhotos(photos)} />}
-        <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <button onClick={() => sharePick(cuisineName, r)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><Share2 size={13} /> Share</button>
-          {fallenList.length > 0 && <button onClick={() => setHistoryOpen((p) => ({ ...p, [cuisineName]: !p[cuisineName] }))} className="flex items-center gap-1 px-1 text-xs font-semibold" style={{ color: C.muted }}>{fallenList.length} fallen {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</button>}
-          {onUnCrown && (
-            <button onClick={onUnCrown} className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><RotateCcw size={13} /> Un-crown</button>
-          )}
-        </div>
+        {fallenList.length > 0 && (
+          <button onClick={() => setHistoryOpen((p) => ({ ...p, [cuisineName]: !p[cuisineName] }))} className="mt-3 flex items-center gap-1 text-xs font-semibold" style={{ color: C.muted }}>{fallenList.length} fallen {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</button>
+        )}
         {open && fallenList.map((f, i) => (
           <div key={i} className="mt-2 rounded-lg p-3 text-xs" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
             <div className="font-bold" style={{ color: C.muted }}>{f.name} <span className="font-normal">· reigned until {fmt(f.dethronedAt)}</span></div>
             <p className="mt-1 italic" style={{ color: C.muted }}>&ldquo;{f.decree}&rdquo;</p>
           </div>))}
+        <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
       </div>) : (<div className="mt-2">
         <p className="text-sm italic" style={{ color: C.muted }}>{featured ? "No overall favourite crowned yet." : "This throne sits empty."}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
