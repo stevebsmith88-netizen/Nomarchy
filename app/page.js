@@ -20,6 +20,7 @@ import {
   loadCourt, toggleEndorsement, followByUsername, loadStanding, loadConquestProgress, blockUser, unblockUser, loadBlockedUsers,
   loadAdminOverview,
 } from "@/lib/data";
+import { claimSignupSource } from "@/lib/signupSource";
 import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell, useTheme } from "./theme";
 
 // Leaflet touches window/document at load time, which breaks server-side
@@ -187,6 +188,13 @@ export default function Nomarchy() {
     getUser().then((u) => { setUser(u); setAuthChecked(true); });
     return onAuthChange((u) => setUser(u));
   }, []);
+
+  // Records which link a brand-new signup came from, once. Runs on every
+  // sign-in but only does anything when there's a saved tag, and never
+  // throws - it must not be able to get in the way of loading the app.
+  useEffect(() => {
+    if (user) claimSignupSource(supabase, user);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -1474,6 +1482,25 @@ export default function Nomarchy() {
               ))}
             </div>
 
+            <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Signups by source</h3>
+            <div className="mb-4 rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+              <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 px-3 py-2 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>
+                <span>Source</span><span className="text-right">This week</span><span className="text-right">All time</span>
+              </div>
+              {adminData.signupSources.rows.map((r) => (
+                <div key={r.source} className="grid grid-cols-[1fr_auto_auto] gap-x-4 px-3 py-2 text-sm" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
+                  <span className="truncate font-semibold">{r.source}</span>
+                  <span className="text-right" style={{ color: C.gold }}>{r.week}</span>
+                  <span className="text-right" style={{ color: C.gold }}>{r.allTime}</span>
+                </div>
+              ))}
+              <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 px-3 py-2 text-sm" style={{ borderTop: `1px solid ${C.cardEdge}`, color: C.muted }}>
+                <span>Unknown / direct</span>
+                <span className="text-right">{adminData.signupSources.unknown.week}</span>
+                <span className="text-right">{adminData.signupSources.unknown.allTime}</span>
+              </div>
+            </div>
+
             <FixThroneTool cuisines={selectableCuisines} />
 
             <h3 className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>All users ({adminData.users.length})</h3>
@@ -1485,7 +1512,7 @@ export default function Nomarchy() {
                     <div className="truncate text-xs" style={{ color: C.muted }}>{u.email || "no email on file"}</div>
                   </div>
                   <div className="shrink-0 text-right text-xs" style={{ color: C.muted }}>
-                    <div>Joined {fmt(u.createdAt)}</div>
+                    <div>Joined {fmt(u.createdAt)}{u.source && ` · via ${u.source}`}</div>
                     <div>{u.lastSignInAt ? `Last in ${fmt(u.lastSignInAt)}` : "Never signed in"}</div>
                   </div>
                 </div>

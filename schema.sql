@@ -956,3 +956,61 @@ as $$
       or (p_address is null and p_area is null)
     );
 $$;
+
+-- ------------------------------------------------------------
+-- SIGNUP SOURCES (where each new signup came from)
+-- A separate table rather than a column on profiles: every profile is
+-- readable by any signed-in user (see "profiles readable" above), so a
+-- source tag stored there would be visible to everyone. Here only the
+-- owner can read it, and nobody can write to it directly - the only way
+-- a row gets in is record_signup_source() below, which enforces the
+-- rules itself rather than trusting whatever the browser sends.
+--
+-- One row per person, ever (user_id is the primary key and the insert is
+-- "do nothing" on conflict), so a source can never be overwritten.
+-- People who signed up before this existed simply have no row, which the
+-- Admin tab shows as "unknown".
+-- ------------------------------------------------------------
+create table if not exists signup_sources (
+  user_id    uuid primary key references profiles(id) on delete cascade,
+  source     text not null check (source ~ '^[a-z0-9_]{1,32}$'),
+  created_at timestamptz not null default now()
+);
+
+alter table signup_sources enable row level security;
+
+drop policy if exists "owner reads signup sources" on signup_sources;
+create policy "owner reads signup sources" on signup_sources for select
+  using (exists (select 1 from profiles p where p.id = auth.uid() and p.is_owner));
+
+-- Called by the app right after someone signs in. Quietly does nothing
+-- (never raises) unless ALL of these hold, so a bad or stale value can
+-- never block a sign-in:
+--   - the caller is signed in
+--   - the value is 1-32 letters, numbers or underscores (lowercased)
+--   - the account was created within the last hour, so an existing user
+--     who later clicks a tagged link can't be retroactively attributed
+--   - they don't already have a source saved
+create or replace function record_signup_source(p_ref text)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  clean text := lower(coalesce(p_ref, ''));
+  account_created timestamptz;
+begin
+  if auth.uid() is null then return; end if;
+  if clean !~ '^[a-z0-9_]{1,32}$' then return; end if;
+
+  select u.created_at into account_created from auth.users u where u.id = auth.uid();
+  if account_created is null or account_created < now() - interval '1 hour' then return; end if;
+
+  insert into signup_sources (user_id, source)
+  values (auth.uid(), clean)
+  on conflict (user_id) do nothing;
+end;
+$$;
+
+revoke all on function record_signup_source(text) from public;
+grant execute on function record_signup_source(text) to authenticated;

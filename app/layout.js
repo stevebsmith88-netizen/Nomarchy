@@ -1,5 +1,6 @@
 import "./globals.css";
 import { ThemeProvider } from "./theme";
+import RefCapture from "./RefCapture";
 
 const description = "Crown your favourite restaurant in every cuisine, stage a coup when something better comes along, and compare your kingdom with friends.";
 
@@ -36,6 +37,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
+        <RefCapture />
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
