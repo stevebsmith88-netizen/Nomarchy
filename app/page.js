@@ -1707,7 +1707,7 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
         <option value="">Uncategorized</option>
         {selectableCuisines.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
       </select>
-      {p.visitedAt && <PhotoPicker userId={userId} photos={p.photos || []} onChange={(photos) => onChangePhotos(p.id, photos)} />}
+      {p.visitedAt && <PhotoPicker userId={userId} photos={p.photos || []} onChange={(photos) => onChangePhotos(p.id, photos)} removeInViewer />}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           onClick={() => onCrown(p)}
@@ -1959,7 +1959,7 @@ function RestaurantProfileModal({ restaurant, onClose }) {
 // Read-only thumbnail row - used both for the owner's own picks (paired
 // with PhotoPicker below) and for reading a friend's or a public profile's
 // photos, where no remove button applies.
-function PhotoStrip({ photos, onRemove }) {
+function PhotoStrip({ photos, onRemove, removeInViewer = false }) {
   const [viewingIndex, setViewingIndex] = useState(null);
   if (!photos || photos.length === 0) return null;
   const prev = () => setViewingIndex((i) => (i - 1 + photos.length) % photos.length);
@@ -1971,7 +1971,7 @@ function PhotoStrip({ photos, onRemove }) {
           <div key={url} className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg" style={{ border: `1px solid ${C.cardEdge}` }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={url} alt="" onClick={() => setViewingIndex(i)} className="h-full w-full cursor-pointer object-cover" />
-            {onRemove && (
+            {onRemove && !removeInViewer && (
               <button onClick={() => onRemove(i)} aria-label="Remove photo" className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full" style={{ background: "rgba(0,0,0,0.6)", color: "#fff" }}>
                 <X size={10} />
               </button>
@@ -1986,7 +1986,12 @@ function PhotoStrip({ photos, onRemove }) {
               <span className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>
                 {photos.length > 1 ? `Photo ${viewingIndex + 1} of ${photos.length}` : "Photo"}
               </span>
-              <button onClick={() => setViewingIndex(null)} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
+              <div className="flex items-center gap-4">
+                {onRemove && removeInViewer && (
+                  <button onClick={() => { onRemove(viewingIndex); setViewingIndex(null); }} aria-label="Delete photo" className="flex items-center gap-1 text-xs font-semibold" style={{ color: C.muted }}><Trash2 size={14} /> Delete</button>
+                )}
+                <button onClick={() => setViewingIndex(null)} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
+              </div>
             </div>
             {/* Fixed-height stage, not sized to each image - otherwise the
                 modal itself grows or shrinks depending on whether the
@@ -2015,7 +2020,7 @@ function PhotoStrip({ photos, onRemove }) {
 // "save" - simpler state, and it means a review's photos are never lost to
 // a closed tab mid-edit. Removing one is a local array change the caller
 // persists (immediately for an existing review, or on submit for a new one).
-function PhotoPicker({ userId, photos, onChange, action, canRemove = true }) {
+function PhotoPicker({ userId, photos, onChange, action, canRemove = true, removeInViewer = false }) {
   const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState("");
 
@@ -2036,7 +2041,7 @@ function PhotoPicker({ userId, photos, onChange, action, canRemove = true }) {
 
   return (
     <div className="mt-2">
-      <PhotoStrip photos={photos} onRemove={canRemove ? (i) => { deleteReviewPhoto(photos[i]); onChange(photos.filter((_, idx) => idx !== i)); } : undefined} />
+      <PhotoStrip photos={photos} removeInViewer={removeInViewer} onRemove={canRemove ? (i) => { deleteReviewPhoto(photos[i]); onChange(photos.filter((_, idx) => idx !== i)); } : undefined} />
       {(photos.length < MAX_REVIEW_PHOTOS || action) && (
         <div className="mt-2 flex items-end justify-between gap-2">
           {photos.length < MAX_REVIEW_PHOTOS ? (
@@ -3615,7 +3620,7 @@ function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning,
         {!isPretender && (<div className="mt-1 text-right text-xs" style={{ color: text.trim().length >= minLen ? C.green : C.muted }}>
           {text.trim().length}/{minLen} minimum. No throne without a decree.
         </div>)}
-        {!isPretender && <PhotoPicker userId={userId} photos={photos} onChange={setPhotos} />}
+        {!isPretender && <PhotoPicker userId={userId} photos={photos} onChange={setPhotos} removeInViewer />}
 
         <button disabled={!valid || submitting} onClick={handleSubmit}
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold"
