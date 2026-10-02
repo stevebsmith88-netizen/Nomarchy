@@ -424,10 +424,10 @@ drop policy if exists "lookup cache readable" on place_lookup_cache;
 create policy "lookup cache readable" on place_lookup_cache for select using (true);
 drop policy if exists "signed-in users populate the cache" on place_lookup_cache;
 create policy "signed-in users populate the cache" on place_lookup_cache for insert
-  with check (auth.uid() is not null);
+  with check ((select auth.uid()) is not null);
 drop policy if exists "signed-in users refresh the cache" on place_lookup_cache;
 create policy "signed-in users refresh the cache" on place_lookup_cache for update
-  using (auth.uid() is not null) with check (auth.uid() is not null);
+  using ((select auth.uid()) is not null) with check ((select auth.uid()) is not null);
 
 -- ------------------------------------------------------------
 -- 7bb. RESTAURANTS (pre-loaded local reference data)
@@ -469,17 +469,21 @@ create policy "restaurants readable" on restaurants for select using (true);
 -- Adding a return column requires a drop first - unlike a view, CREATE OR
 -- REPLACE FUNCTION refuses to change RETURNS TABLE's shape at all, append
 -- or not.
+-- "%" and "<->" are the trigram operators the restaurants_name_trgm_idx
+-- index can serve (a bare similarity() > x reads every row); the threshold
+-- is set on the function itself, so the matching is the same as before.
 drop function if exists match_restaurant(text);
 create function match_restaurant(search_name text)
 returns table (name text, address text, neighbourhood text, lat numeric, lng numeric, city text)
 language sql
 stable
+set pg_trgm.similarity_threshold = 0.4
 as $$
   select r.name, r.address, r.neighbourhood, r.lat, r.lng, r.city
   from restaurants r
   where r.city = 'Toronto'
-    and similarity(r.name, search_name) > 0.4
-  order by similarity(r.name, search_name) desc
+    and r.name % search_name
+  order by r.name <-> search_name
   limit 1;
 $$;
 
@@ -500,12 +504,13 @@ create or replace function search_restaurants_fuzzy(search_name text)
 returns table (name text, address text, neighbourhood text)
 language sql
 stable
+set pg_trgm.similarity_threshold = 0.3
 as $$
   select r.name, r.address, r.neighbourhood
   from restaurants r
   where r.city = 'Toronto'
-    and similarity(r.name, search_name) > 0.3
-  order by similarity(r.name, search_name) desc
+    and r.name % search_name
+  order by r.name <-> search_name
   limit 3;
 $$;
 
@@ -530,12 +535,12 @@ alter table feedback enable row level security;
 -- can see everyone's (to actually triage them) - nobody else's business.
 drop policy if exists "feedback insert own" on feedback;
 create policy "feedback insert own" on feedback for insert
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 drop policy if exists "feedback read own or owner" on feedback;
 create policy "feedback read own or owner" on feedback for select
   using (
-    auth.uid() = user_id
-    or exists (select 1 from profiles p where p.id = auth.uid() and p.is_owner)
+    (select auth.uid()) = user_id
+    or exists (select 1 from profiles p where p.id = (select auth.uid()) and p.is_owner)
   );
 
 -- ------------------------------------------------------------
@@ -565,10 +570,10 @@ create policy "review photos readable" on storage.objects for select
   using (bucket_id = 'review-photos');
 drop policy if exists "review photos insertable by owner" on storage.objects;
 create policy "review photos insertable by owner" on storage.objects for insert
-  with check (bucket_id = 'review-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+  with check (bucket_id = 'review-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
 drop policy if exists "review photos deletable by owner" on storage.objects;
 create policy "review photos deletable by owner" on storage.objects for delete
-  using (bucket_id = 'review-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+  using (bucket_id = 'review-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 -- Profile photos: same "{user_id}/filename" path convention, but a
 -- re-upload overwrites the same path (one avatar per person), so this
@@ -583,18 +588,23 @@ create policy "avatars readable" on storage.objects for select
   using (bucket_id = 'avatars');
 drop policy if exists "avatars insertable by owner" on storage.objects;
 create policy "avatars insertable by owner" on storage.objects for insert
-  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid())::text);
 drop policy if exists "avatars updatable by owner" on storage.objects;
 create policy "avatars updatable by owner" on storage.objects for update
-  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid())::text);
 drop policy if exists "avatars deletable by owner" on storage.objects;
 create policy "avatars deletable by owner" on storage.objects for delete
-  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 -- ------------------------------------------------------------
 -- 8. ROW LEVEL SECURITY
 -- Do NOT skip this. Without it every table is wide open and anyone
 -- can overwrite anyone else's kingdom.
+--
+-- Every policy in this file writes "(select auth.uid())" rather than a bare
+-- "auth.uid()". It means exactly the same thing, but Postgres works it out
+-- once per query instead of once per row - Supabase's own recommended
+-- pattern, and a big difference once tables have thousands of rows.
 -- ------------------------------------------------------------
 alter table profiles     enable row level security;
 alter table cuisines     enable row level security;
@@ -612,13 +622,13 @@ alter table dismissed_notifications enable row level security;
 drop policy if exists "profiles readable" on profiles;
 create policy "profiles readable" on profiles for select using (true);
 drop policy if exists "own profile writable" on profiles;
-create policy "own profile writable" on profiles for update using (auth.uid() = id);
+create policy "own profile writable" on profiles for update using ((select auth.uid()) = id);
 
 -- Cuisines: everyone reads, signed-in users can add custom ones
 drop policy if exists "cuisines readable" on cuisines;
 create policy "cuisines readable" on cuisines for select using (true);
 drop policy if exists "cuisines insertable" on cuisines;
-create policy "cuisines insertable" on cuisines for insert with check (auth.uid() = created_by);
+create policy "cuisines insertable" on cuisines for insert with check ((select auth.uid()) = created_by);
 
 -- Thrones: readable by the owner, or by anyone if the profile is public.
 -- NOT gated by "am I followed by them" - following here needs no approval
@@ -634,29 +644,29 @@ create policy "cuisines insertable" on cuisines for insert with check (auth.uid(
 drop policy if exists "thrones readable" on thrones;
 create policy "thrones readable" on thrones for select
   using (
-    auth.uid() = thrones.user_id
+    (select auth.uid()) = thrones.user_id
     or exists (select 1 from profiles p where p.id = thrones.user_id and p.is_public)
-    or exists (select 1 from profiles p where p.id = auth.uid() and p.is_owner)
+    or exists (select 1 from profiles p where p.id = (select auth.uid()) and p.is_owner)
   );
 drop policy if exists "own thrones writable" on thrones;
 create policy "own thrones writable" on thrones for all
-  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 -- Fallen: same visibility rule as thrones
 drop policy if exists "fallen readable" on fallen;
 create policy "fallen readable" on fallen for select
   using (
-    auth.uid() = fallen.user_id
+    (select auth.uid()) = fallen.user_id
     or exists (select 1 from profiles p where p.id = fallen.user_id and p.is_public)
   );
 drop policy if exists "own fallen writable" on fallen;
 create policy "own fallen writable" on fallen for all
-  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 -- Next in line: PRIVATE. Your shortlist is nobody else's business.
 drop policy if exists "own list only" on next_in_line;
 create policy "own list only" on next_in_line for all
-  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 -- A visited (not necessarily crowned) place with a note is effectively a
 -- review, and shown to followers - unvisited "want to go" items stay fully
@@ -667,7 +677,7 @@ drop policy if exists "followers see visited picks" on next_in_line;
 create policy "followers see visited picks" on next_in_line for select
   using (
     visited_at is not null
-    and exists (select 1 from follows f where f.follower_id = auth.uid() and f.followee_id = next_in_line.user_id)
+    and exists (select 1 from follows f where f.follower_id = (select auth.uid()) and f.followee_id = next_in_line.user_id)
   );
 
 -- Rank promotions: readable by yourself and anyone who follows you (so a
@@ -679,28 +689,28 @@ create policy "followers see visited picks" on next_in_line for select
 drop policy if exists "rank promotions readable" on rank_promotions;
 create policy "rank promotions readable" on rank_promotions for select
   using (
-    auth.uid() = user_id
-    or exists (select 1 from follows f where f.follower_id = auth.uid() and f.followee_id = rank_promotions.user_id)
+    (select auth.uid()) = user_id
+    or exists (select 1 from follows f where f.follower_id = (select auth.uid()) and f.followee_id = rank_promotions.user_id)
   );
 drop policy if exists "own rank promotions insertable" on rank_promotions;
 create policy "own rank promotions insertable" on rank_promotions for insert
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 
 -- Dismissed notifications: entirely private bookkeeping, never anyone
 -- else's business.
 drop policy if exists "own dismissed notifications" on dismissed_notifications;
 create policy "own dismissed notifications" on dismissed_notifications for all
-  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 -- Endorsements: readable by all, and you can never endorse your own pick
 drop policy if exists "endorsements readable" on endorsements;
 create policy "endorsements readable" on endorsements for select using (true);
 drop policy if exists "own endorsements writable" on endorsements;
 create policy "own endorsements writable" on endorsements for all
-  using (auth.uid() = endorser_id)
+  using ((select auth.uid()) = endorser_id)
   with check (
-    auth.uid() = endorser_id
-    and not exists (select 1 from thrones t where t.id = throne_id and t.user_id = auth.uid())
+    (select auth.uid()) = endorser_id
+    and not exists (select 1 from thrones t where t.id = throne_id and t.user_id = (select auth.uid()))
   );
 
 -- Follows
@@ -708,7 +718,7 @@ drop policy if exists "follows readable" on follows;
 create policy "follows readable" on follows for select using (true);
 drop policy if exists "own follows writable" on follows;
 create policy "own follows writable" on follows for all
-  using (auth.uid() = follower_id) with check (auth.uid() = follower_id);
+  using ((select auth.uid()) = follower_id) with check ((select auth.uid()) = follower_id);
 -- The permissive policy above only ever lets you touch a row where
 -- YOU'RE the follower - it can't remove someone else's follow of you,
 -- which is exactly what blocking someone who already follows you needs.
@@ -717,8 +727,8 @@ create policy "own follows writable" on follows for all
 drop policy if exists "remove an incoming follow you've blocked" on follows;
 create policy "remove an incoming follow you've blocked" on follows for delete
   using (
-    auth.uid() = followee_id
-    and exists (select 1 from blocks b where b.blocker_id = auth.uid() and b.blocked_id = follows.follower_id)
+    (select auth.uid()) = followee_id
+    and exists (select 1 from blocks b where b.blocker_id = (select auth.uid()) and b.blocked_id = follows.follower_id)
   );
 -- Restrictive: combined with AND against the permissive insert policy
 -- above, so a follow can never be created in either direction while a
@@ -739,18 +749,18 @@ create policy "no follows across a block" on follows as restrictive for insert
 -- information they need, same reasoning most platforms use.
 drop policy if exists "own blocks readable" on blocks;
 create policy "own blocks readable" on blocks for select
-  using (auth.uid() = blocker_id);
+  using ((select auth.uid()) = blocker_id);
 drop policy if exists "own blocks writable" on blocks;
 create policy "own blocks writable" on blocks for all
-  using (auth.uid() = blocker_id) with check (auth.uid() = blocker_id);
+  using ((select auth.uid()) = blocker_id) with check ((select auth.uid()) = blocker_id);
 
 -- AI calls: private, insert/read your own only
 drop policy if exists "users log their own ai calls" on ai_calls;
 create policy "users log their own ai calls" on ai_calls for insert
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 drop policy if exists "users read their own ai calls" on ai_calls;
 create policy "users read their own ai calls" on ai_calls for select
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 -- ------------------------------------------------------------
 -- 8b. CONQUESTS (one-time achievements)
@@ -777,13 +787,13 @@ alter table conquests enable row level security;
 drop policy if exists "conquests readable" on conquests;
 create policy "conquests readable" on conquests for select
   using (
-    auth.uid() = user_id
+    (select auth.uid()) = user_id
     or exists (select 1 from profiles p where p.id = conquests.user_id and p.is_public)
   );
 
 drop policy if exists "own conquests writable" on conquests;
 create policy "own conquests writable" on conquests for insert
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 
 -- ------------------------------------------------------------
 -- 9. CREDIBILITY SCORE
@@ -814,23 +824,36 @@ select
   p.id,
   p.username,
   p.display_name,
-  (select count(*) from thrones t where t.user_id = p.id)                as thrones,
-  (select count(*) from fallen f where f.user_id = p.id)                 as coups,
-  (select coalesce(avg(char_length(t.decree)), 0) from thrones t where t.user_id = p.id) as avg_decree,
-  (select count(*) from endorsements e
-     join thrones t on t.id = e.throne_id where t.user_id = p.id)        as endorsements_received,
+  t.thrones,
+  f.coups,
+  t.avg_decree,
+  e.endorsements_received,
   round(
-      (select count(*) from thrones t where t.user_id = p.id) * 12
-    + (select count(*) from fallen f where f.user_id = p.id) * 8
-    + least((select coalesce(avg(char_length(t.decree)), 0) from thrones t where t.user_id = p.id), 240) / 4
-    + (select count(*) from endorsements e
-         join thrones t on t.id = e.throne_id where t.user_id = p.id) * 5
-    + least((select count(*) from thrones t where t.user_id = p.id and cardinality(t.photos) > 0) * 3, 30)
-    + least((select coalesce(sum(c.points), 0) from conquests c where c.user_id = p.id), 60)
+      t.thrones * 12
+    + f.coups * 8
+    + least(t.avg_decree, 240) / 4
+    + e.endorsements_received * 5
+    + least(t.thrones_with_photos * 3, 30)
+    + least(cq.conquest_points, 60)
   ) as score,
-  (select count(*) from thrones t where t.user_id = p.id and cardinality(t.photos) > 0) as thrones_with_photos,
-  (select coalesce(sum(c.points), 0) from conquests c where c.user_id = p.id) as conquest_points
-from profiles p;
+  t.thrones_with_photos,
+  cq.conquest_points
+from profiles p
+-- Each person's crowns are read once (not four times, as before) and the
+-- counts reused - same numbers, same column order, less work.
+cross join lateral (
+  select count(*) as thrones,
+         coalesce(avg(char_length(th.decree)), 0) as avg_decree,
+         count(*) filter (where cardinality(th.photos) > 0) as thrones_with_photos
+  from thrones th where th.user_id = p.id
+) t
+cross join lateral (select count(*) as coups from fallen fa where fa.user_id = p.id) f
+cross join lateral (
+  select count(*) as endorsements_received
+  from endorsements en join thrones th on th.id = en.throne_id
+  where th.user_id = p.id
+) e
+cross join lateral (select coalesce(sum(c.points), 0) as conquest_points from conquests c where c.user_id = p.id) cq;
 
 -- One-time backfill for existing scores at the moment last_rank_min was
 -- added (see its own comment above, in section 1) - without this,
@@ -878,7 +901,7 @@ end $$;
 drop policy if exists "thrones coup rate limit" on thrones;
 create policy "thrones coup rate limit" on thrones as restrictive for update
   with check (
-    (select count(*) from fallen f where f.user_id = auth.uid() and f.dethroned_at > now() - interval '1 hour') < 50
+    (select count(*) from fallen f where f.user_id = (select auth.uid()) and f.dethroned_at > now() - interval '1 hour') < 50
   );
 
 -- A policy's check can't safely query its OWN table directly - Postgres
@@ -899,7 +922,7 @@ $$;
 
 drop policy if exists "next in line insert rate limit" on next_in_line;
 create policy "next in line insert rate limit" on next_in_line as restrictive for insert
-  with check (next_in_line_recent_count(auth.uid()) < 50);
+  with check (next_in_line_recent_count((select auth.uid())) < 50);
 
 -- Separate from the existing 3-photos-per-pick cap - this limits how many
 -- NEW photos get uploaded across all picks combined in an hour, so someone
@@ -926,7 +949,7 @@ drop policy if exists "review photos insert rate limit" on storage.objects;
 create policy "review photos insert rate limit" on storage.objects as restrictive for insert
   with check (
     bucket_id <> 'review-photos'
-    or review_photos_recent_count(auth.uid()) < 30
+    or review_photos_recent_count((select auth.uid())) < 30
   );
 
 -- ------------------------------------------------------------
@@ -1024,7 +1047,7 @@ alter table signup_sources enable row level security;
 
 drop policy if exists "owner reads signup sources" on signup_sources;
 create policy "owner reads signup sources" on signup_sources for select
-  using (exists (select 1 from profiles p where p.id = auth.uid() and p.is_owner));
+  using (exists (select 1 from profiles p where p.id = (select auth.uid()) and p.is_owner));
 
 -- Called by the app right after someone signs in. Quietly does nothing
 -- (never raises) unless ALL of these hold, so a bad or stale value can
@@ -1094,7 +1117,7 @@ as $$
     count(*) filter (where c.created_at >= date_trunc('month', now())),
     count(*)
   from google_api_calls c
-  where exists (select 1 from profiles p where p.id = auth.uid() and p.is_owner)
+  where exists (select 1 from profiles p where p.id = (select auth.uid()) and p.is_owner)
   group by c.kind
   order by c.kind;
 $$;
@@ -1154,7 +1177,7 @@ alter table place_refresh_issues enable row level security;
 
 drop policy if exists "owner reads place refresh issues" on place_refresh_issues;
 create policy "owner reads place refresh issues" on place_refresh_issues for select
-  using (exists (select 1 from profiles p where p.id = auth.uid() and p.is_owner));
+  using (exists (select 1 from profiles p where p.id = (select auth.uid()) and p.is_owner));
 
 -- ------------------------------------------------------------
 -- CLOSED PLACES (places the owner has confirmed are permanently closed)
@@ -1210,7 +1233,7 @@ alter table cuisines add constraint cuisines_emoji_length check (emoji is null o
 
 drop policy if exists "cuisines icon updatable by creator" on cuisines;
 create policy "cuisines icon updatable by creator" on cuisines for update
-  using (auth.uid() = created_by) with check (auth.uid() = created_by);
+  using ((select auth.uid()) = created_by) with check ((select auth.uid()) = created_by);
 
 create or replace function protect_cuisine_fields()
 returns trigger
@@ -1384,10 +1407,10 @@ alter table app_errors enable row level security;
 
 drop policy if exists "owner reads errors" on app_errors;
 create policy "owner reads errors" on app_errors for select
-  using (exists (select 1 from profiles p where p.id = auth.uid() and p.is_owner));
+  using (exists (select 1 from profiles p where p.id = (select auth.uid()) and p.is_owner));
 drop policy if exists "owner clears errors" on app_errors;
 create policy "owner clears errors" on app_errors for delete
-  using (exists (select 1 from profiles p where p.id = auth.uid() and p.is_owner));
+  using (exists (select 1 from profiles p where p.id = (select auth.uid()) and p.is_owner));
 
 -- The only way a report gets in. Anyone's app can call it (an error can
 -- happen before sign-in), so it trims every field and caps new reports at

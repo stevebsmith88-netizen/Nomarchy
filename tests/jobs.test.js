@@ -51,3 +51,20 @@ describe("closure check", () => {
     expect(calls.every((c) => c.mask === "businessStatus")).toBe(true);
   });
 });
+
+import { cleanUpOldRecords } from "@/lib/maintenance";
+
+describe("daily clean-up", () => {
+  it("removes only old log rows", async () => {
+    const db = fakeDb({
+      ai_calls: [{ called_at: ago(40) }, { called_at: ago(1) }],
+      dismissed_notifications: [{ dismissed_at: ago(31) }, { dismissed_at: ago(2) }],
+      place_lookup_cache: [{ created_at: ago(100) }, { created_at: ago(10) }],
+    });
+    const result = await cleanUpOldRecords(db, { now: () => NOW });
+    expect(result).toEqual({ ai_calls: "ok", dismissed_notifications: "ok", place_lookup_cache: "ok" });
+    expect(db.tables.ai_calls).toHaveLength(1);
+    expect(db.tables.dismissed_notifications).toHaveLength(1);
+    expect(db.tables.place_lookup_cache).toHaveLength(1);
+  });
+});

@@ -14,6 +14,7 @@ import { refreshCoords } from "@/lib/coordRefresh";
 import { logGoogleCall } from "@/lib/googleUsage";
 import { isCronAuthorized } from "@/lib/cronAuth";
 import { runErrorDigest, sendWithSendGrid } from "@/lib/errorDigest";
+import { cleanUpOldRecords } from "@/lib/maintenance";
 
 export const maxDuration = 60;
 
@@ -36,9 +37,16 @@ export async function GET(request) {
     errorDigest = { sent: false, reason: err?.message };
   }
 
+  let cleanUp;
+  try {
+    cleanUp = await cleanUpOldRecords(admin);
+  } catch (err) {
+    cleanUp = { error: err?.message };
+  }
+
   try {
     const summary = await refreshCoords(admin, { apiKey, onCall: () => logGoogleCall("place_refresh") });
-    return NextResponse.json({ ...summary, errorDigest });
+    return NextResponse.json({ ...summary, errorDigest, cleanUp });
   } catch (err) {
     console.error("Coordinate refresh failed", err?.message);
     return NextResponse.json({ error: "Refresh failed" }, { status: 500 });
