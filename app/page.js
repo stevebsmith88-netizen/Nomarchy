@@ -1652,9 +1652,9 @@ function PretenderCard({ p, selectableCuisines, onRemove, onChangeNote, onChange
             {p.mapsUrl && <a href={p.mapsUrl} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 font-semibold" style={{ color: C.gold }}>Map <ExternalLink size={10} /></a>}
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {onShare && <button onClick={() => onShare(p)} aria-label="Share" style={{ color: C.muted }}><Share2 size={15} /></button>}
-          <button onClick={() => onRemove(p.id)} aria-label="Remove" style={{ color: C.muted }}><Trash2 size={15} /></button>
+        <div className="flex shrink-0 items-center gap-4">
+          {onShare && <button onClick={() => onShare(p)} aria-label="Share" className="p-1" style={{ color: C.muted }}><Share2 size={15} /></button>}
+          <button onClick={() => onRemove(p.id)} aria-label="Remove" className="p-1" style={{ color: C.muted }}><Trash2 size={15} /></button>
         </div>
       </div>
       {friendMatches && friendMatches.length > 0 && (
