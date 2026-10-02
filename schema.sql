@@ -1259,3 +1259,100 @@ create index if not exists thrones_crowned_at_idx on thrones (crowned_at);
 -- means "all defaults".
 -- ------------------------------------------------------------
 alter table profiles add column if not exists a11y_prefs jsonb not null default '{}';
+
+-- ------------------------------------------------------------
+-- BEST IN THE LAND (ranked in the database)
+-- Used to download every crown in the app to each phone and rank them
+-- there; this ranks them here and sends back only the top places.
+-- Same rules as before (groupCrownedThrones in lib/data.js): one line per
+-- real restaurant by Google ID, a crown with no ID joins the one Google
+-- place with the same name and address, closed places are left out, and a
+-- person counts once per place. Runs with the caller's own permissions, so
+-- it only ever counts crowns that person can already see.
+-- ------------------------------------------------------------
+
+-- Same normalisation as placeKey() in lib/data.js: name, then the street
+-- part of the address (postal code, punctuation and "Street"/"St" style
+-- differences removed), falling back to the neighbourhood.
+create or replace function place_street_key(p_text text)
+returns text
+language sql
+immutable
+as $$
+  select coalesce(string_agg(coalesce(m.short, w.word), ' ' order by w.ord), '')
+  from unnest(string_to_array(
+         trim(regexp_replace(regexp_replace(regexp_replace(
+           lower(split_part(coalesce(p_text, ''), ',', 1)),
+           '[a-z][0-9][a-z]\s?[0-9][a-z][0-9]\s*$', ''),
+           '[^a-z0-9_\s]', '', 'g'),
+           '\s+', ' ', 'g')),
+         ' ')) with ordinality as w(word, ord)
+  left join (values ('street','st'),('avenue','ave'),('boulevard','blvd'),('drive','dr'),('road','rd'),
+                    ('place','pl'),('lane','ln'),('court','ct'),('crescent','cres'),('terrace','terr'),
+                    ('west','w'),('east','e'),('north','n'),('south','s')) as m(long, short)
+    on m.long = w.word
+  where w.word <> '';
+$$;
+
+create or replace function place_text_key(p_name text, p_address text, p_area text)
+returns text
+language sql
+immutable
+as $$
+  select regexp_replace(regexp_replace(lower(trim(coalesce(p_name, ''))), '[\s\-–—:,.]+$', ''), '\s+', ' ', 'g')
+    || '|' || coalesce(nullif(place_street_key(p_address), ''), place_street_key(p_area));
+$$;
+
+create or replace function best_in_land(
+  p_since timestamptz default null,
+  p_user_ids uuid[] default null,
+  p_city text default null,
+  p_search text default null,
+  p_limit int default 25
+)
+returns table (name text, area text, address text, rating numeric, maps_url text, google_place_id text, crown_count bigint)
+language sql
+stable
+as $$
+  with crowns as (
+    select t.user_id, t.place_name, t.address, t.neighbourhood, t.rating, t.maps_url, t.google_place_id, t.crowned_at,
+           place_text_key(t.place_name, t.address, t.neighbourhood) as tkey
+    from thrones t
+    where (p_since is null or t.crowned_at >= p_since)
+      and (p_user_ids is null or t.user_id = any(p_user_ids))
+      and (t.google_place_id is null
+           or not exists (select 1 from closed_places c where c.google_place_id = t.google_place_id))
+  ),
+  one_id_per_text as (
+    select tkey, min(google_place_id) as only_id
+    from crowns
+    where google_place_id is not null
+    group by tkey
+    having count(distinct google_place_id) = 1
+  ),
+  keyed as (
+    select c.*,
+           case when c.google_place_id is not null then 'gid:' || c.google_place_id
+                when o.only_id is not null then 'gid:' || o.only_id
+                else 'text:' || c.tkey end as gkey
+    from crowns c
+    left join one_id_per_text o on c.google_place_id is null and o.tkey = c.tkey
+  ),
+  grouped as (
+    select (array_agg(place_name order by crowned_at))[1] as name,
+           (array_agg(neighbourhood order by crowned_at))[1] as area,
+           (array_agg(address order by crowned_at))[1] as address,
+           (array_agg(rating order by crowned_at))[1] as rating,
+           (array_agg(maps_url order by crowned_at))[1] as maps_url,
+           (array_agg(google_place_id order by crowned_at) filter (where google_place_id is not null))[1] as google_place_id,
+           count(distinct user_id) as crown_count
+    from keyed
+    group by gkey
+  )
+  select g.name, g.area, g.address, g.rating, g.maps_url, g.google_place_id, g.crown_count
+  from grouped g
+  where (p_search is null or g.name ilike '%' || p_search || '%')
+    and (p_city is null or g.area ilike '%' || p_city || '%' or g.address ilike '%' || p_city || '%')
+  order by g.crown_count desc, lower(g.name)
+  limit greatest(1, least(coalesce(p_limit, 25), 100));
+$$;

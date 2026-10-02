@@ -12,7 +12,7 @@ import {
 import {
   supabase, getUser, onAuthChange, signIn, verifyCode, signInWithGoogle, signOut, getProfile, updateProfile, deleteAccount, submitFeedback,
   linkGoogle, unlinkGoogle, getLinkedProviders,
-  loadDirectory, loadSuggestedFriends, loadCrownedThrones, groupCrownedThrones, placeKey, loadRestaurantProfile, loadRestaurantVisitCount, loadRestaurantWantingCount, searchAllRestaurants, loadFollowers, followUser, loadNotifications, markNotificationsSeen, logRankPromotion, dismissNotification, dismissAllNotifications,
+  loadDirectory, loadSuggestedFriends, loadBestInLand, placeKey, loadRestaurantProfile, loadRestaurantVisitCount, loadRestaurantWantingCount, searchAllRestaurants, loadFollowers, followUser, loadNotifications, markNotificationsSeen, logRankPromotion, dismissNotification, dismissAllNotifications,
   loadKingdom, loadNextInLine, loadCuisines, addCuisine,
   crownSpot, promoteToThrone, addToNextInLine, importToNextInLine, removeFromNextInLine, markVisited, updatePretenderCuisine, updatePretenderNote, updatePretenderVerdict, updatePretenderPhotos,
   moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
@@ -42,6 +42,7 @@ const MAX_IMPORT_CHARS = 20000;
 // (react-hooks/purity). A Trending range like "this week" doesn't need
 // to be precise to the second anyway, just roughly right for the session.
 const NOW = Date.now();
+const RANGE_MS = { all: Infinity, year: 365 * 86400000, month: 30 * 86400000, week: 7 * 86400000 };
 
 // A reserved, shared cuisine row (seeded in schema.sql) that every user gets
 // their own throne on via the normal unique(user_id, cuisine_id) constraint.
@@ -183,7 +184,10 @@ export default function Nomarchy() {
   const [closedIds, setClosedIds] = useState(() => new Set());
   const [showMembers, setShowMembers] = useState(false);
 
-  const [top25, setTop25] = useState(null);
+  // Best in the Land: the ranked list for the current filters, and the
+  // search results when something is typed in its search box (null = not searching).
+  const [bestList, setBestList] = useState(null);
+  const [bestSearchList, setBestSearchList] = useState(null);
   const [top25Error, setTop25Error] = useState("");
   const [top25City, setTop25City] = useState("");
   const [top25Range, setTop25Range] = useState("all");
@@ -333,10 +337,32 @@ export default function Nomarchy() {
     await refreshCourt();
   };
 
+  // Re-ranks whenever a filter changes, after a short pause so typing in
+  // the city or search box doesn't fire a request per letter. "Your Court"
+  // counts your own crowns too.
+  const courtIdsKey = user ? [...court.map((f) => f.id), user.id].sort().join(",") : "";
   useEffect(() => {
-    if (tab !== "top25" || top25 !== null) return;
-    loadCrownedThrones().then(setTop25).catch((e) => setTop25Error(e.message || "Couldn't load the leaderboard."));
-  }, [tab, top25]);
+    if (tab !== "top25" || !user) return;
+    let cancelled = false;
+    const search = restaurantSearch.trim();
+    const timer = setTimeout(async () => {
+      try {
+        const userIds = top25Scope === "friends" ? courtIdsKey.split(",") : null;
+        if (search) {
+          const found = await loadBestInLand({ search, userIds, limit: 50, closedIds });
+          if (!cancelled) setBestSearchList(found);
+        } else {
+          const since = top25Range === "all" ? null : new Date(NOW - RANGE_MS[top25Range]).toISOString();
+          const ranked = await loadBestInLand({ since, userIds, city: top25City.trim() || null, limit: 25, closedIds });
+          if (!cancelled) { setBestList(ranked); setBestSearchList(null); }
+        }
+        if (!cancelled) setTop25Error("");
+      } catch (e) {
+        if (!cancelled) setTop25Error(e.message || "Couldn't load the leaderboard.");
+      }
+    }, 250);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [tab, user, restaurantSearch, top25Scope, top25Range, top25City, courtIdsKey, closedIds]);
 
   useEffect(() => {
     if (tab !== "admin" || !profile?.is_owner || adminData !== null || adminError) return;
@@ -924,22 +950,6 @@ export default function Nomarchy() {
     return found.size ? [...found] : undefined;
   };
 
-  // NOW is a module-level constant (evaluated once at page load), not a
-  // fresh Date.now() call here - calling that directly in render is an
-  // impure render (react-hooks/purity), and a Trending range like "this
-  // week" doesn't need per-render precision anyway.
-  const RANGE_MS = { all: Infinity, year: 365 * 86400000, month: 30 * 86400000, week: 7 * 86400000 };
-  const trendingCutoff = NOW - RANGE_MS[top25Range];
-  // "Friends" scopes down to Court before grouping - court is already
-  // loaded on every page load (not lazily per-tab), so this needs no new
-  // query. Uncrowned search results (below, in the render) aren't scoped
-  // this way - there's no "whose" to attribute an uncrowned restaurant to.
-  // Includes your own id, not just people you follow - your own crowns
-  // are as much "your Court" as a friend's, and without this a place you
-  // and a friend both crowned would show a lower count here than on its
-  // own restaurant page (which counts everyone), reading as if it had
-  // quietly lost a crown rather than just being scoped down.
-  const followedIds = new Set([...court.map((f) => f.id), user.id]);
   // Joint places, not a hard cap of three people: the three highest
   // distinct scores in your Court each earn the crown, so two friends tied
   // on 77 are both joint first and the next score down is second. Zero is
@@ -951,15 +961,12 @@ export default function Nomarchy() {
     const place = courtTopScores.indexOf(score);
     return place === -1 ? null : [C.gold, "#9AA5B1", "#B7762E"][place];
   };
-  const scopedTop25 = top25 && (top25Scope === "friends" ? top25.filter((t) => followedIds.has(t.user_id)) : top25);
-  const trendingList = scopedTop25 && groupCrownedThrones(scopedTop25.filter((t) => new Date(t.crowned_at).getTime() >= trendingCutoff && !isClosed(t.google_place_id)));
+  const trendingList = bestList;
   // Search ignores the range/rank window entirely - "find any restaurant
   // anyone's crowned" shouldn't be limited to the top 25 most-crowned or
   // to whatever time range happens to be selected.
   const restaurantSearchQuery = restaurantSearch.trim().toLowerCase();
-  const restaurantSearchResults = scopedTop25 && restaurantSearchQuery
-    ? groupCrownedThrones(scopedTop25.filter((t) => !isClosed(t.google_place_id))).filter((p) => p.name.toLowerCase().includes(restaurantSearchQuery))
-    : null;
+  const restaurantSearchResults = restaurantSearchQuery ? bestSearchList : null;
   // A restaurant already showing up above (someone's crowned it) shouldn't
   // also show up down here as "not yet crowned".
   const crownedKeys = new Set((restaurantSearchResults || []).map((p) => placeKey(p.name, p.address, p.area)));
@@ -1562,7 +1569,7 @@ export default function Nomarchy() {
           </div>)}
           {!restaurantSearchResults && top25City && <button onClick={() => setTop25City("")} className="mb-3 text-xs font-semibold" style={{ color: C.muted }}>Clear filter</button>}
           {top25Error && <p className="mb-3 text-xs" style={{ color: C.coup }}>{top25Error}</p>}
-          {!top25 && !top25Error && <RowSkeleton count={5} />}
+          {!bestList && !top25Error && <RowSkeleton count={5} />}
           {restaurantSearchResults ? (
             restaurantSearchResults.length === 0 && uncrownedResults.length === 0
               ? <p className="text-sm" style={{ color: C.muted }}>No restaurant matches that yet.</p>
