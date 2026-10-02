@@ -24,7 +24,7 @@ import { claimSignupSource } from "@/lib/signupSource";
 import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
 import { C, display, body, RANKS, getRank, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell, useTheme } from "./theme";
 
-// Leaflet touches window/document at load time, which breaks server-side
+// The Google map loader touches window/document, which breaks server-side
 // rendering - ssr:false defers loading it until the browser actually
 // needs it (i.e. someone switches the Kingdom tab to Map view).
 const KingdomMap = dynamic(() => import("./KingdomMap"), { ssr: false });

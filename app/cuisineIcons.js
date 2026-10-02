@@ -44,10 +44,9 @@ export function getCuisineEmoji(cuisine) {
   return CUISINE_EMOJI[cuisine] || DEFAULT_EMOJI;
 }
 
-// A fixed dark badge regardless of the app's own light/dark theme - these
-// sit on top of OpenStreetMap tiles, which don't change with it, so the
-// badge needs to read clearly against map imagery either way rather than
-// flip to a light background that would wash out on the map.
+// A fixed dark badge regardless of the app's own light/dark theme - it
+// sits on top of map imagery, so it needs to read clearly against either
+// map style rather than flip to a light background that would wash out.
 const BADGE_BG = "#2A1E38";
 
 // Ring color is the only thing that still carries "been" vs "still to
