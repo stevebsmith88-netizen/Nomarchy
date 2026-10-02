@@ -1278,6 +1278,12 @@ export default function Nomarchy() {
             </div>
           )}
 
+          {(court.length > 0 || followers.length > 0) && (
+            <p className="mb-2 text-xs font-semibold" style={{ color: C.muted }}>
+              {court.length} in your Court · {followers.length} follower{followers.length === 1 ? "" : "s"}
+            </p>
+          )}
+
           {court.length > 0 && (
             <div className="mb-3 flex items-center justify-between gap-2">
               {courtView === "grid" ? (
@@ -1617,6 +1623,8 @@ export default function Nomarchy() {
           nextRank={nextRank}
           score={score}
           stats={[
+            { n: followers.length, label: "Followers", hint: "People following you" },
+            { n: court.length, label: "In your Court", hint: "People you follow" },
             { n: thrones, label: "Thrones claimed", hint: "Crown more cuisines" },
             { n: coups, label: "Coups staged", hint: "Better spots dethrone old ones" },
             { n: pretenders.length, label: "Next in line", hint: "Go try them" },
@@ -2813,6 +2821,26 @@ function PromotionModal({ rank, nextRank, score, thrones, reviewCount, profile, 
   );
 }
 
+// A collapsed-by-default section for the profile - stats and conquests are
+// reference material, not something to scroll past every time the profile
+// opens. `right` is a small summary (like "3/8") shown beside the title
+// even while it's closed.
+function ProfileSection({ title, right, className = "", children }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`border-t pt-3 text-left ${className || "mt-3"}`} style={{ borderColor: C.cardEdge }}>
+      <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-center justify-between pb-1">
+        <span className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>{title}</span>
+        <span className="flex items-center gap-2">
+          {right && <span className="text-xs" style={{ color: C.muted }}>{right}</span>}
+          <ChevronDown size={15} className="transition-transform" style={{ color: C.muted, transform: open ? "rotate(180deg)" : "none" }} />
+        </span>
+      </button>
+      {open && <div className="mt-2">{children}</div>}
+    </div>
+  );
+}
+
 function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, onSubmit, onChangeAvatar, onDeleteAccount, onFeedback }) {
   const { theme, toggleTheme } = useTheme();
   const [username, setUsername] = useState(profile?.username || "");
@@ -2933,25 +2961,24 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
           <RankLadder score={score} />
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 text-left">
-          {stats.map((s) => (
-            <div key={s.label} className="rounded-xl p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
-              <div className="text-xl" style={{ ...display, fontWeight: 700, color: C.gold }}>{s.n}</div>
-              <div className="text-xs font-semibold">{s.label}</div>
-              <div className="mt-0.5 text-xs" style={{ color: C.muted }}>{s.hint}</div>
-            </div>))}
-        </div>
-        <p className="mt-4 text-xs leading-relaxed" style={{ color: C.muted }}>
-          Credibility rewards conviction and depth, not hype. Honest write ups about real favourites outrank trendy picks with lazy decrees.
-        </p>
-
-        <div className="mt-5 border-t pt-4 text-left" style={{ borderColor: C.cardEdge }}>
-          <div className="mb-2 flex items-center justify-between">
-            <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Conquests</label>
-            {conquests && (
-              <span className="text-xs" style={{ color: C.muted }}>{conquests.filter((c) => c.completed).length}/{conquests.length}</span>
-            )}
+        <ProfileSection title="Your stats" className="mt-5">
+          <div className="grid grid-cols-2 gap-3 text-left">
+            {stats.map((s) => (
+              <div key={s.label} className="rounded-xl p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+                <div className="text-xl" style={{ ...display, fontWeight: 700, color: C.gold }}>{s.n}</div>
+                <div className="text-xs font-semibold">{s.label}</div>
+                <div className="mt-0.5 text-xs" style={{ color: C.muted }}>{s.hint}</div>
+              </div>))}
           </div>
+          <p className="mt-3 text-xs leading-relaxed" style={{ color: C.muted }}>
+            Credibility rewards conviction and depth, not hype. Honest write ups about real favourites outrank trendy picks with lazy decrees.
+          </p>
+        </ProfileSection>
+
+        <ProfileSection
+          title="Conquests"
+          right={conquests ? `${conquests.filter((c) => c.completed).length}/${conquests.length}` : null}
+        >
           {!conquests && !conquestsError && <RowSkeleton count={3} />}
           {conquestsError && <p className="text-xs" style={{ color: C.coup }}>{conquestsError}</p>}
           {conquests && conquests.map((c) => (
@@ -2966,7 +2993,7 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
               <span className="shrink-0 text-xs font-bold" style={{ color: c.completed ? C.gold : C.muted }}>+{c.points}</span>
             </div>
           ))}
-        </div>
+        </ProfileSection>
 
         <div className="mt-6 border-t pt-4" style={{ borderColor: C.cardEdge }}>
           <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Display name</label>
@@ -3355,8 +3382,11 @@ function FriendKingdomModal({ friend: f, onClose, onEndorse, onAddToList, onBloc
               >
                 {getTitle(f.isOwner, f.score)}
               </span>
+              <p className="mt-1 text-xs" style={{ color: C.muted }}>
+                {f.followerCount} follower{f.followerCount === 1 ? "" : "s"}
+              </p>
               {specialty && (
-                <p className="mt-1 text-xs" style={{ color: C.muted }}>
+                <p className="mt-0.5 text-xs" style={{ color: C.muted }}>
                   Known for <span style={{ color: C.gold, fontWeight: 700 }}>{specialty.cuisine}</span>
                   {specialty.endorsements > 0 && ` · pick endorsed by ${specialty.endorsements}`}
                 </p>
