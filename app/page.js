@@ -2998,7 +2998,8 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
           ))}
         </ProfileSection>
 
-        <div className="mt-6 border-t pt-4" style={{ borderColor: C.cardEdge }}>
+        <ProfileSection title="Settings">
+        <div>
           <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Display name</label>
           <input
             value={displayName}
@@ -3231,25 +3232,6 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
           Save
         </button>
 
-        <Link href="/faq" className="mt-4 block text-center text-xs font-semibold" style={{ color: C.muted }}>
-          How Nomarchy works
-        </Link>
-
-        <a
-          href="https://www.instagram.com/nomarchyapp"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-2 flex items-center justify-center gap-1.5 text-xs font-semibold"
-          style={{ color: C.muted }}
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-          </svg>
-          Follow @nomarchyapp
-        </a>
-
         <div className="mt-6 rounded-lg p-3" style={{ border: `1px solid ${C.coup}55` }}>
           {!confirmingDelete ? (
             <button
@@ -3295,6 +3277,26 @@ function ProfileModal({ profile, title, rank, nextRank, score, stats, onClose, o
             </div>
           )}
         </div>
+        </ProfileSection>
+
+        <Link href="/faq" className="mt-4 block text-center text-xs font-semibold" style={{ color: C.muted }}>
+          How Nomarchy works
+        </Link>
+
+        <a
+          href="https://www.instagram.com/nomarchyapp"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 flex items-center justify-center gap-1.5 text-xs font-semibold"
+          style={{ color: C.muted }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+          </svg>
+          Follow @nomarchyapp
+        </a>
         </div>
       </div>
     </div>

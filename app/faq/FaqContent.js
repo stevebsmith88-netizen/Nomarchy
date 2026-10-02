@@ -131,7 +131,7 @@ const QUESTIONS = [
     q: "What's the difference between Public, Private, and Discoverable?",
     a: (
       <>
-        <p>These are two separate switches in Your Profile, and it&apos;s easy to mix them up:</p>
+        <p>These are two separate switches in Your Profile under Settings, and it&apos;s easy to mix them up:</p>
         <ul className="mt-2 list-disc pl-5">
           <li><strong>Public / Private</strong> controls whether people who already have your profile link (or already follow you) can actually see your kingdom. Private hides it from everyone but you, even friends in Court.</li>
           <li><strong>Discoverable</strong> is separate and off by default - it controls whether strangers can find you at all, by browsing <strong>Find People</strong>. Being &ldquo;Public&rdquo; does not make you Discoverable; they&apos;re independent settings, on purpose.</li>
@@ -163,7 +163,7 @@ const QUESTIONS = [
     q: "How do I delete my account?",
     a: (
       <p>
-        Your Profile has a &ldquo;Delete my account&rdquo; option at the bottom - it&apos;s permanent and
+        Your Profile has a &ldquo;Delete my account&rdquo; option at the bottom of Settings - it&apos;s permanent and
         removes everything tied to your account (crowns, reviews, follows, everything) with nothing left
         behind.
       </p>
@@ -173,7 +173,7 @@ const QUESTIONS = [
     q: "Found a bug, or have an idea?",
     a: (
       <p>
-        Open <strong>Your Profile</strong> and tap <strong>Send</strong> next to Feedback, or just reply to
+        Open <strong>Your Profile</strong>, expand <strong>Settings</strong>, and tap <strong>Send</strong> next to Feedback, or just reply to
         any Nomarchy email.
       </p>
     ),
