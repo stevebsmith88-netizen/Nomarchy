@@ -7,6 +7,15 @@
 create extension if not exists pgcrypto;
 create extension if not exists pg_trgm;
 
+-- One-time data fixes ("backfills") below are recorded here once they've
+-- run, so pasting this whole file again never repeats them. Each is wrapped
+-- in a DO block that checks for its name first.
+create table if not exists schema_migrations (
+  name   text primary key,
+  ran_at timestamptz not null default now()
+);
+alter table schema_migrations enable row level security;
+
 -- ------------------------------------------------------------
 -- 1. PROFILES
 -- One row per user. Created automatically on signup by the trigger below.
@@ -37,7 +46,15 @@ alter table profiles add column if not exists avatar_url text;
 -- signups still get the column default (false) since handle_new_user()
 -- doesn't set it explicitly.
 alter table profiles add column if not exists onboarded boolean not null default false;
-update profiles set onboarded = true where onboarded = false;
+-- One-time: re-running this used to mark anyone halfway through the
+-- username step as onboarded, so they'd skip it. Now it runs once only.
+do $$
+begin
+  if not exists (select 1 from schema_migrations where name = 'backfill_onboarded') then
+    update profiles set onboarded = true where onboarded = false;
+    insert into schema_migrations (name) values ('backfill_onboarded');
+  end if;
+end $$;
 -- Separate from is_public: is_public controls whether your kingdom link
 -- and Court visibility work at all; discoverable controls whether you
 -- show up in the "Find people" directory for anyone to browse. Off by
@@ -827,12 +844,18 @@ from profiles p;
 -- anyone who crosses a threshold and then has this full script re-run
 -- before they next open the app misses that one celebration - a minor,
 -- cosmetic edge case worth accepting over a dedicated migrations table.
-update profiles p
-set last_rank_min = coalesce((
-  select max(t.min) from (values (0),(30),(70),(120),(180),(270),(400),(580),(820)) as t(min)
-  where t.min <= coalesce((select s.score from standings s where s.id = p.id), 0)
-), 0)
-where p.last_rank_min = 0;
+do $$
+begin
+  if not exists (select 1 from schema_migrations where name = 'backfill_last_rank_min') then
+    update profiles p
+    set last_rank_min = coalesce((
+      select max(t.min) from (values (0),(30),(70),(120),(180),(270),(400),(580),(820)) as t(min)
+      where t.min <= coalesce((select s.score from standings s where s.id = p.id), 0)
+    ), 0)
+    where p.last_rank_min = 0;
+    insert into schema_migrations (name) values ('backfill_last_rank_min');
+  end if;
+end $$;
 
 -- ------------------------------------------------------------
 -- 10. ANTI-ABUSE WRITE-RATE LIMITS
@@ -1208,3 +1231,23 @@ drop trigger if exists protect_cuisine_fields_trigger on cuisines;
 create trigger protect_cuisine_fields_trigger
   before update on cuisines
   for each row execute function protect_cuisine_fields();
+
+-- ------------------------------------------------------------
+-- PERFORMANCE INDEXES
+-- Lookups the app makes often that had no index, so each one read the
+-- whole table. Invisible while small; these keep pages fast as it grows.
+-- Safe to add at any time and to re-run.
+-- ------------------------------------------------------------
+-- "who follows me": follower counts, notifications, block clean-up
+create index if not exists follows_followee_idx on follows (followee_id);
+-- endorsement counts per crown, and the standings score
+create index if not exists endorsements_throne_idx on endorsements (throne_id);
+-- the "no follows across a block" check looks both ways
+create index if not exists blocks_blocked_idx on blocks (blocked_id);
+-- restaurant pages, closures and the daily coordinate refresh match on Google IDs
+create index if not exists thrones_google_place_idx on thrones (google_place_id) where google_place_id is not null;
+create index if not exists nil_google_place_idx on next_in_line (google_place_id) where google_place_id is not null;
+-- someone's own custom cuisines
+create index if not exists cuisines_created_by_idx on cuisines (created_by) where created_by is not null;
+-- Best in the Land filters crowns by date
+create index if not exists thrones_crowned_at_idx on thrones (crowned_at);
