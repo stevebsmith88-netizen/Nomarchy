@@ -38,3 +38,10 @@ html {
   0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
   50% { transform: translateY(-14px) rotate(var(--r, 0deg)); }
 }
+
+/* Tailwind's reset caps every img/canvas at max-width:100%, which squeezes
+   Google Maps' tile images and leaves part of the map grey. */
+.gm-style img,
+.gm-style canvas {
+  max-width: none !important;
+}
