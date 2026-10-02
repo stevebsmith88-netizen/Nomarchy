@@ -18,7 +18,7 @@ import {
   moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
   uploadReviewPhoto, deleteReviewPhoto, uploadAvatar, MAX_REVIEW_PHOTOS,
   loadCourt, toggleEndorsement, followByUsername, loadStanding, loadConquestProgress, blockUser, unblockUser, loadBlockedUsers,
-  loadAdminOverview,
+  loadAdminOverview, adminPlaceMatch,
 } from "@/lib/data";
 import { claimSignupSource } from "@/lib/signupSource";
 import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
@@ -1509,6 +1509,7 @@ export default function Nomarchy() {
             </div>
 
             <FixThroneTool cuisines={selectableCuisines} />
+            <PlaceMatchTool />
 
             <h3 className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>All users ({adminData.users.length})</h3>
             <div className="max-h-96 overflow-y-auto rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
@@ -2269,6 +2270,152 @@ function FixThroneTool({ cuisines }) {
             </div>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+// One-time Google ID backfill. Scanning searches Google but saves nothing;
+// the owner then approves the automatic matches and picks the right result
+// for the doubtful ones. See /api/admin/backfill-places.
+function PlaceMatchTool() {
+  const [phase, setPhase] = useState("idle");
+  const [progress, setProgress] = useState({ checked: 0, total: 0 });
+  const [groups, setGroups] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  const hasCoords = (m) => typeof m?.lat === "number" && typeof m?.lng === "number";
+  const toUpdate = (g, m) => ({ thrones: g.thrones, nextInLine: g.nextInLine, googlePlaceId: m.googlePlaceId, lat: m.lat, lng: m.lng });
+  const entryCount = (g) => g.thrones.length + g.nextInLine.length;
+
+  const auto = groups.filter((g) => g.status === "auto" && hasCoords(g.match));
+  const review = groups.filter((g) => g.status === "review" || (g.status === "auto" && !hasCoords(g.match)));
+  const none = groups.filter((g) => g.status === "none");
+  const failed = groups.filter((g) => g.status === "error");
+
+  const scan = async () => {
+    setPhase("scanning"); setErr(""); setMsg(""); setGroups([]); setProgress({ checked: 0, total: 0 });
+    try {
+      let offset = 0;
+      let all = [];
+      for (;;) {
+        const data = await adminPlaceMatch({ mode: "preview", offset });
+        all = all.concat(data.groups);
+        setGroups(all);
+        setProgress({ checked: all.length, total: data.total });
+        if (data.nextOffset == null) break;
+        offset = data.nextOffset;
+      }
+    } catch (e) {
+      setErr(e.message || "The scan stopped early.");
+    }
+    setPhase("done");
+  };
+
+  const remove = (key) => setGroups((gs) => gs.filter((g) => g.key !== key));
+
+  const saveAuto = async () => {
+    if (saving || auto.length === 0) return;
+    setSaving(true); setErr(""); setMsg("");
+    try {
+      let saved = 0;
+      for (let i = 0; i < auto.length; i += 50) {
+        const chunk = auto.slice(i, i + 50);
+        const data = await adminPlaceMatch({ mode: "apply", updates: chunk.map((g) => toUpdate(g, g.match)) });
+        saved += data.saved;
+        chunk.forEach((g) => remove(g.key));
+      }
+      setMsg(`Saved ${saved} entr${saved === 1 ? "y" : "ies"} across ${auto.length} place${auto.length === 1 ? "" : "s"}.`);
+    } catch (e) {
+      setErr(e.message || "Couldn't save those.");
+    }
+    setSaving(false);
+  };
+
+  const choose = async (g, m) => {
+    if (saving || !hasCoords(m)) return;
+    setSaving(true); setErr(""); setMsg("");
+    try {
+      await adminPlaceMatch({ mode: "apply", updates: [toUpdate(g, m)] });
+      remove(g.key);
+      setMsg(`Matched ${g.name}.`);
+    } catch (e) {
+      setErr(e.message || "Couldn't save that.");
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="mb-5">
+      <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Match places to Google</h3>
+      <p className="mb-2 text-xs" style={{ color: C.muted }}>
+        Finds the real Google place for saved crowns and Next in Line entries that don&apos;t have one yet. Scanning only looks - nothing is saved until you approve it, and names, addresses and reviews are never changed.
+      </p>
+      <button onClick={scan} disabled={phase === "scanning" || saving} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold" style={phase === "scanning" ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.bg }}>
+        {phase === "scanning" ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+        {phase === "scanning" ? `Checked ${progress.checked} of ${progress.total || "..."}` : phase === "done" ? "Scan again" : "Scan places"}
+      </button>
+      {err && <p className="mt-2 text-xs" style={{ color: C.coup }}>{err}</p>}
+      {msg && <p className="mt-2 text-xs" style={{ color: C.green }}>{msg}</p>}
+
+      {phase !== "idle" && groups.length === 0 && phase === "done" && !err && (
+        <p className="mt-2 text-sm" style={{ color: C.muted }}>Nothing left to match - every saved place already has a Google ID.</p>
+      )}
+
+      {groups.length > 0 && (
+        <div className="mt-3 rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+          <div className="text-xs" style={{ color: C.muted }}>
+            {auto.length} clear match{auto.length === 1 ? "" : "es"} · {review.length} to review · {none.length} not found{failed.length > 0 ? ` · ${failed.length} couldn't be checked` : ""}
+          </div>
+          {auto.length > 0 && (
+            <button onClick={saveAuto} disabled={saving || phase === "scanning"} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold" style={saving || phase === "scanning" ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.bg }}>
+              {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+              Save {auto.length} clear match{auto.length === 1 ? "" : "es"} ({auto.reduce((n, g) => n + entryCount(g), 0)} entries)
+            </button>
+          )}
+          {auto.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs font-semibold" style={{ color: C.muted }}>See the clear matches</summary>
+              {auto.map((g) => (
+                <div key={g.key} className="mt-1.5 text-xs" style={{ color: C.muted }}>
+                  <span style={{ color: C.cream, fontWeight: 600 }}>{g.name}</span> → {g.match.name}{g.match.address ? ` · ${g.match.address}` : ""}
+                </div>
+              ))}
+            </details>
+          )}
+        </div>
+      )}
+
+      {review.length > 0 && (
+        <div className="mt-3">
+          <div className="mb-1.5 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>To review ({review.length})</div>
+          {review.map((g) => (
+            <div key={g.key} className="mb-2 rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-bold">{g.name}</div>
+                  <div className="truncate text-xs" style={{ color: C.muted }}>{[g.area, g.address].filter(Boolean).join(" · ") || "no location on file"} · {entryCount(g)} saved</div>
+                </div>
+                <button onClick={() => remove(g.key)} className="shrink-0 text-xs font-semibold" style={{ color: C.muted }}>Skip</button>
+              </div>
+              {(g.candidates || (g.match ? [g.match] : [])).map((m) => (
+                <button key={m.googlePlaceId} disabled={saving || !hasCoords(m)} onClick={() => choose(g, m)} className="mt-1.5 w-full rounded-lg p-2 text-left" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+                  <div className="text-sm font-semibold">{m.name}</div>
+                  <div className="text-xs" style={{ color: C.muted }}>{[m.neighbourhood, m.address].filter(Boolean).join(" · ")}</div>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(none.length > 0 || failed.length > 0) && phase === "done" && (
+        <p className="mt-2 text-xs" style={{ color: C.muted }}>
+          {none.length > 0 && <>Not found on Google: {none.map((g) => g.name).join(", ")}. </>}
+          {failed.length > 0 && <>Couldn&apos;t be checked (Google error - try scanning again): {failed.map((g) => g.name).join(", ")}.</>}
+        </p>
       )}
     </div>
   );
