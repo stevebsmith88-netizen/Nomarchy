@@ -18,7 +18,7 @@ export default function PrivacyContent() {
         </Link>
 
         <h1 className="mt-8 text-2xl" style={{ ...display, fontWeight: 800 }}>Privacy Policy</h1>
-        <p className="mt-1 text-sm" style={{ color: C.muted }}>Last updated: September 2026</p>
+        <p className="mt-1 text-sm" style={{ color: C.muted }}>Last updated: October 2026</p>
 
         <Section title="What this is">
           Nomarchy is a small app for tracking and comparing your favourite restaurants with friends. This
@@ -29,17 +29,19 @@ export default function PrivacyContent() {
           <List items={[
             "Account info: your email address (or your Google account info, if you sign in with Google), and a username you choose.",
             "Profile info: display name, city, and a profile photo, if you add them.",
-            "Content you create: restaurants you crown or add to your list, written reviews (“decrees”), ratings, and photos you attach.",
+            "Content you create: restaurants you crown or add to your list (along with the place's Google ID and map coordinates, so we can show it on a map), written reviews (“decrees”), ratings, and photos you attach.",
             "Social info: who you follow and who follows you.",
             "Feedback you submit through the in-app feedback form, including your device/browser type (captured automatically so bug reports are easier to act on).",
-            "Basic usage data needed to run the app - e.g. when you signed up, when a review was posted.",
+            "Basic usage data needed to run the app - e.g. when you signed up, when a review was posted, and a simple count of how many restaurant searches and map views are made (linked to your account), so we can keep an eye on running costs.",
+            "Where you came from: if you arrive through a tagged link (for example, one on our Instagram), we note which link it was and save it once, when you sign up, to understand how people find Nomarchy. It is only visible to us, and the tag is held in your browser until you sign up.",
           ]} />
         </Section>
 
         <Section title="How we use it">
           <List items={[
             "To run the app: show your kingdom, your friends' picks, and comparisons between you.",
-            "To let you look up a restaurant by name when adding one - your search text is sent to Anthropic's Claude API to find a real matching place. It is not linked to your identity by Anthropic beyond that one request.",
+            "To let you look up a restaurant by name when adding one - your search text (and the city you type, if any) is sent to Google's Places service to find a real matching place. In a small number of cases, and when you import a list, it is sent to Anthropic's Claude API instead. Neither service is given your name or email as part of that request.",
+            "To show your places on a map - maps are provided by Google Maps, so opening a map sends your device's IP address and basic browser details to Google, as with any website that embeds Google Maps.",
             "To send you sign-in emails (a one-time code or link) so you can access your account.",
             "To improve the app based on feedback you submit.",
           ]} />
@@ -61,7 +63,8 @@ export default function PrivacyContent() {
           <p className="text-sm leading-relaxed" style={{ color: C.cream + "CC" }}>
             Nomarchy is built on Supabase (database, authentication and file storage) and hosted on Vercel.
             Photos you upload are stored in Supabase Storage. Sign-in emails are delivered via SendGrid.
-            Restaurant lookups use Anthropic’s Claude API. A “near me” search sends your device’s
+            Restaurant lookups use Google’s Places service (and, in some cases and for list imports,
+            Anthropic’s Claude API), and maps are provided by Google Maps. A “near me” search sends your device’s
             coordinates to OpenStreetMap’s free lookup service to determine your general area - your exact
             coordinates aren’t stored.
           </p>
