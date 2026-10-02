@@ -1533,8 +1533,34 @@ export default function Nomarchy() {
               ))}
             </div>
 
-            <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Signups by source</h3>
-            <div className="mb-4 rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+            {(() => {
+              // One-line summaries shown on each collapsed section, so the
+              // headline of each is visible without opening it.
+              const signupsThisWeek = adminData.signupSources.rows.reduce((n, r) => n + r.week, 0) + adminData.signupSources.unknown.week;
+              const googleMonth = adminData.googleUsage ? adminData.googleUsage.reduce((n, u) => n + u.thisMonth, 0) : null;
+              const toReview = adminData.placeIssues?.length || 0;
+              const googleSummary = [googleMonth === null ? null : `${googleMonth} calls this month`, toReview ? `${toReview} to review` : null].filter(Boolean).join(" · ");
+              return (<>
+            <AdminSection title={`Feedback (${adminData.feedback.length})`}>
+            {adminData.feedback.length === 0 ? (
+              <p className="text-sm" style={{ color: C.muted }}>Nothing submitted yet.</p>
+            ) : (
+              <div className="rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+                {adminData.feedback.map((f, i) => (
+                  <div key={f.id} className="px-3 py-2.5" style={i > 0 ? { borderTop: `1px solid ${C.cardEdge}` } : undefined}>
+                    <div className="flex items-center justify-between gap-2 text-xs" style={{ color: C.muted }}>
+                      <span>@{f.username || "unknown"}{f.page ? ` · ${f.page}` : ""}</span>
+                      <span className="shrink-0">{fmt(f.createdAt)}</span>
+                    </div>
+                    <p className="mt-1 text-sm">{f.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            </AdminSection>
+
+            <AdminSection title="Signups by source" right={`${signupsThisWeek} this week`}>
+            <div className="rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
               <div className="grid grid-cols-[1fr_5.5rem_5rem] gap-x-4 px-3 py-2 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>
                 <span>Source</span><span className="text-right">This week</span><span className="text-right">All time</span>
               </div>
@@ -1551,52 +1577,9 @@ export default function Nomarchy() {
                 <span className="text-right">{adminData.signupSources.unknown.allTime}</span>
               </div>
             </div>
+            </AdminSection>
 
-            <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Google usage</h3>
-            <div className="mb-4 rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
-              {adminData.googleUsage === null ? (
-                <p className="p-3 text-xs" style={{ color: C.muted }}>Counting hasn&apos;t started - run the latest database update (schema.sql) to turn it on.</p>
-              ) : (<>
-                <div className="grid grid-cols-[1fr_3.5rem_4.5rem_4rem] gap-x-3 px-3 py-2 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>
-                  <span>Calls</span><span className="text-right">Today</span><span className="text-right">Month</span><span className="text-right">All time</span>
-                </div>
-                {adminData.googleUsage.length === 0 && (
-                  <p className="px-3 py-2 text-sm" style={{ color: C.muted, borderTop: `1px solid ${C.cardEdge}` }}>Nothing yet - the next place search will show up here.</p>
-                )}
-                {adminData.googleUsage.map((u) => (
-                  <div key={u.kind} className="grid grid-cols-[1fr_3.5rem_4.5rem_4rem] gap-x-3 px-3 py-2 text-sm" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
-                    <span className="truncate font-semibold">{GOOGLE_USAGE_LABELS[u.kind] || u.kind}</span>
-                    <span className="text-right" style={{ color: C.gold }}>{u.today}</span>
-                    <span className="text-right" style={{ color: C.gold }}>{u.thisMonth}</span>
-                    <span className="text-right" style={{ color: C.gold }}>{u.allTime}</span>
-                  </div>
-                ))}
-                <p className="px-3 py-2 text-xs leading-relaxed" style={{ color: C.muted, borderTop: `1px solid ${C.cardEdge}` }}>
-                  Our own count of calls to Google since counting began (UTC days and months). Place searches get roughly 5,000 free a month - check Google&apos;s pricing page for the exact figure. Google&apos;s billing page is what you&apos;re actually charged on.
-                </p>
-              </>)}
-            </div>
-
-            {adminData.placeIssues?.length > 0 && (<>
-              <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Places Google can&apos;t find</h3>
-              <div className="mb-4 rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
-                {adminData.placeIssues.map((p, i) => (
-                  <div key={`${p.name}-${p.notedAt}`} className="flex items-center justify-between gap-3 px-3 py-2 text-sm" style={{ borderTop: i > 0 ? `1px solid ${C.cardEdge}` : "none" }}>
-                    <span className="truncate font-semibold">{p.name}</span>
-                    <span className="shrink-0 text-xs" style={{ color: C.muted }}>{new Date(p.notedAt).toLocaleDateString()}</span>
-                  </div>
-                ))}
-                <p className="px-3 py-2 text-xs leading-relaxed" style={{ color: C.muted, borderTop: `1px solid ${C.cardEdge}` }}>
-                  The daily location check couldn&apos;t find these on Google (often a closed or renamed restaurant). Nothing has been changed on anyone&apos;s kingdom - they&apos;re listed so you can decide.
-                </p>
-              </div>
-            </>)}
-
-            <FixThroneTool cuisines={selectableCuisines} />
-            <PlaceMatchTool />
-            <ClosureCheckTool />
-
-            <h3 className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>All users ({adminData.users.length})</h3>
+            <AdminSection title={`All users (${adminData.users.length})`}>
             <div className="max-h-96 overflow-y-auto rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
               {adminData.users.map((u) => (
                 <div key={u.id} className="flex items-center justify-between gap-2 px-3 py-2" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
@@ -1611,8 +1594,10 @@ export default function Nomarchy() {
                 </div>
               ))}
             </div>
+            </AdminSection>
 
-            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <AdminSection title="Popular places and cuisines">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Most-crowned places</h3>
                 <div className="rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
@@ -1638,23 +1623,54 @@ export default function Nomarchy() {
                 </div>
               </div>
             </div>
+            </AdminSection>
 
-            <h3 className="mb-2 mt-5 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Feedback ({adminData.feedback.length})</h3>
-            {adminData.feedback.length === 0 ? (
-              <p className="text-sm" style={{ color: C.muted }}>Nothing submitted yet.</p>
-            ) : (
-              <div className="rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
-                {adminData.feedback.map((f, i) => (
-                  <div key={f.id} className="px-3 py-2.5" style={i > 0 ? { borderTop: `1px solid ${C.cardEdge}` } : undefined}>
-                    <div className="flex items-center justify-between gap-2 text-xs" style={{ color: C.muted }}>
-                      <span>@{f.username || "unknown"}{f.page ? ` · ${f.page}` : ""}</span>
-                      <span className="shrink-0">{fmt(f.createdAt)}</span>
-                    </div>
-                    <p className="mt-1 text-sm">{f.message}</p>
+            <AdminSection title="Google" right={googleSummary}>
+            <div className="rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+              {adminData.googleUsage === null ? (
+                <p className="p-3 text-xs" style={{ color: C.muted }}>Counting hasn&apos;t started - run the latest database update (schema.sql) to turn it on.</p>
+              ) : (<>
+                <div className="grid grid-cols-[1fr_3.5rem_4.5rem_4rem] gap-x-3 px-3 py-2 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>
+                  <span>Calls</span><span className="text-right">Today</span><span className="text-right">Month</span><span className="text-right">All time</span>
+                </div>
+                {adminData.googleUsage.length === 0 && (
+                  <p className="px-3 py-2 text-sm" style={{ color: C.muted, borderTop: `1px solid ${C.cardEdge}` }}>Nothing yet - the next place search will show up here.</p>
+                )}
+                {adminData.googleUsage.map((u) => (
+                  <div key={u.kind} className="grid grid-cols-[1fr_3.5rem_4.5rem_4rem] gap-x-3 px-3 py-2 text-sm" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
+                    <span className="truncate font-semibold">{GOOGLE_USAGE_LABELS[u.kind] || u.kind}</span>
+                    <span className="text-right" style={{ color: C.gold }}>{u.today}</span>
+                    <span className="text-right" style={{ color: C.gold }}>{u.thisMonth}</span>
+                    <span className="text-right" style={{ color: C.gold }}>{u.allTime}</span>
                   </div>
                 ))}
+                <p className="px-3 py-2 text-xs leading-relaxed" style={{ color: C.muted, borderTop: `1px solid ${C.cardEdge}` }}>
+                  Our own count of calls to Google since counting began (UTC days and months). Place searches get roughly 5,000 free a month - check Google&apos;s pricing page for the exact figure. Google&apos;s billing page is what you&apos;re actually charged on.
+                </p>
+              </>)}
+            </div>
+            {adminData.placeIssues?.length > 0 && (<>
+              <h4 className="mb-2 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Places Google can&apos;t find</h4>
+              <div className="mt-3 rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+                {adminData.placeIssues.map((p, i) => (
+                  <div key={`${p.name}-${p.notedAt}`} className="flex items-center justify-between gap-3 px-3 py-2 text-sm" style={{ borderTop: i > 0 ? `1px solid ${C.cardEdge}` : "none" }}>
+                    <span className="truncate font-semibold">{p.name}</span>
+                    <span className="shrink-0 text-xs" style={{ color: C.muted }}>{new Date(p.notedAt).toLocaleDateString()}</span>
+                  </div>
+                ))}
+                <p className="px-3 py-2 text-xs leading-relaxed" style={{ color: C.muted, borderTop: `1px solid ${C.cardEdge}` }}>
+                  The daily location check couldn&apos;t find these on Google (often a closed or renamed restaurant). Nothing has been changed on anyone&apos;s kingdom - they&apos;re listed so you can decide.
+                </p>
               </div>
-            )}
+            </>)}
+            </AdminSection>
+
+            <div className="mt-5 mb-1 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Tools</div>
+            <AdminSection title="Fix a restaurant"><FixThroneTool cuisines={selectableCuisines} /></AdminSection>
+            <AdminSection title="Match places to Google"><PlaceMatchTool /></AdminSection>
+            <AdminSection title="Check for closures"><ClosureCheckTool /></AdminSection>
+              </>);
+            })()}
           </>)}
         </div>)}
 
@@ -2305,7 +2321,6 @@ function FixThroneTool({ cuisines }) {
 
   return (
     <div className="mb-5">
-      <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Fix a restaurant</h3>
       <p className="mb-2 text-xs" style={{ color: C.muted }}>Corrects address, neighbourhood, or cuisine on anyone&apos;s crown - never their review text or photos.</p>
       <div className="flex gap-2">
         <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="Search by restaurant name..." className="w-full rounded-lg px-3 py-2 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
@@ -2497,7 +2512,6 @@ function PlaceMatchTool() {
 
   return (
     <div className="mb-5">
-      <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Match places to Google</h3>
       <p className="mb-2 text-xs" style={{ color: C.muted }}>
         Finds the real Google place for saved crowns and Next in Line entries that don&apos;t have one yet. Scanning only looks - nothing is saved until you approve it, and names, addresses and reviews are never changed.
       </p>
@@ -2645,7 +2659,6 @@ function ClosureCheckTool() {
 
   return (
     <div className="mb-5">
-      <h3 className="mb-2 text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>Check for closures</h3>
       <p className="mb-2 text-xs" style={{ color: C.muted }}>
         Asks Google which saved places have permanently closed. Checking only looks - a place is only marked closed when you press the button on it. Marking greys it out for everyone who saved it, takes it off the maps, Best in the Land and recommendations, and tells each of them. Worth running every few months.
       </p>
@@ -3298,6 +3311,25 @@ function PromotionModal({ rank, nextRank, score, thrones, reviewCount, profile, 
 // reference material, not something to scroll past every time the profile
 // opens. `right` is a small summary (like "3/8") shown beside the title
 // even while it's closed.
+// Collapsible section for the Admin tab. Unlike ProfileSection, the content
+// stays mounted while closed (just hidden), so a running scan, a search box
+// or a list of results isn't lost by collapsing it.
+function AdminSection({ title, right, children }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-t pt-3 pb-1 text-left" style={{ borderColor: C.cardEdge }}>
+      <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 pb-1">
+        <span className="text-xs font-bold uppercase" style={{ color: C.gold, letterSpacing: "0.14em" }}>{title}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          {right && <span className="truncate text-xs" style={{ color: C.muted }}>{right}</span>}
+          <ChevronDown size={15} className="shrink-0 transition-transform" style={{ color: C.muted, transform: open ? "rotate(180deg)" : "none" }} />
+        </span>
+      </button>
+      <div className={open ? "mt-2 mb-3" : "hidden"}>{children}</div>
+    </div>
+  );
+}
+
 function ProfileSection({ title, right, className = "", children }) {
   const [open, setOpen] = useState(false);
   return (
