@@ -136,6 +136,17 @@ export default function Nomarchy() {
   const [pcCuisine, setPcCuisine] = useState("");
   const [pcIndex, setPcIndex] = useState(0);
   const [courtView, setCourtView] = useState("grid");
+  const [courtDensity, setCourtDensity] = useState("expanded");
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("nomarchy-court-density");
+      if (saved === "compact" || saved === "expanded") setCourtDensity(saved);
+    } catch {}
+  }, []);
+  const changeCourtDensity = (next) => {
+    setCourtDensity(next);
+    try { localStorage.setItem("nomarchy-court-density", next); } catch {}
+  };
   const [adminData, setAdminData] = useState(null);
   const [adminError, setAdminError] = useState("");
   const [pretenderSearch, setPretenderSearch] = useState("");
@@ -808,6 +819,13 @@ export default function Nomarchy() {
   // own restaurant page (which counts everyone), reading as if it had
   // quietly lost a crown rather than just being scoped down.
   const followedIds = new Set([...court.map((f) => f.id), user.id]);
+  // Joint places, not a hard cap of three people: the three highest
+  // distinct scores in your Court each earn the crown, so two friends tied
+  // on 77 are both joint first and the next score down is second. Zero is
+  // excluded - a score nobody's earned anything towards isn't a podium.
+  const courtTopScores = new Set(
+    [...new Set(court.map((f) => f.score))].filter((s) => s > 0).sort((a, b) => b - a).slice(0, 3)
+  );
   const scopedTop25 = top25 && (top25Scope === "friends" ? top25.filter((t) => followedIds.has(t.user_id)) : top25);
   const trendingList = scopedTop25 && groupCrownedThrones(scopedTop25.filter((t) => new Date(t.crowned_at).getTime() >= trendingCutoff));
   // Search ignores the range/rank window entirely - "find any restaurant
@@ -1257,7 +1275,17 @@ export default function Nomarchy() {
           )}
 
           {court.length > 0 && (
-            <div className="mb-3 flex justify-end">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              {courtView === "grid" ? (
+                <div className="flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}` }}>
+                  <button onClick={() => changeCourtDensity("expanded")} className="px-3 py-1 text-xs font-semibold" style={{ background: courtDensity === "expanded" ? C.gold : C.card, color: courtDensity === "expanded" ? C.bg : C.muted }}>
+                    Expanded
+                  </button>
+                  <button onClick={() => changeCourtDensity("compact")} className="px-3 py-1 text-xs font-semibold" style={{ background: courtDensity === "compact" ? C.gold : C.card, color: courtDensity === "compact" ? C.bg : C.muted, borderLeft: `1px solid ${C.cardEdge}` }}>
+                    Compact
+                  </button>
+                </div>
+              ) : <span />}
               <div className="flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}` }}>
                 <button onClick={() => setCourtView("grid")} className="px-3 py-1 text-xs font-semibold" style={{ background: courtView === "grid" ? C.gold : C.card, color: courtView === "grid" ? C.bg : C.muted }}>
                   Grid
@@ -1276,7 +1304,22 @@ export default function Nomarchy() {
             </div>
           ) : courtView === "map" ? (
             <KingdomMap pins={courtPins} emptyMessage="None of your friends' crowned spots have a location yet." />
-          ) : court.map((f) => (
+          ) : courtDensity === "compact" ? court.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setCourtModalFriendId(f.id)}
+              className="mb-2 flex w-full items-center justify-between gap-2 rounded-xl px-4 py-2.5 text-left"
+              style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}
+            >
+              <div className="flex items-center gap-2.5">
+                <Avatar url={f.avatarUrl} size={28} />
+                <h3 className="flex items-center gap-1.5 text-base" style={{ ...display, fontWeight: 700 }}>
+                  {f.name} {courtTopScores.has(f.score) && <Crown size={14} style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />} {f.isOwner && <OwnerBadge />}
+                </h3>
+              </div>
+              <ChevronDown size={16} className="shrink-0" style={{ color: C.muted, transform: "rotate(-90deg)" }} />
+            </button>
+          )) : court.map((f) => (
             <button
               key={f.id}
               onClick={() => setCourtModalFriendId(f.id)}
@@ -1287,17 +1330,16 @@ export default function Nomarchy() {
                 <Avatar url={f.avatarUrl} size={32} />
                 <div>
                   <h3 className="flex items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
-                    {f.name} <RankBadge score={f.score} /> {f.isOwner && <OwnerBadge />}
+                    {f.name} {courtTopScores.has(f.score) && <RankBadge score={f.score} />} {f.isOwner && <OwnerBadge />}
                   </h3>
-                  {f.username && f.name !== f.username && (
-                    <p className="text-xs" style={{ color: C.muted }}>@{f.username}</p>
+                  {courtTopScores.has(f.score) && (
+                    <span
+                      className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+                      style={{ background: C.bg, color: C.gold, letterSpacing: "0.06em" }}
+                    >
+                      {getTitle(f.isOwner, f.score)}
+                    </span>
                   )}
-                  <span
-                    className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
-                    style={{ background: C.bg, color: C.gold, letterSpacing: "0.06em" }}
-                  >
-                    {getTitle(f.isOwner, f.score)}
-                  </span>
                   <p className="mt-1 text-xs" style={{ color: C.muted }}>
                     {f.picks.length === 0 && f.reviews.length === 0
                       ? "No thrones claimed yet."
@@ -1309,7 +1351,7 @@ export default function Nomarchy() {
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
-                <span className="text-xs font-semibold" style={{ color: C.gold }}>{f.score}</span>
+                {courtTopScores.has(f.score) && <span className="text-xs font-semibold" style={{ color: C.gold }}>{f.score}</span>}
                 <ChevronDown size={16} style={{ color: C.muted, transform: "rotate(-90deg)" }} />
               </div>
             </button>

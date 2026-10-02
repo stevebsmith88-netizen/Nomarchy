@@ -88,7 +88,8 @@ const QUESTIONS = [
         Follow people by username to see their kingdoms and endorse picks you agree with. Endorsements feed
         into their credibility score, alongside how many thrones they hold, how many coups they&apos;ve
         staged, how much thought goes into their decrees, and whether they bothered to add photos - it&apos;s
-        meant to reward genuine taste, not just volume.
+        meant to reward genuine taste, not just volume. In your Court list, the three highest scores (ties share
+        a place) get a crown, and you can switch between an Expanded and a Compact view.
       </p>
     ),
   },
