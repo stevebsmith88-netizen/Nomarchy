@@ -29,3 +29,20 @@ begin
     raise exception 'place_text_key does not normalise addresses';
   end if;
 end $$;
+
+-- Error reports: repeats within an hour are counted on one row, and empty
+-- reports are ignored.
+select report_error('client', 'Boom', 'stack', '/', 'ua');
+select report_error('client', 'Boom', 'stack', '/', 'ua');
+select report_error('client', '   ', 'stack', '/', 'ua');
+select report_error('weird', 'Server thing', null, '/api/x', 'server');
+do $$
+declare n int; occ int; src text;
+begin
+  select count(*) into n from app_errors;
+  if n <> 2 then raise exception 'expected 2 error rows, got %', n; end if;
+  select occurrences into occ from app_errors where message = 'Boom';
+  if occ <> 2 then raise exception 'repeat errors were not counted together (%)', occ; end if;
+  select source into src from app_errors where message = 'Server thing';
+  if src <> 'client' then raise exception 'unknown source should be stored as client, got %', src; end if;
+end $$;

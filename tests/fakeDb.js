@@ -12,6 +12,7 @@ export function fakeDb(tables) {
         eq(c, v) { q.f.push((r) => r[c] === v); return api; },
         in(c, vs) { q.f.push((r) => vs.includes(r[c])); return api; },
         gt(c, v) { q.f.push((r) => Date.parse(r[c]) > Date.parse(v)); return api; },
+        lt(c, v) { q.f.push((r) => Date.parse(r[c]) < Date.parse(v)); return api; },
         not(c) { q.f.push((r) => r[c] !== null && r[c] !== undefined); return api; },
         is(c, v) { q.f.push((r) => (r[c] ?? null) === v); return api; },
         or(expr) {

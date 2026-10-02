@@ -13,6 +13,7 @@ import { createClient } from "@supabase/supabase-js";
 import { refreshCoords } from "@/lib/coordRefresh";
 import { logGoogleCall } from "@/lib/googleUsage";
 import { isCronAuthorized } from "@/lib/cronAuth";
+import { runErrorDigest, sendWithSendGrid } from "@/lib/errorDigest";
 
 export const maxDuration = 60;
 
@@ -26,9 +27,18 @@ export async function GET(request) {
   }
 
   const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  // The daily error email rides on this daily job (one scheduled job keeps
+  // within Vercel's cron limits). Its failure never affects the refresh.
+  let errorDigest;
+  try {
+    errorDigest = await runErrorDigest(admin, { sendEmail: sendWithSendGrid });
+  } catch (err) {
+    errorDigest = { sent: false, reason: err?.message };
+  }
+
   try {
     const summary = await refreshCoords(admin, { apiKey, onCall: () => logGoogleCall("place_refresh") });
-    return NextResponse.json(summary);
+    return NextResponse.json({ ...summary, errorDigest });
   } catch (err) {
     console.error("Coordinate refresh failed", err?.message);
     return NextResponse.json({ error: "Refresh failed" }, { status: 500 });

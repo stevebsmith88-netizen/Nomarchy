@@ -2,6 +2,7 @@ import "./globals.css";
 import { ThemeProvider } from "./theme";
 import RefCapture from "./RefCapture";
 import A11yHelpers from "./A11yHelpers";
+import ErrorReporter from "./ErrorReporter";
 
 const description = "Crown your favourite restaurant in every cuisine, stage a coup when something better comes along, and compare your kingdom with friends.";
 
@@ -57,6 +58,7 @@ export default function RootLayout({ children }) {
       <body>
         <RefCapture />
         <A11yHelpers />
+        <ErrorReporter />
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

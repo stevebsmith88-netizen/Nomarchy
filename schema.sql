@@ -1356,3 +1356,64 @@ as $$
   order by g.crown_count desc, lower(g.name)
   limit greatest(1, least(coalesce(p_limit, 25), 100));
 $$;
+
+-- ------------------------------------------------------------
+-- ERROR REPORTS (built-in error monitoring)
+-- When something breaks in someone's app (or on the server), a short
+-- report lands here: what went wrong, on which page, and the browser type
+-- - never who it was. Repeats of the same error within an hour are counted
+-- on one row rather than filling the table. Only the owner can read or
+-- clear them (Admin > Errors), a daily email flags new ones, and anything
+-- older than 90 days is removed by that same daily job.
+-- ------------------------------------------------------------
+create table if not exists app_errors (
+  id          bigint generated always as identity primary key,
+  source      text not null default 'client' check (source in ('client', 'server')),
+  message     text not null,
+  stack       text,
+  page        text,
+  user_agent  text,
+  occurrences integer not null default 1,
+  created_at  timestamptz not null default now(),
+  last_seen   timestamptz not null default now()
+);
+
+create index if not exists app_errors_last_seen_idx on app_errors (last_seen);
+
+alter table app_errors enable row level security;
+
+drop policy if exists "owner reads errors" on app_errors;
+create policy "owner reads errors" on app_errors for select
+  using (exists (select 1 from profiles p where p.id = auth.uid() and p.is_owner));
+drop policy if exists "owner clears errors" on app_errors;
+create policy "owner clears errors" on app_errors for delete
+  using (exists (select 1 from profiles p where p.id = auth.uid() and p.is_owner));
+
+-- The only way a report gets in. Anyone's app can call it (an error can
+-- happen before sign-in), so it trims every field and caps new reports at
+-- 300 an hour across the whole app, so it can't be used to flood the table.
+create or replace function report_error(p_source text, p_message text, p_stack text, p_page text, p_user_agent text)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  msg text := left(trim(coalesce(p_message, '')), 500);
+  pg text := left(coalesce(p_page, ''), 200);
+  existing bigint;
+begin
+  if msg = '' then return; end if;
+  select id into existing from app_errors
+    where message = msg and coalesce(page, '') = pg and last_seen > now() - interval '1 hour'
+    order by last_seen desc limit 1;
+  if existing is not null then
+    update app_errors set occurrences = occurrences + 1, last_seen = now() where id = existing;
+    return;
+  end if;
+  if (select count(*) from app_errors where created_at > now() - interval '1 hour') >= 300 then return; end if;
+  insert into app_errors (source, message, stack, page, user_agent)
+  values (case when p_source = 'server' then 'server' else 'client' end, msg, left(p_stack, 4000), nullif(pg, ''), left(p_user_agent, 300));
+end;
+$$;
+
+grant execute on function report_error(text, text, text, text, text) to anon, authenticated;

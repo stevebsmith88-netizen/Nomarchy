@@ -18,7 +18,7 @@ import {
   moveThroneCuisine, updateThroneDecree, updateThroneLocation, updateThronePhotos, unCrown,
   uploadReviewPhoto, deleteReviewPhoto, uploadAvatar, MAX_REVIEW_PHOTOS,
   loadCourt, toggleEndorsement, followByUsername, loadStanding, loadConquestProgress, blockUser, unblockUser, loadBlockedUsers,
-  loadAdminOverview, adminPlaceMatch, adminCheckClosures, adminClosedPlace, loadClosedPlaceIds, loadClosedPlaceRows, loadTourSeen, markTourSeen, loadCuisineEmojis, setCuisineEmoji, loadA11yPrefs, saveA11yPrefs,
+  loadAdminOverview, adminPlaceMatch, adminCheckClosures, adminClosedPlace, loadClosedPlaceIds, loadClosedPlaceRows, loadTourSeen, markTourSeen, loadCuisineEmojis, setCuisineEmoji, loadA11yPrefs, saveA11yPrefs, clearAppErrors,
 } from "@/lib/data";
 import { claimSignupSource } from "@/lib/signupSource";
 import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
@@ -1654,6 +1654,43 @@ export default function Nomarchy() {
                 ))}
               </div>
             )}
+            </AdminSection>
+
+            <AdminSection
+              title="Errors"
+              right={adminData.errors === null ? "not set up yet" : (() => { const n = adminData.errors.filter((e) => Date.now() - e.lastSeen < 86400000).length; return n ? `${n} in the last day` : "none in the last day"; })()}
+            >
+              {adminData.errors === null ? (
+                <p className="text-xs" style={{ color: C.muted }}>Run the latest database update (schema.sql) to start collecting error reports.</p>
+              ) : adminData.errors.length === 0 ? (
+                <p className="text-sm" style={{ color: C.green }}>No errors reported. Nice.</p>
+              ) : (<>
+                <div className="rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+                  {adminData.errors.map((e, i) => (
+                    <details key={e.id} className="px-3 py-2.5" style={i > 0 ? { borderTop: `1px solid ${C.cardEdge}` } : undefined}>
+                      <summary className="cursor-pointer text-sm">
+                        <span className="font-semibold">{e.message}</span>
+                        <span className="mt-0.5 block text-xs" style={{ color: C.muted }}>
+                          {e.source === "server" ? "Server" : "App"} · {e.page || "unknown page"} · {e.occurrences}× · last {fmt(e.lastSeen)}
+                        </span>
+                      </summary>
+                      {e.userAgent && e.userAgent !== "server" && <p className="mt-2 text-xs" style={{ color: C.muted }}>{e.userAgent}</p>}
+                      {e.stack && <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg p-2 text-[11px]" style={{ background: C.bg, color: C.muted }}>{e.stack}</pre>}
+                    </details>
+                  ))}
+                </div>
+                <button
+                  onClick={async () => {
+                    try { await clearAppErrors(); setAdminData({ ...adminData, errors: [] }); flash("Errors cleared"); } catch (err) { flash(err.message || "Couldn't clear them"); }
+                  }}
+                  className="mt-2 text-xs font-semibold" style={{ color: C.muted }}
+                >
+                  Clear all
+                </button>
+              </>)}
+              <p className="mt-2 text-xs leading-relaxed" style={{ color: C.muted }}>
+                Problems from anyone&apos;s app or the server, without who it was. A daily email flags new ones; reports older than 90 days are removed.
+              </p>
             </AdminSection>
 
             <AdminSection title="Signups by source" right={`${signupsThisWeek} this week`}>
