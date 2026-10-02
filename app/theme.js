@@ -34,27 +34,47 @@ const LIGHT = {
 // `import { C } from "./theme"` still points at live, current values -
 // no per-component rewiring needed, just something that re-renders each
 // page's own tree after the mutation so those values get re-read.
-export const C = { ...DARK };
+//
+// Light is the default for anyone who has never picked a mode (the landing
+// page reads best that way); a saved choice of dark is restored on load.
+export const C = { ...LIGHT };
 
 const STORAGE_KEY = "nomarchy-theme";
 
-const ThemeContext = createContext({ theme: "dark", toggleTheme: () => {} });
+const ThemeContext = createContext({ theme: "light", toggleTheme: () => {} });
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState("light");
+  // True once the saved choice (if any) has been applied - until then the
+  // page may be deliberately hidden (see the inline script in layout.js),
+  // so nothing reveals it early.
+  const [restored, setRestored] = useState(false);
 
-  // Runs once, after the page's own default-dark render - a user who
-  // picked light on a previous visit sees a brief flash of dark before
-  // this kicks in, a known, acceptable tradeoff for how much simpler this
-  // keeps the setup (no blocking inline script in the document head).
+  // Runs once, after the default (light) render. Someone who chose dark
+  // last time would otherwise see a flash of light first, so layout.js's
+  // inline script hides the page and paints the dark background until this
+  // has applied their choice and the next render has committed.
   useEffect(() => {
     let saved;
     try { saved = localStorage.getItem(STORAGE_KEY); } catch { saved = null; }
-    if (saved === "light" || saved === "dark") {
-      Object.assign(C, saved === "light" ? LIGHT : DARK);
-      setTheme(saved);
+    if (saved === "dark") {
+      Object.assign(C, DARK);
+      setTheme("dark");
     }
+    setRestored(true);
   }, []);
+
+  // Keeps the parts outside React's tree in step with the theme: the
+  // page-edge background (what shows on overscroll), the phone's browser
+  // bar colour, and un-hiding the page once the right theme is on screen.
+  useEffect(() => {
+    if (!restored) return;
+    const root = document.documentElement;
+    root.style.setProperty("--page-bg", C.bg);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", C.bg);
+    root.removeAttribute("data-theme-pending");
+  }, [theme, restored]);
 
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";

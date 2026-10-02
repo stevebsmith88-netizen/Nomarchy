@@ -4,10 +4,11 @@ html,
 body {
   padding: 0;
   margin: 0;
-  /* Match the app's dark background so any stray horizontal overflow
+  /* Match the app's own background so any stray horizontal overflow
      (a popover or unwrapped row briefly wider than the screen) reveals
-     this instead of the browser's default white canvas. */
-  background: #1C1326;
+     this instead of the browser's default white canvas. --page-bg is set
+     from the active theme (see ThemeProvider); light is the default. */
+  background: var(--page-bg, #F5ECDE);
   /* A phone-width layout has little margin for error - clip rather than
      let the page grow wider than the viewport and show a scrollbar/gap. */
   overflow-x: hidden;
@@ -44,4 +45,11 @@ html {
 .gm-style img,
 .gm-style canvas {
   max-width: none !important;
+}
+
+/* Set by the inline script in layout.js for people whose saved theme is
+   dark: keeps the page hidden (on the dark background) until the theme is
+   applied, so the default light render never flashes. */
+html[data-theme-pending] body {
+  visibility: hidden;
 }
