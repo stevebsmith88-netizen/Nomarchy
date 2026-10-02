@@ -823,9 +823,13 @@ export default function Nomarchy() {
   // distinct scores in your Court each earn the crown, so two friends tied
   // on 77 are both joint first and the next score down is second. Zero is
   // excluded - a score nobody's earned anything towards isn't a podium.
-  const courtTopScores = new Set(
-    [...new Set(court.map((f) => f.score))].filter((s) => s > 0).sort((a, b) => b - a).slice(0, 3)
-  );
+  const courtTopScores = [...new Set(court.map((f) => f.score))].filter((s) => s > 0).sort((a, b) => b - a).slice(0, 3);
+  // Gold, silver, bronze by place. Silver and bronze are fixed mid-tones
+  // that stay readable on both the light and dark card backgrounds.
+  const podiumColor = (score) => {
+    const place = courtTopScores.indexOf(score);
+    return place === -1 ? null : [C.gold, "#9AA5B1", "#B7762E"][place];
+  };
   const scopedTop25 = top25 && (top25Scope === "friends" ? top25.filter((t) => followedIds.has(t.user_id)) : top25);
   const trendingList = scopedTop25 && groupCrownedThrones(scopedTop25.filter((t) => new Date(t.crowned_at).getTime() >= trendingCutoff));
   // Search ignores the range/rank window entirely - "find any restaurant
@@ -1314,7 +1318,7 @@ export default function Nomarchy() {
               <div className="flex items-center gap-2.5">
                 <Avatar url={f.avatarUrl} size={28} />
                 <h3 className="flex items-center gap-1.5 text-base" style={{ ...display, fontWeight: 700 }}>
-                  {f.name} {courtTopScores.has(f.score) && <Crown size={14} style={{ color: C.gold }} fill={C.gold} strokeWidth={0} />} {f.isOwner && <OwnerBadge />}
+                  {f.name} {podiumColor(f.score) && <Crown size={14} style={{ color: podiumColor(f.score) }} fill={podiumColor(f.score)} strokeWidth={0} />} {f.isOwner && <OwnerBadge />}
                 </h3>
               </div>
               <ChevronDown size={16} className="shrink-0" style={{ color: C.muted, transform: "rotate(-90deg)" }} />
@@ -1330,12 +1334,12 @@ export default function Nomarchy() {
                 <Avatar url={f.avatarUrl} size={32} />
                 <div>
                   <h3 className="flex items-center gap-1.5 text-lg" style={{ ...display, fontWeight: 700 }}>
-                    {f.name} {courtTopScores.has(f.score) && <RankBadge score={f.score} />} {f.isOwner && <OwnerBadge />}
+                    {f.name} {podiumColor(f.score) && <Crown size={16} style={{ color: podiumColor(f.score) }} fill={podiumColor(f.score)} strokeWidth={0} />} {f.isOwner && <OwnerBadge />}
                   </h3>
-                  {courtTopScores.has(f.score) && (
+                  {podiumColor(f.score) && (
                     <span
                       className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
-                      style={{ background: C.bg, color: C.gold, letterSpacing: "0.06em" }}
+                      style={{ background: C.bg, color: podiumColor(f.score), letterSpacing: "0.06em" }}
                     >
                       {getTitle(f.isOwner, f.score)}
                     </span>
@@ -1351,7 +1355,7 @@ export default function Nomarchy() {
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
-                {courtTopScores.has(f.score) && <span className="text-xs font-semibold" style={{ color: C.gold }}>{f.score}</span>}
+                {podiumColor(f.score) && <span className="text-xs font-semibold" style={{ color: podiumColor(f.score) }}>{f.score}</span>}
                 <ChevronDown size={16} style={{ color: C.muted, transform: "rotate(-90deg)" }} />
               </div>
             </button>
