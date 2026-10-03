@@ -1461,6 +1461,218 @@ as $$
 $$;
 
 -- ------------------------------------------------------------
+-- RESTAURANT PAGES (nomarchy.ca/r/<slug>)
+-- Every Google place anyone has crowned or listed gets a readable web
+-- address, made once and never changed so shared links keep working:
+-- the name plus the city ("pizzeria-libretto-toronto"), then with the
+-- neighbourhood if another place already has that, then a number.
+-- The name, area and city are kept here too, so a page can still show a
+-- place nobody has crowned yet (Next in Line entries aren't public).
+-- Only the triggers below add rows; anyone can read them.
+-- ------------------------------------------------------------
+create table if not exists place_pages (
+  slug            text primary key check (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$' and char_length(slug) <= 130),
+  google_place_id text not null unique,
+  place_name      text not null,
+  neighbourhood   text,
+  city            text,
+  address         text,
+  created_at      timestamptz not null default now()
+);
+
+alter table place_pages enable row level security;
+
+drop policy if exists "place pages readable" on place_pages;
+create policy "place pages readable" on place_pages for select using (true);
+
+-- "Rudy's Café, Toronto" -> "rudys-cafe-toronto"
+create or replace function slug_part(t text)
+returns text
+language sql
+immutable
+as $$
+  select trim(both '-' from regexp_replace(
+    translate(replace(replace(lower(coalesce(t, '')), '''', ''), '’', ''),
+              'àáâäãåæçèéêëìíîïñòóôöõøùúûüýÿ', 'aaaaaaaceeeeiiiinoooooouuuuyy'),
+    '[^a-z0-9]+', '-', 'g'));
+$$;
+
+-- Returns the place's address, making one the first time it's seen.
+create or replace function ensure_place_page(p_place_id text, p_name text, p_area text, p_city text, p_address text)
+returns text
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  existing text;
+  base text := trim(both '-' from left(slug_part(p_name), 60));
+  city_part text := trim(both '-' from left(slug_part(p_city), 30));
+  area_part text := trim(both '-' from left(slug_part(p_area), 30));
+  candidate text;
+  stem text;
+  n int := 2;
+begin
+  if p_place_id is null or coalesce(trim(p_name), '') = '' then return null; end if;
+  select slug into existing from place_pages where google_place_id = p_place_id;
+  if existing is not null then return existing; end if;
+
+  if base = '' then base := 'place'; end if;
+  candidate := case
+    when city_part <> '' and base <> city_part and base not like '%-' || city_part then base || '-' || city_part
+    else base end;
+  if area_part <> '' and exists (select 1 from place_pages where slug = candidate) then
+    candidate := base || '-' || area_part || case when city_part <> '' and area_part <> city_part then '-' || city_part else '' end;
+  end if;
+  stem := candidate;
+  while exists (select 1 from place_pages where slug = candidate) loop
+    candidate := stem || '-' || n;
+    n := n + 1;
+  end loop;
+
+  insert into place_pages (slug, google_place_id, place_name, neighbourhood, city, address)
+  values (candidate, p_place_id, trim(p_name), nullif(trim(p_area), ''), nullif(trim(p_city), ''), nullif(trim(p_address), ''))
+  on conflict do nothing;
+  select slug into existing from place_pages where google_place_id = p_place_id;
+  return existing;
+end;
+$$;
+
+revoke all on function ensure_place_page(text, text, text, text, text) from public;
+
+-- Any crown or list entry with a Google ID gets its page. A problem here
+-- must never stop someone saving a place, so errors are swallowed.
+create or replace function place_page_from_row()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if new.google_place_id is not null then
+    begin
+      perform ensure_place_page(new.google_place_id, new.place_name, new.neighbourhood, new.city, new.address);
+    exception when others then null;
+    end;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists thrones_place_page on thrones;
+create trigger thrones_place_page after insert or update of google_place_id on thrones
+  for each row execute function place_page_from_row();
+drop trigger if exists next_in_line_place_page on next_in_line;
+create trigger next_in_line_place_page after insert or update of google_place_id on next_in_line
+  for each row execute function place_page_from_row();
+
+-- Pages for every place saved before this existed (earliest save's details).
+-- Safe to re-run: places that already have a page are skipped.
+do $$
+declare r record;
+begin
+  for r in
+    select distinct on (x.google_place_id) x.google_place_id, x.place_name, x.neighbourhood, x.city, x.address
+    from (
+      select google_place_id, place_name, neighbourhood, city, address, crowned_at as saved_at from thrones where google_place_id is not null
+      union all
+      select google_place_id, place_name, neighbourhood, city, address, added_at from next_in_line where google_place_id is not null
+    ) x
+    where not exists (select 1 from place_pages p where p.google_place_id = x.google_place_id)
+    order by x.google_place_id, x.saved_at
+  loop
+    perform ensure_place_page(r.google_place_id, r.place_name, r.neighbourhood, r.city, r.address);
+  end loop;
+end $$;
+
+-- Everything a restaurant page shows, in one call. Only crowns from
+-- Public kingdoms are included, whoever is asking. The want-to-try and
+-- been numbers are totals only, never who.
+create or replace function place_page(p_slug text)
+returns jsonb
+language plpgsql
+stable
+set search_path = public
+as $$
+declare
+  pg place_pages%rowtype;
+  crowns jsonb;
+  crown_count int;
+  best_rank bigint;
+begin
+  select * into pg from place_pages where slug = lower(trim(coalesce(p_slug, '')));
+  if pg.slug is null then return null; end if;
+
+  select coalesce(jsonb_agg(x.c order by (x.c->>'endorsements')::int desc, x.c->>'crowned_at'), '[]'::jsonb), count(*)
+  into crowns, crown_count
+  from (
+    select jsonb_build_object(
+      'id', t.id,
+      'cuisine', cu.name,
+      'cuisine_id', t.cuisine_id,
+      'cuisine_emoji', cu.emoji,
+      'decree', t.decree,
+      'photos', coalesce(to_jsonb(t.photos), '[]'::jsonb),
+      'crowned_at', t.crowned_at,
+      'username', p.username,
+      'display_name', p.display_name,
+      'is_owner', p.is_owner,
+      'score', coalesce(s.score, 0),
+      'endorsements', (select count(*) from endorsements e where e.throne_id = t.id)
+    ) as c
+    from thrones t
+    join profiles p on p.id = t.user_id and p.is_public
+    left join cuisines cu on cu.id = t.cuisine_id
+    left join standings s on s.id = t.user_id
+    where t.google_place_id = pg.google_place_id
+  ) x;
+
+  if crown_count > 0 then
+    select ranked.r into best_rank
+    from (
+      select b.google_place_id, row_number() over (order by b.crown_count desc, lower(b.name)) as r
+      from best_in_land(null, null, pg.city, null, 100) b
+    ) ranked
+    where ranked.google_place_id = pg.google_place_id;
+  end if;
+
+  return jsonb_build_object(
+    'slug', pg.slug,
+    'google_place_id', pg.google_place_id,
+    'name', pg.place_name,
+    'neighbourhood', pg.neighbourhood,
+    'city', pg.city,
+    'address', pg.address,
+    'closed', exists (select 1 from closed_places c where c.google_place_id = pg.google_place_id),
+    'crowns', crowns,
+    'crown_count', crown_count,
+    'want_count', restaurant_wanting_count(pg.place_name, pg.address, pg.neighbourhood, pg.google_place_id),
+    'been_count', restaurant_visit_count(pg.place_name, pg.address, pg.neighbourhood, pg.google_place_id),
+    'best_rank', case when best_rank <= 25 then best_rank end
+  );
+end;
+$$;
+
+grant execute on function place_page(text) to anon, authenticated;
+
+-- Restaurant pages worth listing for search engines: those with at least
+-- one crown from a Public kingdom (empty pages are kept out of search).
+create or replace function place_pages_for_sitemap()
+returns table (slug text, updated_at timestamptz)
+language sql
+stable
+set search_path = public
+as $$
+  select pp.slug, max(t.crowned_at)
+  from place_pages pp
+  join thrones t on t.google_place_id = pp.google_place_id
+  join profiles p on p.id = t.user_id and p.is_public
+  group by pp.slug
+  order by max(t.crowned_at) desc
+  limit 5000;
+$$;
+
+grant execute on function place_pages_for_sitemap() to anon, authenticated;
+
+-- ------------------------------------------------------------
 -- ERROR REPORTS (built-in error monitoring)
 -- When something breaks in someone's app (or on the server), a short
 -- report lands here: what went wrong, on which page, and the browser type

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { C, OwnerBadge, RankBadge, body, display, getTitle } from "../theme";
 import { Avatar, AvatarPicker, ClosedBadge, MAX_IMPORT_CHARS, MIN_DECREE_LENGTH, PersonRow, PhotoPicker, PhotoStrip, RowSkeleton, knownFor } from "./shared";
 import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
-import { loadDirectory, loadRestaurantProfile, loadRestaurantVisitCount, loadRestaurantWantingCount, loadSuggestedFriends, supabase } from "@/lib/data";
+import { loadDirectory, loadPlaceSlug, loadRestaurantProfile, loadRestaurantVisitCount, loadRestaurantWantingCount, loadSuggestedFriends, supabase } from "@/lib/data";
 import { safeMapsUrl } from "@/lib/safeUrl";
 import { clearDraft, loadDraft, saveDraft } from "@/lib/decreeDrafts";
 import { Bookmark, Check, Crown, ExternalLink, Loader2, MessageSquare, Search, Share2, Star, Swords, Wand2, X } from "lucide-react";
@@ -19,7 +19,16 @@ export function RestaurantProfileModal({ restaurant, onClose }) {
   const [err, setErr] = useState("");
   const [visitCount, setVisitCount] = useState(null);
   const [wantingCount, setWantingCount] = useState(null);
+  const [slug, setSlug] = useState(null);
   const fmt = (t) => new Date(t).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
+
+  // Its public restaurant page, if it has a Google ID (and so a page).
+  useEffect(() => {
+    if (!restaurant.googlePlaceId) return;
+    let cancelled = false;
+    loadPlaceSlug(restaurant.googlePlaceId).then((s) => { if (!cancelled) setSlug(s); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [restaurant.googlePlaceId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,6 +53,11 @@ export function RestaurantProfileModal({ restaurant, onClose }) {
           <div className="min-w-0">
             <h3 className="truncate text-lg" style={{ ...display, fontWeight: 700 }}>{restaurant.name}</h3>
             <p className="truncate text-xs" style={{ color: C.muted }}>{[restaurant.area, restaurant.address].filter(Boolean).join(" · ")}</p>
+            {slug && (
+              <a href={`/r/${slug}`} target="_blank" rel="noopener" className="mt-1 inline-flex items-center gap-1 text-xs font-bold" style={{ color: C.goldText }}>
+                Restaurant page <ExternalLink size={10} />
+              </a>
+            )}
           </div>
           <button onClick={onClose} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center" style={{ color: C.muted }}><X size={18} /></button>
         </div>

@@ -8,9 +8,10 @@ import { C, FontShell, LogoMark, OwnerBadge, RANKS, RankBadge, body, display, ge
 import { PretenderCard, ThroneCard } from "./Cards";
 import { AdminSection, Avatar, CORNY_VISIT_NOTES, CuisineEmojiGrid, GOOGLE_USAGE_LABELS, NOW, OVERALL_FAVOURITE_NAME, RANGE_MS, RestaurantRow, RowSkeleton, Skeleton, sameRestaurant, timeAgo } from "./shared";
 import { A11Y_DEFAULTS, applyA11y, isDefaultA11y, normalizeA11y, readLocalA11y } from "@/lib/a11yPrefs";
-import { addCuisine, addToNextInLine, blockUser, clearAppErrors, deleteAccount, dismissAllNotifications, dismissNotification, followByUsername, followUser, getProfile, importToNextInLine, loadA11yPrefs, loadAdminOverview, loadBestInLand, loadClosedPlaceIds, loadCourt, loadCuisineEmojis, loadCuisines, loadFollowers, loadKingdom, loadNextInLine, loadNotifications, loadStanding, loadTourSeen, logRankPromotion, markNotificationsSeen, markTourSeen, markVisited, moveThroneCuisine, placeKey, promoteToThrone, removeFromNextInLine, saveA11yPrefs, searchAllRestaurants, setCuisineEmoji, signOut, submitFeedback, supabase, toggleEndorsement, unCrown, updatePretenderCuisine, updatePretenderNote, updatePretenderPhotos, updatePretenderVerdict, updateProfile, updateThroneDecree, updateThroneLocation, updateThronePhotos } from "@/lib/data";
+import { addCuisine, addToNextInLine, blockUser, clearAppErrors, deleteAccount, dismissAllNotifications, dismissNotification, followByUsername, followUser, getProfile, importToNextInLine, loadA11yPrefs, loadAdminOverview, loadBestInLand, loadClosedPlaceIds, loadCourt, loadCuisineEmojis, loadCuisines, loadFollowers, loadKingdom, loadNextInLine, loadNotifications, loadPlaceSlug, loadStanding, loadTourSeen, logRankPromotion, markNotificationsSeen, markTourSeen, markVisited, moveThroneCuisine, placeKey, promoteToThrone, removeFromNextInLine, saveA11yPrefs, searchAllRestaurants, setCuisineEmoji, signOut, submitFeedback, supabase, toggleEndorsement, unCrown, updatePretenderCuisine, updatePretenderNote, updatePretenderPhotos, updatePretenderVerdict, updateProfile, updateThroneDecree, updateThroneLocation, updateThronePhotos } from "@/lib/data";
 import { claimSignupSource } from "@/lib/signupSource";
 import { claimInvite, inviteUrl } from "@/lib/invite";
+import { restaurantUrl } from "@/lib/restaurantPage";
 import { rememberTourLocally, shouldAutoStartTour, tourSeenLocally } from "@/lib/tour";
 import { Bell, Bookmark, Check, ChevronDown, ClipboardPaste, Crown, Loader2, LogOut, Moon, Navigation, Pencil, Plus, Search, Share2, ShieldCheck, Sun, TrendingUp, UserPlus, Users, X } from "lucide-react";
 
@@ -560,8 +561,15 @@ export default function NomarchyApp({ user }) {
     }
   };
 
-  const sharePick = (cuisineName, r) => {
-    const text = `My ${cuisineName} throne on Nomarchy: ${r.name}${r.area ? ` (${r.area})` : ""}\n\n"${r.decree}"`;
+  // Links to the restaurant's public page (who else crowned it), plus the
+  // sharer's own kingdom when it's Public.
+  const sharePick = async (cuisineName, r) => {
+    const slug = r.googlePlaceId ? await loadPlaceSlug(r.googlePlaceId).catch(() => null) : null;
+    const links = [
+      slug && `Who else crowned it: ${restaurantUrl(slug)}`,
+      profile?.is_public && profile?.username && `My kingdom: https://nomarchy.ca/${profile.username}`,
+    ].filter(Boolean).join("\n");
+    const text = `My ${cuisineName} throne on Nomarchy: ${r.name}${r.area ? ` (${r.area})` : ""}\n\n"${r.decree}"${links ? `\n\n${links}` : ""}`;
     const params = new URLSearchParams({
       cuisine: cuisineName, name: r.name, area: r.area || "",
       rating: r.rating || "", blurb: r.decree || "", username: profile?.username || "",

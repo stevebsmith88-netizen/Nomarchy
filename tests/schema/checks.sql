@@ -146,3 +146,57 @@ begin
     raise exception 'an invited signup was not recorded as source "invite"';
   end if;
 end $$;
+
+-- Restaurant pages: every Google place gets a readable address once;
+-- clashes get the neighbourhood, then a number; and only Public
+-- kingdoms' crowns ever appear on a page.
+insert into next_in_line (user_id, place_name, neighbourhood, city, google_place_id) values
+  ('00000000-0000-0000-0000-0000000000b2', 'Rudy''s Café', null, 'Toronto', 'GID_RUDY1'),
+  ('00000000-0000-0000-0000-0000000000b2', 'Rudy''s Café', 'Annex', 'Toronto', 'GID_RUDY2'),
+  ('00000000-0000-0000-0000-0000000000b2', 'Rudy''s Café', 'Annex', 'Toronto', 'GID_RUDY3'),
+  ('00000000-0000-0000-0000-0000000000b2', 'Rudy''s Café', 'Annex', 'Toronto', 'GID_RUDY1');
+grant usage on schema public to anon;
+grant select on all tables in schema public to anon;
+do $$
+declare page jsonb;
+begin
+  if (select slug from place_pages where google_place_id = 'GID_RUDY1') is distinct from 'rudys-cafe-toronto' then
+    raise exception 'unexpected slug %', (select slug from place_pages where google_place_id = 'GID_RUDY1');
+  end if;
+  if (select slug from place_pages where google_place_id = 'GID_RUDY2') is distinct from 'rudys-cafe-annex-toronto' then
+    raise exception 'a clashing name did not get its neighbourhood';
+  end if;
+  if (select slug from place_pages where google_place_id = 'GID_RUDY3') is distinct from 'rudys-cafe-annex-toronto-2' then
+    raise exception 'a second clash did not get a number';
+  end if;
+  if (select count(*) from place_pages where google_place_id = 'GID_RUDY1') <> 1 then
+    raise exception 'one place got two pages';
+  end if;
+  if (select slug from place_pages where google_place_id = 'GID_LIB') is distinct from 'pizzeria-libretto' then
+    raise exception 'a crown saved before pages existed was not given one';
+  end if;
+end $$;
+set role anon;
+select set_config('app.uid', '', false);
+do $$
+declare page jsonb;
+begin
+  page := place_page('pizzeria-libretto');
+  if (page->>'crown_count')::int <> 1 then raise exception 'expected 1 public crown, got %', page->>'crown_count'; end if;
+  if (page->>'best_rank')::int <> 1 then raise exception 'expected Best in the Land rank 1, got %', page->>'best_rank'; end if;
+  if page->'crowns'->0->>'decree' is null then raise exception 'the crown''s decree is missing'; end if;
+  if (place_page('rudys-cafe-toronto')->>'crown_count')::int <> 0 then raise exception 'an uncrowned place shows crowns'; end if;
+  if (place_page('rudys-cafe-toronto')->>'want_count')::int <> 2 then raise exception 'want-to-try count wrong'; end if;
+  if place_page('no-such-place') is not null then raise exception 'a missing page returned something'; end if;
+  if (select count(*) from place_pages_for_sitemap()) <> 1 then raise exception 'sitemap should list only crowned places'; end if;
+end $$;
+reset role;
+update profiles set is_public = false where id = '00000000-0000-0000-0000-0000000000b1';
+set role anon;
+do $$
+begin
+  if (place_page('pizzeria-libretto')->>'crown_count')::int <> 0 then
+    raise exception 'a Private kingdom''s crown appeared on a restaurant page';
+  end if;
+end $$;
+reset role;

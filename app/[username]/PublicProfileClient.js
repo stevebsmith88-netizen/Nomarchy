@@ -187,7 +187,12 @@ export default function PublicProfileClient({ username }) {
     );
   }
 
-  const { profile, slots, standing } = data;
+  const { profile, slots, standing, slugs } = data;
+  // A crowned place's name opens its public restaurant page, when it has one.
+  const placeName = (r) => {
+    const slug = slugs?.[r.googlePlaceId];
+    return slug ? <Link href={`/r/${slug}`} style={{ color: "inherit" }} className="underline decoration-1 underline-offset-4" title="See who else crowned it">{r.name}</Link> : r.name;
+  };
   const isSelf = viewer && viewer.id === profile.id;
   const isPrivate = !profile.is_public && !isSelf;
 
@@ -264,7 +269,7 @@ export default function PublicProfileClient({ username }) {
         {overall && (
           <div className="mb-5 rounded-xl p-4" style={{ background: C.card, border: `2px solid ${C.gold}55`, boxShadow: `0 0 0 1px ${C.gold}33` }}>
             <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>Overall Favourite</div>
-            <h3 className="mt-2 text-2xl" style={{ ...display, fontWeight: 700 }}>{overall.name}</h3>
+            <h3 className="mt-2 text-2xl" style={{ ...display, fontWeight: 700 }}>{placeName(overall)}</h3>
             <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
               {(overall.area || overall.address) && (<><MapPin size={11} /> {overall.area || overall.address}<span className="mx-1">·</span></>)}
               crowned {fmt(overall.crownedAt)}
@@ -291,7 +296,7 @@ export default function PublicProfileClient({ username }) {
                     <span className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.14em" }}>{cuisineName}</span>
                     <Crown size={16} style={{ color: C.goldText }} fill={C.gold} strokeWidth={0} />
                   </div>
-                  <h3 className="mt-2 text-xl" style={{ ...display, fontWeight: 700 }}>{r.name}</h3>
+                  <h3 className="mt-2 text-xl" style={{ ...display, fontWeight: 700 }}>{placeName(r)}</h3>
                   <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs" style={{ color: C.muted }}>
                     {(r.area || r.address) && (<><MapPin size={11} /> {r.area || r.address}<span className="mx-1">·</span></>)}
                     crowned {fmt(r.crownedAt)}

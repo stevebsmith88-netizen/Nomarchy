@@ -194,6 +194,19 @@ const SECTIONS = [
         ),
       },
       {
+        q: "What are restaurant pages?",
+        a: (
+          <p>
+            Every restaurant saved on Nomarchy has its own public page, like
+            nomarchy.ca/r/pizzeria-libretto-toronto. It shows the decrees and photos from everyone who&apos;s
+            crowned it in a Public kingdom, how many people want to try it or have been, and its place in Best in
+            the Land. Sharing a crown links to its page, and you can open one from any restaurant in Best in the
+            Land or on someone&apos;s kingdom. Crowns from Private kingdoms never appear there, and the want-to-try
+            and been numbers are totals only - never who.
+          </p>
+        ),
+      },
+      {
         q: "What's Best in the Land?",
         a: (
           <p>

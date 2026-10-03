@@ -55,7 +55,8 @@ export default function PrivacyContent() {
         <Section title="Who can see your content">
           <List items={[
             "Your “Next in Line” shortlist (places you want to try) is private - only you can see it.",
-            "A crowned restaurant and its review are visible to anyone, if your profile is set to Public; only to you, if set to Private.",
+            "A crowned restaurant and its review are visible to anyone, if your profile is set to Public; only to you, if set to Private. Public crowns also appear, with your name, rank and photos, on that restaurant's public page on Nomarchy, which search engines can list.",
+            "Restaurant pages also show how many people want to try or have been to a place - as totals only, never who.",
             "A note on a place you've marked as visited (but not crowned) is shown to anyone who follows you, once you've marked it visited - this app does not require your approval for someone to follow you, so treat “followers” as “anyone who knows your username,” not a vetted friends list.",
             "Your username, display name, profile photo and city are visible to anyone who uses the app, and to anyone with your public profile link - even if your profile is set to Private (Private hides your crowns, not your name). Who follows whom is visible too. This is needed for the follow and Court features to work.",
           ]} />

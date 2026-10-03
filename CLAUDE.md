@@ -23,8 +23,9 @@
 Pick these up when Steve asks "what's next" - each still needs his
 sign-off on the UI before building.
 
-- Public restaurant pages.
 - Group Privy Council (deciding where to eat together).
+- A "Crowned on Nomarchy" window sticker / digital badge for restaurants
+  with several crowns, built on the restaurant pages (app/r/[slug]).
 - Paid placement (e.g. a sponsored Privy Council suggestion) is a
   possibility later, so never promise "no ads" or "no paid placements"
   in user-facing copy.
