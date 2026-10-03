@@ -694,10 +694,44 @@ export function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, re
     </div>);
 }
 
-export function ImportModal({ cuisineNames, onClose, onImport }) {
+// After the list is sorted out, each place is checked with Google so it
+// arrives like one added by hand: Google ID, address, map pin, and a
+// suggested cuisine where the person didn't state one. Best-effort - if the
+// check fails the list is shown exactly as sorted.
+async function enrichWithGoogle(rows, city, cuisineNames, token) {
+  try {
+    const res = await fetch("/api/ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ mode: "enrich", rows: rows.map((r) => ({ name: r.name, area: r.area })), city }),
+    });
+    if (!res.ok) return rows;
+    const { results } = await res.json();
+    if (!Array.isArray(results)) return rows;
+    return rows.map((r, i) => {
+      const g = results[i];
+      if (!g) return r;
+      const suggested = !r.cuisine?.trim() && g.suggestedCuisine
+        ? cuisineNames.find((c) => c.toLowerCase() === g.suggestedCuisine.toLowerCase())
+        : null;
+      return {
+        ...r,
+        googlePlaceId: g.googlePlaceId, address: g.address, lat: g.lat, lng: g.lng, mapsUrl: g.mapsUrl, city,
+        area: r.area || g.neighbourhood || r.area,
+        ...(suggested ? { cuisine: suggested, _suggested: true } : {}),
+        _google: true,
+      };
+    });
+  } catch {
+    return rows;
+  }
+}
+
+export function ImportModal({ cuisineNames, defaultCity, onClose, onImport }) {
   const [raw, setRaw] = useState("");
   const [rows, setRows] = useState(null);
   const [working, setWorking] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [err, setErr] = useState("");
 
@@ -734,15 +768,18 @@ export function ImportModal({ cuisineNames, onClose, onImport }) {
       if (!Array.isArray(data.results) || !data.results.length) {
         setErr("Couldn't find any restaurants in that. Try pasting one per line.");
       } else {
-        setRows(data.results.map((r, i) => ({ ...r, _id: i, _keep: true })));
+        const sorted = data.results.map((r, i) => ({ ...r, _id: i, _keep: true }));
+        setChecking(true);
+        setRows(await enrichWithGoogle(sorted, defaultCity || "Toronto", cuisineNames, session?.access_token));
       }
     } catch (e) {
       setErr(e.message || "Couldn't read that list. Try pasting it again, one restaurant per line.");
     }
     setWorking(false);
+    setChecking(false);
   };
 
-  const update = (id, field, val) => setRows((p) => p.map((r) => (r._id === id ? { ...r, [field]: val } : r)));
+  const update = (id, field, val) => setRows((p) => p.map((r) => (r._id === id ? { ...r, [field]: val, ...(field === "cuisine" ? { _suggested: false } : {}) } : r)));
   const keeping = rows ? rows.filter((r) => r._keep) : [];
 
   return (
@@ -770,13 +807,13 @@ export function ImportModal({ cuisineNames, onClose, onImport }) {
           <button onClick={parse} disabled={working || !raw.trim()} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold"
             style={working || !raw.trim() ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.onGold }}>
             {working ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />}
-            {working ? "Reading your list..." : "Sort this out"}
+            {working ? (checking ? "Checking places on Google..." : "Reading your list...") : "Sort this out"}
           </button>
           <p className="mt-2 text-center text-xs" style={{ color: C.muted }}>
             Everything lands in Next in Line. Thrones still have to be earned one decree at a time.
           </p>
         </>) : (<>
-          <p className="mt-2 text-sm" style={{ color: C.muted }}>Found {rows.length}. Fix anything it got wrong, untick anything you don&apos;t want. Cuisine&apos;s left blank where it wasn&apos;t stated - pick one or leave it for later.</p>
+          <p className="mt-2 text-sm" style={{ color: C.muted }}>Found {rows.length}. Fix anything it got wrong, untick anything you don&apos;t want. Places Google recognised get their address and map pin, and a cuisine where it was confident. Cuisine&apos;s left blank where it wasn&apos;t clear - pick one or leave it for later.</p>
           <div className="mt-3">
             {rows.map((r) => (
               <div key={r._id} className="mb-2 rounded-lg p-2.5" style={{ background: C.bg, border: `1px solid ${r._keep ? C.cardEdge : C.cardEdge + "55"}`, opacity: r._keep ? 1 : 0.45 }}>
@@ -805,6 +842,11 @@ export function ImportModal({ cuisineNames, onClose, onImport }) {
                     style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }}
                   />
                 </div>
+                {(r._suggested || r._google) && (
+                  <p className="mt-1 px-1 text-[11px]" style={{ color: C.muted }}>
+                    {r._suggested ? "Cuisine suggested from Google. " : ""}{r._google ? "Found on Google Maps." : ""}
+                  </p>
+                )}
                 <input aria-label="Note"
                   value={r.note || ""}
                   onChange={(e) => update(r._id, "note", e.target.value)}

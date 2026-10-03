@@ -21,6 +21,7 @@ import { createClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
 import { searchGooglePlaces } from "../../../lib/googlePlaces";
 import { logGoogleCall } from "../../../lib/googleUsage";
+import { enrichRows, MAX_ENRICH } from "../../../lib/importEnrich";
 
 // Import is a batch, wait-a-moment task where getting cuisines right
 // matters most, so it uses the Opus model. Lookup happens mid-flow while
@@ -119,7 +120,7 @@ export async function POST(request) {
   if (!payload || typeof payload !== "object") {
     return NextResponse.json({ error: "Bad request" }, { status: 400 });
   }
-  const { mode, query, city, raw, cuisines } = payload;
+  const { mode, query, city, raw, cuisines, rows } = payload;
 
   try {
     let result;
@@ -127,6 +128,9 @@ export async function POST(request) {
     if (mode === "lookup") {
       if (!query?.trim()) return NextResponse.json({ error: "No query" }, { status: 400 });
       ({ result, cached } = await handleLookup(supabase, query, city, user.id));
+    } else if (mode === "enrich") {
+      if (!Array.isArray(rows) || rows.length === 0) return NextResponse.json({ results: [] });
+      result = await handleEnrich(supabase, rows, city, user.id);
     } else if (mode === "import") {
       if (!raw?.trim()) return NextResponse.json({ error: "Nothing to import" }, { status: 400 });
       result = await handleImport(raw, cuisines);
@@ -277,6 +281,20 @@ async function handleLookup(supabase, query, city, userId) {
   }
 
   return { result: { results }, cached: false };
+}
+
+// Imported list -> Google details for each place that's clearly matched
+// (see lib/importEnrich.js). Costs Google searches, not AI calls, so it's
+// each logged as a search; one request counts once toward the hourly cap.
+// Without a Google key, or if Google is down, every place just comes back
+// unmatched and the import carries on as before.
+async function handleEnrich(supabase, rows, city, userId) {
+  const clean = rows.slice(0, 200).map((r) => ({ name: String(r?.name || "").slice(0, 200), area: String(r?.area || "").slice(0, 100) }));
+  const { data: closed } = await supabase.from("closed_places").select("google_place_id");
+  const closedIds = new Set((closed || []).map((c) => c.google_place_id));
+  const search = (q, c) => searchGooglePlaces(q, c, { onCall: () => logGoogleCall("search", userId) });
+  const results = await enrichRows(clean, String(city || "Toronto").slice(0, 100), { search, closedIds });
+  return { results, limit: MAX_ENRICH };
 }
 
 async function handleImport(raw, cuisines) {

@@ -499,7 +499,12 @@ export default function NomarchyApp({ user }) {
           match = null;
         }
       }
-      resolved.push({ name: r.name.toUpperCase(), area: r.area || null, note: r.note || null, cuisineId: match?.id || null });
+      resolved.push({
+        name: r.name.toUpperCase(), area: r.area || null, note: r.note || null, cuisineId: match?.id || null,
+        // Google details, when the import checked this place (see ImportModal).
+        googlePlaceId: r.googlePlaceId || null, address: r.address || null, city: r.city || null,
+        lat: r.lat ?? null, lng: r.lng ?? null, mapsUrl: r.mapsUrl || null,
+      });
       added++;
     }
     if (resolved.length) await importToNextInLine(user.id, resolved);
@@ -1853,6 +1858,7 @@ export default function NomarchyApp({ user }) {
       {importing && (
         <ImportModal
           cuisineNames={cuisineNames}
+          defaultCity={profile?.city || "Toronto"}
           onClose={() => setImporting(false)}
           onImport={importMany}
         />

@@ -28,6 +28,7 @@ const nil = [
   { id: "n2", user_id: UID, cuisine_id: "c2", cuisines: { name: "Sushi" }, place_name: "BEEN SUSHI", neighbourhood: "Annex", note: "Great", photos: [], added_at: now, visited_at: now, verdict: "worth_it" },
 ];
 
+const listInserts = []; // what the app tried to save to Next in Line
 function table(url) { return new URL(url).pathname.replace(/^\/rest\/v1\//, ""); }
 // Applies the simple eq./in. filters in a query (user_id=eq.x,
 // followee_id=in.(a,b)) to rows that have that column, so "my thrones" and
@@ -63,6 +64,7 @@ function filterRows(url, rows) {
     // Your own profile and the owner's user list (both database functions).
     if (t === "rpc/my_profile") return json(profile);
     if (t === "rpc/admin_profiles") return json([profile]);
+    if (req.method() === "POST" && t === "next_in_line") { try { listInserts.push(JSON.parse(req.postData() || "null")); } catch {} }
     if (req.method() !== "GET" && req.method() !== "HEAD") return json(single ? {} : [], 200);
     if (t.startsWith("rpc/")) return json(t.includes("count") ? 0 : []);
     const data = { profiles: single ? profile : [profile], cuisines, thrones, next_in_line: nil, follows, invites, standings: single ? { id: UID, score: 42, thrones: 1, coups: 0 } : [{ id: UID, score: 42 }] }[t];
@@ -83,6 +85,30 @@ function filterRows(url, rows) {
   await step("crowned place shows", () => page.getByText("PIZZERIA LIBRETTO").first().waitFor({ timeout: 5000 }));
   await step("next in line tab", async () => { await page.click('[data-tour="tab-pretenders"]'); await page.getByText("SUSHI PLACE").first().waitFor({ timeout: 5000 }); });
   await step("been-to tab", async () => { await page.getByRole("tab", { name: /Been to/ }).click(); await page.getByText("BEEN SUSHI").first().waitFor({ timeout: 5000 }); });
+  await step("import checks places with Google and saves the details", async () => {
+    await page.route("**/api/ai", async (route) => {
+      const body = JSON.parse(route.request().postData() || "{}");
+      const json = (b) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(b) });
+      if (body.mode === "import") return json({ results: [{ name: "Pai", cuisine: "", area: "", note: "khao soi" }, { name: "Mystery Spot", cuisine: "", area: "", note: "" }] });
+      if (body.mode === "enrich") return json({ results: [{ googlePlaceId: "GIDIMPORT1", address: "18 Duncan St, Toronto", neighbourhood: "Entertainment District", lat: 43.64, lng: -79.39, mapsUrl: "https://maps.google.com/?cid=1", suggestedCuisine: "Sushi" }, null] });
+      return route.fallback();
+    });
+    await page.getByRole("button", { name: /Import/i }).first().click();
+    await page.getByRole("textbox", { name: "Your list to import" }).fill("Pai - khao soi\nMystery Spot");
+    await page.getByRole("button", { name: /Sort this out/ }).click();
+    await page.getByText("Found on Google Maps.").waitFor({ timeout: 8000 });
+    await page.getByText(/Cuisine suggested from Google/).waitFor({ timeout: 2000 });
+    const picked = await page.getByRole("dialog").getByRole("combobox", { name: "Cuisine" }).first().inputValue();
+    if (picked !== "Sushi") throw new Error("cuisine not suggested: " + picked);
+    await page.getByRole("button", { name: /Add 2 to Next in Line/ }).click();
+    await page.getByRole("dialog").first().waitFor({ state: "detached", timeout: 8000 });
+    const saved = listInserts.flat().filter(Boolean);
+    const pai = saved.find((r) => r.place_name === "PAI");
+    if (!pai || pai.google_place_id !== "GIDIMPORT1" || pai.address !== "18 Duncan St, Toronto" || pai.lat !== 43.64) throw new Error("Google details not saved: " + JSON.stringify(pai));
+    const mystery = saved.find((r) => r.place_name === "MYSTERY SPOT");
+    if (!mystery || mystery.google_place_id) throw new Error("unmatched place should have no Google ID");
+    await page.unroute("**/api/ai");
+  });
   await step("compact card opens", async () => { await page.getByText("BEEN SUSHI").first().click(); await page.getByRole("button", { name: /Crown it/ }).first().waitFor({ timeout: 5000 }); });
   await step("add a place modal", async () => { await page.getByRole("button", { name: /Add a place/i }).first().click(); await page.getByRole("dialog").first().waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); await page.getByRole("dialog").first().waitFor({ state: "detached", timeout: 5000 }); });
   await step("privy council opens", async () => { await page.getByRole("button", { name: /Privy Council/ }).click(); await page.getByRole("combobox", { name: "Privy Council cuisine" }).waitFor({ timeout: 5000 }); });
