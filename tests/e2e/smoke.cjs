@@ -16,13 +16,32 @@ const cuisines = [
   { id: "c2", name: "Sushi", is_default: true, emoji: null },
   { id: "c3", name: "Wings", is_default: false, emoji: "🍗" },
 ];
-const thrones = [{ id: "t1", user_id: UID, cuisine_id: "c1", cuisines: { name: "Pizza" }, place_name: "PIZZERIA LIBRETTO", address: "221 Ossington Ave", neighbourhood: "Ossington", decree: "Best margherita in the city, hands down.", photos: [], crowned_at: now, google_place_id: "GID1", lat: 43.6, lng: -79.4, maps_url: "https://www.google.com/maps/search/?api=1&query=x" }];
+// One friend in your Court, so a crown notification can be tapped through.
+const FRIEND = "22222222-2222-2222-2222-222222222222";
+const friendProfile = { id: FRIEND, username: "alex", display_name: "Alex", is_owner: false, avatar_url: null };
+const follows = [{ follower_id: UID, followee_id: FRIEND, profiles: friendProfile }];
+const thrones = [{ id: "t2", user_id: FRIEND, cuisine_id: "c2", cuisines: { name: "Sushi" }, profiles: friendProfile, place_name: "FRIEND SUSHI", neighbourhood: "Annex", decree: "The omakase is worth every penny.", photos: [], crowned_at: now, google_place_id: "GID3", lat: 43.6, lng: -79.4 }, { id: "t1", user_id: UID, cuisine_id: "c1", cuisines: { name: "Pizza" }, place_name: "PIZZERIA LIBRETTO", address: "221 Ossington Ave", neighbourhood: "Ossington", decree: "Best margherita in the city, hands down.", photos: [], crowned_at: now, google_place_id: "GID1", lat: 43.6, lng: -79.4, maps_url: "https://www.google.com/maps/search/?api=1&query=x" }];
 const nil = [
   { id: "n1", user_id: UID, cuisine_id: "c2", cuisines: { name: "Sushi" }, place_name: "SUSHI PLACE", neighbourhood: "Annex", note: "", photos: [], added_at: now, visited_at: null, google_place_id: "GID2" },
   { id: "n2", user_id: UID, cuisine_id: "c2", cuisines: { name: "Sushi" }, place_name: "BEEN SUSHI", neighbourhood: "Annex", note: "Great", photos: [], added_at: now, visited_at: now, verdict: "worth_it" },
 ];
 
 function table(url) { return new URL(url).pathname.replace(/^\/rest\/v1\//, ""); }
+// Applies the simple eq./in. filters in a query (user_id=eq.x,
+// followee_id=in.(a,b)) to rows that have that column, so "my thrones" and
+// "my friends' thrones" come back separately. Other filters are ignored.
+function filterRows(url, rows) {
+  if (!Array.isArray(rows)) return rows;
+  let out = rows;
+  for (const [key, value] of new URL(url).searchParams) {
+    const eq = value.match(/^eq\.(.*)$/);
+    const inList = value.match(/^in\.\((.*)\)$/);
+    if (!eq && !inList) continue;
+    const allowed = eq ? [eq[1]] : inList[1].split(",").map((v) => v.replace(/^"|"$/g, ""));
+    out = out.filter((r) => !(key in r) || allowed.includes(String(r[key])));
+  }
+  return out;
+}
 
 (async () => {
   const browser = await chromium.launch(process.env.PW_EXE ? { executablePath: process.env.PW_EXE } : {});
@@ -41,9 +60,9 @@ function table(url) { return new URL(url).pathname.replace(/^\/rest\/v1\//, "");
     const single = (req.headers()["accept"] || "").includes("vnd.pgrst.object");
     if (req.method() !== "GET" && req.method() !== "HEAD") return json(single ? {} : [], 200);
     if (t.startsWith("rpc/")) return json(t.includes("count") ? 0 : []);
-    const data = { profiles: single ? profile : [profile], cuisines, thrones, next_in_line: nil, standings: single ? { id: UID, score: 42, thrones: 1, coups: 0 } : [{ id: UID, score: 42 }] }[t];
+    const data = { profiles: single ? profile : [profile], cuisines, thrones, next_in_line: nil, follows, standings: single ? { id: UID, score: 42, thrones: 1, coups: 0 } : [{ id: UID, score: 42 }] }[t];
     if (single) return json(data ?? {});
-    return json(data ?? []);
+    return json(filterRows(url, data ?? []));
   });
   await ctx.route("https://maps.googleapis.com/**", (r) => r.abort());
 
@@ -63,6 +82,7 @@ function table(url) { return new URL(url).pathname.replace(/^\/rest\/v1\//, "");
   await step("court tab", async () => { await page.click('[data-tour="tab-court"]'); await page.getByText(/Invite a friend/).first().waitFor({ timeout: 5000 }); });
   await step("best in the land tab", async () => { await page.click('[data-tour="tab-top25"]'); await page.getByText(/picked as a favourite|picked by the friends you follow/).first().waitFor({ timeout: 5000 }); });
   await step("notifications", async () => { await page.click('[data-tour="bell"]'); await page.getByText("Notifications").first().waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); });
+  await step("crown notification opens the pick", async () => { await page.click('[data-tour="bell"]'); await page.getByRole("button", { name: /Alex crowned FRIEND SUSHI - view it/ }).click(); await page.getByRole("dialog").getByText("FRIEND SUSHI").waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); await page.getByRole("dialog").first().waitFor({ state: "detached", timeout: 5000 }); });
   await step("profile modal + accessibility", async () => { await page.getByRole("button", { name: /@steve/ }).click(); await page.getByText("Your profile").first().waitFor({ timeout: 5000 }); await page.getByRole("button", { name: /Accessibility/ }).click(); await page.getByRole("switch", { name: "Larger text" }).click(); const t = await page.evaluate(() => document.documentElement.getAttribute("data-text")); if (t !== "large") throw new Error("larger text not applied"); await page.getByRole("switch", { name: "Larger text" }).click(); await page.keyboard.press("Escape"); });
   await step("tour replay", async () => { await page.getByRole("button", { name: /@steve/ }).click(); await page.getByRole("button", { name: /Settings/ }).click(); await page.getByRole("button", { name: "Start" }).click(); await page.locator("[data-tour-box]").waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); });
   await step("admin tab", async () => { await page.getByRole("button", { name: "Admin" }).click(); await page.getByText(/admin|Loading admin overview|Couldn't load/i).first().waitFor({ timeout: 5000 }); });

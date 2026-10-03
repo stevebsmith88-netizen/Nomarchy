@@ -144,6 +144,8 @@ const QUESTIONS = [
         Your Court tab shows how many people you follow and how many follow you, and each friend&apos;s
         profile shows their follower count. Open a friend and, once they have at least two places in a cuisine, you&apos;ll see what they&apos;re
         &ldquo;Known for&rdquo; - worked out automatically from their crowns and the places they&apos;ve been.
+        When someone in your Court crowns or tries somewhere new, you&apos;ll get a notification - tap it to
+        jump straight to that pick in their kingdom.
       </p>
     ),
   },

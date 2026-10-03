@@ -17,3 +17,17 @@
   otherwise - e.g. the FAQ told people to use "the Feedback button at
   the top of the app" after Feedback had already moved into Profile
   settings.
+
+## Parked ideas (agreed with Steve, not yet built)
+
+Pick these up when Steve asks "what's next" - each still needs his
+sign-off on the UI before building.
+
+- FAQ split into fold-down categories (about the app, using it, the
+  royal words, account & privacy), plus new questions: what the app is
+  for, and how it differs from review apps (without naming any).
+- Auto-saved decree drafts, so a half-written decree survives closing
+  the pop-up.
+- Public restaurant pages.
+- Personal invite links.
+- Group Privy Council (deciding where to eat together).

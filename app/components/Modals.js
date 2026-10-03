@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { C, OwnerBadge, RankBadge, body, display, getTitle } from "../theme";
 import { Avatar, AvatarPicker, ClosedBadge, MAX_IMPORT_CHARS, MIN_DECREE_LENGTH, PersonRow, PhotoPicker, PhotoStrip, RowSkeleton, knownFor } from "./shared";
@@ -232,8 +232,15 @@ export function PromotionModal({ rank, nextRank, score, thrones, reviewCount, pr
   );
 }
 
-export function FriendKingdomModal({ friend: f, closedIds, onClose, onEndorse, onAddToList, onBlock, onReport }) {
+export function FriendKingdomModal({ friend: f, closedIds, highlight, onClose, onEndorse, onAddToList, onBlock, onReport }) {
   const specialty = knownFor(f);
+  // Opened from a notification: scroll that crown or review into view and
+  // ring it in gold so it's obvious which one the notification meant.
+  const highlightRef = useRef(null);
+  const isHighlighted = (kind, id) => highlight?.kind === kind && highlight.id === id;
+  useEffect(() => {
+    highlightRef.current?.scrollIntoView({ block: "center" });
+  }, [highlight]);
   const [reporting, setReporting] = useState(false);
   const [reportText, setReportText] = useState("");
   const [reportSent, setReportSent] = useState(false);
@@ -279,7 +286,8 @@ export function FriendKingdomModal({ friend: f, closedIds, onClose, onEndorse, o
         {f.picks.length === 0 && f.reviews.length === 0 && <p className="mt-4 text-sm" style={{ color: C.muted }}>No thrones claimed yet.</p>}
 
         {f.picks.map((p) => (
-          <div key={p.id} className="mt-3 rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.cardEdge}` }}>
+          <div key={p.id} ref={isHighlighted("crown", p.id) ? highlightRef : undefined} className="mt-3 rounded-lg p-3"
+            style={{ background: C.bg, border: isHighlighted("crown", p.id) ? `2px solid ${C.gold}` : `1px solid ${C.cardEdge}` }}>
             <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>{p.cuisine}</div>
             <div className="mt-0.5 flex items-center justify-between gap-2">
               <div><span style={{ ...display, fontWeight: 700 }} className="text-base">{p.name}</span><span className="ml-2 text-xs" style={{ color: C.muted }}>{p.area}</span>{p.googlePlaceId && closedIds?.has(p.googlePlaceId) && <span className="ml-2"><ClosedBadge /></span>}</div>
@@ -301,7 +309,8 @@ export function FriendKingdomModal({ friend: f, closedIds, onClose, onEndorse, o
           <div className="mt-4 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Been to, not crowned</div>
         )}
         {f.reviews.map((r) => (
-          <div key={r.id} className="mt-2 rounded-lg p-3" style={{ background: C.bg, border: `1px dashed ${C.cardEdge}` }}>
+          <div key={r.id} ref={isHighlighted("review", r.id) ? highlightRef : undefined} className="mt-2 rounded-lg p-3"
+            style={{ background: C.bg, border: isHighlighted("review", r.id) ? `2px solid ${C.gold}` : `1px dashed ${C.cardEdge}` }}>
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-1.5" style={{ ...display, fontWeight: 700 }}>
                 <span className="text-sm">{r.name}</span>

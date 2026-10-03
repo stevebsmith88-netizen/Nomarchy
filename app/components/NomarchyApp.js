@@ -64,6 +64,9 @@ export default function NomarchyApp({ user }) {
   const [importing, setImporting] = useState(false);
   const [historyOpen, setHistoryOpen] = useState({});
   const [courtModalFriendId, setCourtModalFriendId] = useState(null);
+  // Which crown or review to point at when the friend's kingdom is opened
+  // from a notification - { kind: "crown" | "review", id }.
+  const [courtModalHighlight, setCourtModalHighlight] = useState(null);
   const [newCuisine, setNewCuisine] = useState("");
   const [addingCuisine, setAddingCuisine] = useState(false);
   const [newCuisineEmoji, setNewCuisineEmoji] = useState("");
@@ -955,8 +958,28 @@ export default function NomarchyApp({ user }) {
                       <div className={n.isNew ? "min-w-0 flex-1" : "min-w-0 flex-1 pl-3.5"}>
                         <div>
                           {n.type === "follow" && <><span style={{ fontWeight: 700 }}>{n.name}</span> started following you</>}
-                          {n.type === "crown" && <><span style={{ fontWeight: 700 }}>{n.name}</span> crowned <span style={{ color: C.goldText }}>{n.place}</span> for {n.cuisine}</>}
-                          {n.type === "review" && <><span style={{ fontWeight: 700 }}>{n.name}</span> tried <span style={{ color: C.goldText }}>{n.place}</span>{n.cuisine ? ` for ${n.cuisine}` : ""}</>}
+                          {(n.type === "crown" || n.type === "review") && (() => {
+                            const text = n.type === "crown"
+                              ? <><span style={{ fontWeight: 700 }}>{n.name}</span> crowned <span style={{ color: C.goldText }}>{n.place}</span> for {n.cuisine}</>
+                              : <><span style={{ fontWeight: 700 }}>{n.name}</span> tried <span style={{ color: C.goldText }}>{n.place}</span>{n.cuisine ? ` for ${n.cuisine}` : ""}</>;
+                            // Tappable only while they're still in your Court -
+                            // that's where their kingdom (and this pick) lives.
+                            if (!court.some((f) => f.id === n.userId)) return text;
+                            return (
+                              <button
+                                type="button"
+                                className="text-left"
+                                aria-label={`${n.name} ${n.type === "crown" ? "crowned" : "tried"} ${n.place} - view it`}
+                                onClick={() => {
+                                  setShowNotifications(false);
+                                  setCourtModalHighlight({ kind: n.type, id: n.itemId });
+                                  setCourtModalFriendId(n.userId);
+                                }}
+                              >
+                                {text} <span className="font-bold" style={{ color: C.goldText }}>· View</span>
+                              </button>
+                            );
+                          })()}
                           {n.type === "endorse" && <><span style={{ fontWeight: 700 }}>{n.name}</span> endorsed your <span style={{ color: C.goldText }}>{n.place}</span> pick</>}
                           {n.type === "promotion" && <><span style={{ fontWeight: 700 }}>{n.name}</span> was promoted to <span style={{ color: C.goldText, fontWeight: 700 }}>{n.rank}</span></>}
                           {n.type === "closed" && n.kind === "crown" && <><span style={{ color: C.goldText }}>{n.place}</span> has permanently closed. Time to pick a new favourite?</>}
@@ -1774,10 +1797,11 @@ export default function NomarchyApp({ user }) {
           <FriendKingdomModal
             friend={f}
             closedIds={closedIds}
-            onClose={() => setCourtModalFriendId(null)}
+            highlight={courtModalHighlight}
+            onClose={() => { setCourtModalFriendId(null); setCourtModalHighlight(null); }}
             onEndorse={handleEndorse}
             onAddToList={addFriendPickToPretenders}
-            onBlock={() => { handleBlockFriend(f.id); setCourtModalFriendId(null); }}
+            onBlock={() => { handleBlockFriend(f.id); setCourtModalFriendId(null); setCourtModalHighlight(null); }}
             onReport={(reason) => handleReportFriend(f, reason)}
           />
         );
