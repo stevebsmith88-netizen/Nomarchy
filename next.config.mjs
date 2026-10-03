@@ -20,9 +20,11 @@ const securityHeaders = [
       // Next.js needs inline/eval script allowances in its own runtime.
       // Google Maps: its loader script and the code it pulls in.
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.googleapis.com https://*.gstatic.com *.google.com https://*.ggpht.com *.googleusercontent.com",
-      "style-src 'self' 'unsafe-inline'",
-      // Fonts are bundled with the site (next/font), so none come from elsewhere.
-      "font-src 'self'",
+      // Nomarchy's own fonts are bundled with the site (next/font). Google
+      // Fonts is still allowed because Google Maps loads its own Roboto text
+      // (map labels, info windows) from there.
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
       // Supabase (API + auth) and Google (maps, place search) are the only external calls this app makes.
       "connect-src 'self' data: blob: https://*.supabase.co https://*.googleapis.com *.google.com https://*.gstatic.com",
