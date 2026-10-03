@@ -1849,9 +1849,58 @@ alter table rank_promotions drop constraint if exists rank_promotions_title_leng
 alter table rank_promotions add constraint rank_promotions_title_length check (char_length(rank_title) <= 80) not valid;
 
 -- ------------------------------------------------------------
+-- REPORTING AND REMOVING DECREES
+-- Members can report a decree on a restaurant page (it arrives in the
+-- owner's Feedback list). When the owner removes one, the decree becomes a
+-- standard notice, its photos are cleared, and the original is kept here
+-- (owner and the author can read it; nobody else) so it can be restored if
+-- the removal was a mistake, and the author is told. Only the server, acting
+-- for the owner, writes to it.
+-- ------------------------------------------------------------
+create table if not exists content_removals (
+  id              uuid primary key default gen_random_uuid(),
+  throne_id       uuid references thrones(id) on delete set null,
+  user_id         uuid not null references profiles(id) on delete cascade,
+  place_name      text not null,
+  original_decree text,
+  original_photos text[] not null default '{}',
+  removed_at      timestamptz not null default now()
+);
+
+create index if not exists content_removals_user_idx on content_removals (user_id, removed_at desc);
+
+alter table content_removals enable row level security;
+
+drop policy if exists "author and owner read removals" on content_removals;
+create policy "author and owner read removals" on content_removals for select
+  using (
+    (select auth.uid()) = user_id
+    or exists (select 1 from profiles p where p.id = (select auth.uid()) and p.is_owner)
+  );
+
+-- Reports are feedback messages, so cap how many one person can send an
+-- hour (a policy can't safely count its own table - see
+-- next_in_line_recent_count - hence the function).
+create or replace function feedback_recent_count(uid uuid)
+returns bigint
+language sql
+stable
+security definer set search_path = public
+as $$
+  select count(*) from feedback where user_id = uid and uid = (select auth.uid()) and created_at > now() - interval '1 hour';
+$$;
+
+revoke all on function feedback_recent_count(uuid) from public;
+grant execute on function feedback_recent_count(uuid) to authenticated;
+
+drop policy if exists "feedback insert rate limit" on feedback;
+create policy "feedback insert rate limit" on feedback as restrictive for insert
+  with check (feedback_recent_count((select auth.uid())) < 20);
+
+-- ------------------------------------------------------------
 -- VERSION STAMP
 -- Records that this exact version of the file ran all the way through, so
 -- database-check.sql can tell whether the live database is up to date.
 -- Written by `npm run db:check` (scripts/build-db-check.mjs) - don't edit.
 -- ------------------------------------------------------------
-insert into schema_migrations (name) values ('schema-version:4f6a328bac1b') on conflict (name) do nothing;
+insert into schema_migrations (name) values ('schema-version:790bb0367d63') on conflict (name) do nothing;

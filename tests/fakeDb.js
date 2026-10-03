@@ -23,6 +23,12 @@ export function fakeDb(tables) {
         order(c, { nullsFirst } = {}) { q.order = { c, nullsFirst }; return api; },
         limit(n) { q.limit = n; return api; },
         single() { q.single = true; return api; },
+        insert(v) {
+          const rows = Array.isArray(v) ? v : [v];
+          (db.tables[name] ||= []).push(...rows.map((r) => ({ ...r })));
+          log.push(["insert", name, rows]);
+          return Promise.resolve({ error: null });
+        },
         update(v) { q.op = "update"; q.vals = v; return api; },
         delete() { q.op = "delete"; return api; },
         upsert(row) {

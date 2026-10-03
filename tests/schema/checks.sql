@@ -289,3 +289,36 @@ begin
   select username, display_name into u, d from profiles where id = '00000000-0000-0000-0000-0000000000e1';
   if u !~ '^member-[0-9a-f]{8}$' or d is not null then raise exception 'new profile still built from the email: %, %', u, d; end if;
 end $$;
+
+-- Reporting decrees: removals are visible only to the author and the owner,
+-- nobody can write them directly, and report spam is capped.
+insert into thrones (user_id, cuisine_id, place_name, decree)
+values ('00000000-0000-0000-0000-0000000000e1', (select id from cuisines where name = 'Pizza' and is_default), 'Report Me Pizza', 'a decree that is long enough to pass');
+insert into content_removals (throne_id, user_id, place_name, original_decree)
+select id, user_id, place_name, decree from thrones where place_name = 'Report Me Pizza';
+set role authenticated;
+select set_config('app.uid', '00000000-0000-0000-0000-0000000000e1', false);
+do $$
+declare n int;
+begin
+  if (select count(*) from content_removals) <> 1 then raise exception 'the author could not see their own removal'; end if;
+  begin
+    insert into content_removals (user_id, place_name) values ('00000000-0000-0000-0000-0000000000e1', 'Faked');
+    raise exception 'a member could write a removal directly';
+  exception when insufficient_privilege then null;
+  end;
+  for n in 1..20 loop
+    insert into feedback (user_id, message) values ('00000000-0000-0000-0000-0000000000e1', 'report ' || n);
+  end loop;
+  begin
+    insert into feedback (user_id, message) values ('00000000-0000-0000-0000-0000000000e1', 'one too many');
+    raise exception 'report spam was not capped';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+select set_config('app.uid', '00000000-0000-0000-0000-0000000000b2', false);
+do $$
+begin
+  if (select count(*) from content_removals) <> 0 then raise exception 'someone else could see another member''s removal'; end if;
+end $$;
+reset role;

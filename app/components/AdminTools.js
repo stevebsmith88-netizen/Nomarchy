@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { C, body } from "../theme";
-import { adminCheckClosures, adminClosedPlace, adminPlaceMatch, loadClosedPlaceRows, supabase } from "@/lib/data";
+import { adminCheckClosures, adminClosedPlace, adminPlaceMatch, adminRemoveDecree, loadClosedPlaceRows, supabase } from "@/lib/data";
 import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
 import { Check, Loader2, Pencil, Search } from "lucide-react";
 
@@ -181,6 +181,38 @@ export function ReviewCard({ group: g, saving, hasCoords, entryCount, onChoose, 
 // One-time Google ID backfill. Scanning searches Google but saves nothing;
 // the owner then approves the automatic matches and picks the right result
 // for the doubtful ones. See /api/admin/backfill-places.
+// Under a reported decree in the Feedback list: removes it after a second
+// tap to confirm. The decree becomes a standard notice, the photos are
+// cleared, the crown stays, and the author is told.
+export function RemoveDecreeButton({ throneId, slug }) {
+  const [step, setStep] = useState("idle");
+  const [err, setErr] = useState("");
+  const remove = async () => {
+    setStep("working"); setErr("");
+    try {
+      await adminRemoveDecree(throneId);
+      setStep("done");
+    } catch (e) {
+      setErr(e.message || "Couldn't remove it.");
+      setStep("confirm");
+    }
+  };
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs">
+      {slug && <a href={`/r/${slug}`} target="_blank" rel="noopener" className="font-semibold underline" style={{ color: C.goldText }}>Open the page</a>}
+      {step === "idle" && <button onClick={() => setStep("confirm")} className="font-bold underline" style={{ color: C.coup }}>Remove this decree</button>}
+      {step === "confirm" && (<>
+        <span style={{ color: C.muted }}>Replace it with a removal notice and tell the author?</span>
+        <button onClick={remove} className="rounded-lg px-3 py-1 font-bold" style={{ background: C.coup, color: C.onCoup }}>Yes, remove it</button>
+        <button onClick={() => setStep("idle")} className="underline" style={{ color: C.muted }}>Cancel</button>
+      </>)}
+      {step === "working" && <span style={{ color: C.muted }}><Loader2 size={12} className="inline animate-spin" /> Removing...</span>}
+      {step === "done" && <span style={{ color: C.green }}>Removed. The author has been notified.</span>}
+      {err && <span style={{ color: C.coup }}>{err}</span>}
+    </div>
+  );
+}
+
 // Second step after matching: places that already have a Google ID but still
 // have blank details (cuisine, address, neighbourhood, city, map link). Looks
 // each one up by its ID, shows what it would fill, and saves nothing until

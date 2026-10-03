@@ -4,19 +4,9 @@
 // card (their name + the Nomarchy logo) on iMessage/Instagram/Slack instead of generic
 // site-wide branding - generateMetadata only runs in a server component,
 // so the interactive page had to be split out to make room for it.
-import { createClient } from "@supabase/supabase-js";
 import PublicProfileClient from "./PublicProfileClient";
 import { profilePreview } from "@/lib/profilePreview";
-
-async function fetchProfileForMeta(username) {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  const { data } = await supabase
-    .from("profiles")
-    .select("username, display_name, is_public")
-    .eq("username", username)
-    .single();
-  return data;
-}
+import { fetchProfileForMeta } from "@/lib/publicFetch";
 
 export async function generateMetadata({ params, searchParams }) {
   const { username } = await params;

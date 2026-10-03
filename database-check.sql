@@ -9,7 +9,7 @@
 -- ============================================================
 with checks(item, ok) as (
   values
-    ('Latest version of schema.sql has been run (4f6a328bac1b)', exists (select 1 from schema_migrations where name = 'schema-version:4f6a328bac1b')),
+    ('Latest version of schema.sql has been run (790bb0367d63)', exists (select 1 from schema_migrations where name = 'schema-version:790bb0367d63')),
     ('Table: schema_migrations', to_regclass('public.schema_migrations') is not null),
     ('Table: profiles', to_regclass('public.profiles') is not null),
     ('Table: cuisines', to_regclass('public.cuisines') is not null),
@@ -33,6 +33,7 @@ with checks(item, ok) as (
     ('Table: closed_places', to_regclass('public.closed_places') is not null),
     ('Table: place_pages', to_regclass('public.place_pages') is not null),
     ('Table: app_errors', to_regclass('public.app_errors') is not null),
+    ('Table: content_removals', to_regclass('public.content_removals') is not null),
     ('View: standings', to_regclass('public.standings') is not null),
     ('Column: profiles.is_owner', exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'is_owner')),
     ('Column: profiles.is_public', exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'is_public')),
@@ -88,6 +89,7 @@ with checks(item, ok) as (
     ('Function: my_profile', exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'my_profile')),
     ('Function: admin_profiles', exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'admin_profiles')),
     ('Function: check_username', exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'check_username')),
+    ('Function: feedback_recent_count', exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'feedback_recent_count')),
     ('Trigger: on_auth_user_created', exists (select 1 from pg_trigger where tgname = 'on_auth_user_created' and not tgisinternal)),
     ('Trigger: protect_is_owner_trigger', exists (select 1 from pg_trigger where tgname = 'protect_is_owner_trigger' and not tgisinternal)),
     ('Trigger: on_throne_replaced', exists (select 1 from pg_trigger where tgname = 'on_throne_replaced' and not tgisinternal)),
@@ -116,6 +118,7 @@ with checks(item, ok) as (
     ('Index: cuisines_created_by_idx', to_regclass('public.cuisines_created_by_idx') is not null),
     ('Index: thrones_crowned_at_idx', to_regclass('public.thrones_crowned_at_idx') is not null),
     ('Index: app_errors_last_seen_idx', to_regclass('public.app_errors_last_seen_idx') is not null),
+    ('Index: content_removals_user_idx', to_regclass('public.content_removals_user_idx') is not null),
     ('Access rule: "lookup cache readable" on place_lookup_cache', exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'place_lookup_cache' and policyname = 'lookup cache readable')),
     ('Access rule: "restaurants readable" on restaurants', exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'restaurants' and policyname = 'restaurants readable')),
     ('Access rule: "feedback insert own" on feedback', exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'feedback' and policyname = 'feedback insert own')),
@@ -162,6 +165,8 @@ with checks(item, ok) as (
     ('Access rule: "place pages readable" on place_pages', exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'place_pages' and policyname = 'place pages readable')),
     ('Access rule: "owner reads errors" on app_errors', exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'app_errors' and policyname = 'owner reads errors')),
     ('Access rule: "owner clears errors" on app_errors', exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'app_errors' and policyname = 'owner clears errors')),
+    ('Access rule: "author and owner read removals" on content_removals', exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'content_removals' and policyname = 'author and owner read removals')),
+    ('Access rule: "feedback insert rate limit" on feedback', exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'feedback' and policyname = 'feedback insert rate limit')),
     ('Old access rule removed: "signed-in users populate the cache" on place_lookup_cache', not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'place_lookup_cache' and policyname = 'signed-in users populate the cache')),
     ('Old access rule removed: "signed-in users refresh the cache" on place_lookup_cache', not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'place_lookup_cache' and policyname = 'signed-in users refresh the cache')),
     ('Old access rule removed: "own fallen writable" on fallen', not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'fallen' and policyname = 'own fallen writable')),

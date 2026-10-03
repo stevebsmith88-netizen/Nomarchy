@@ -4,22 +4,12 @@
 // crowns from Public kingdoms only (place_page in schema.sql).
 import { cache } from "react";
 import { notFound } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
 import RestaurantPageClient from "./RestaurantPageClient";
 import { restaurantPreview } from "@/lib/restaurantPage";
+import { fetchPlacePageData } from "@/lib/publicFetch";
 
 // cache(): generateMetadata and the page share one lookup per request.
-const fetchPlacePage = cache(async (slug) => {
-  try {
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
-      auth: { persistSession: false },
-    });
-    const { data, error } = await supabase.rpc("place_page", { p_slug: slug });
-    return error ? null : data;
-  } catch {
-    return null;
-  }
-});
+const fetchPlacePage = cache(fetchPlacePageData);
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;

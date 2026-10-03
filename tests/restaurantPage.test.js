@@ -35,7 +35,8 @@ describe("restaurant pages", () => {
     expect(m.title).toBe("Pizzeria Libretto (Ossington, Toronto)");
     expect(m.description).toContain("Crowned 3 times");
     expect(m.robots.index).toBe(true);
-    expect(m.openGraph.images[0].url).toBe("/icon-512.png");
+    expect(m.openGraph.images).toBeUndefined(); // the generated opengraph-image supplies it
+    expect(m.twitter.card).toBe("summary_large_image");
     expect(restaurantPreview({ ...page, crown_count: 0 }).robots.index).toBe(false);
     expect(restaurantPreview({ ...page, closed: true }).description).toContain("permanently closed");
   });

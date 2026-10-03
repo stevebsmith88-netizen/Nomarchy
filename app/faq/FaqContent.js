@@ -328,6 +328,18 @@ const SECTIONS = [
         ),
       },
       {
+        q: "How do I report something that doesn't belong?",
+        a: (
+          <p>
+            On a restaurant page, tap <strong>Report</strong> under any decree and say what&apos;s wrong (you need
+            to be signed in). We review every report. A decree that breaks the community guidelines is replaced
+            with a removal notice and its photos are cleared; the person&apos;s crown stays, and they&apos;re
+            told. If you see something on your own kingdom or in your Court, you can also use{" "}
+            <strong>Report</strong> on that person from their profile.
+          </p>
+        ),
+      },
+      {
         q: "Found a bug, or have an idea?",
         a: (
           <p>

@@ -27,15 +27,13 @@ export const metadata = {
     description,
     url: "https://nomarchy.ca",
     siteName: "Nomarchy",
-    images: [{ url: "/icon-512.png", width: 512, height: 512 }],
     locale: "en_CA",
     type: "website",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Nomarchy",
     description,
-    images: ["/icon-512.png"],
   },
 };
 

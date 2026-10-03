@@ -12,6 +12,7 @@ import { addCuisine, addToNextInLine, blockUser, clearAppErrors, deleteAccount, 
 import { claimSignupSource } from "@/lib/signupSource";
 import { claimInvite, inviteUrl } from "@/lib/invite";
 import { restaurantUrl } from "@/lib/restaurantPage";
+import { parseDecreeReport } from "@/lib/decreeReports";
 import { rememberTourLocally, shouldAutoStartTour, tourSeenLocally } from "@/lib/tour";
 import { Bell, Bookmark, Check, ChevronDown, ClipboardPaste, Crown, Loader2, LogOut, Moon, Navigation, Pencil, Plus, Search, Share2, ShieldCheck, Sun, TrendingUp, UserPlus, Users, X } from "lucide-react";
 
@@ -29,6 +30,7 @@ const PromotionModal = dynamic(() => import("./Modals").then((m) => m.PromotionM
 const ProfileModal = dynamic(() => import("./ProfileModal").then((m) => m.ProfileModal));
 const FixThroneTool = dynamic(() => import("./AdminTools").then((m) => m.FixThroneTool));
 const PlaceMatchTool = dynamic(() => import("./AdminTools").then((m) => m.PlaceMatchTool));
+const RemoveDecreeButton = dynamic(() => import("./AdminTools").then((m) => m.RemoveDecreeButton));
 const PlaceDetailsTool = dynamic(() => import("./AdminTools").then((m) => m.PlaceDetailsTool));
 const ClosureCheckTool = dynamic(() => import("./AdminTools").then((m) => m.ClosureCheckTool));
 
@@ -1044,6 +1046,7 @@ export default function NomarchyApp({ user }) {
                             );
                           })()}
                           {n.type === "endorse" && <><span style={{ fontWeight: 700 }}>{n.name}</span> endorsed your <span style={{ color: C.goldText }}>{n.place}</span> pick</>}
+                          {n.type === "removed" && <>Your decree for <span style={{ color: C.goldText }}>{n.place}</span> was removed for breaking the community guidelines. Your crown is unchanged - you can write a new decree any time.</>}
                           {n.type === "promotion" && <><span style={{ fontWeight: 700 }}>{n.name}</span> was promoted to <span style={{ color: C.goldText, fontWeight: 700 }}>{n.rank}</span></>}
                           {n.type === "closed" && n.kind === "crown" && <><span style={{ color: C.goldText }}>{n.place}</span> has permanently closed. Time to pick a new favourite?</>}
                           {n.type === "closed" && n.kind === "list" && (<>
@@ -1660,6 +1663,7 @@ export default function NomarchyApp({ user }) {
                       <span className="shrink-0">{fmt(f.createdAt)}</span>
                     </div>
                     <p className="mt-1 text-sm">{f.message}</p>
+                    {parseDecreeReport(f.message) && <RemoveDecreeButton throneId={parseDecreeReport(f.message).throneId} slug={parseDecreeReport(f.message).slug} />}
                   </div>
                 ))}
               </div>

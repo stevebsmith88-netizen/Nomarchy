@@ -2,10 +2,12 @@ import { describe, it, expect } from "vitest";
 import { profilePreview } from "@/lib/profilePreview";
 
 describe("profile link previews", () => {
-  it("shows the name and the Nomarchy logo, never a profile photo", () => {
+  it("shows the name, never a profile photo", () => {
     const m = profilePreview({ username: "steve", display_name: "Steve", is_public: true, avatar_url: "https://x/photo.jpg" });
     expect(m.title).toBe("Steve's Kingdom");
-    expect(m.openGraph.images).toEqual([{ url: "/icon-512.png", width: 512, height: 512 }]);
+    // The picture itself comes from the generated opengraph-image (name only).
+    expect(m.openGraph.images).toBeUndefined();
+    expect(m.twitter.card).toBe("summary_large_image");
     expect(JSON.stringify(m)).not.toContain("photo.jpg");
   });
 

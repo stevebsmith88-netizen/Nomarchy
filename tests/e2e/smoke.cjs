@@ -129,6 +129,13 @@ function filterRows(url, rows) {
     if (stored !== "steve") throw new Error("invite not remembered: " + stored);
     await guest.close();
   });
+  await step("unknown address shows the branded not-found page", async () => {
+    const r = await ctx.newPage();
+    await r.goto(BASE + "/r/does/not/exist");
+    await r.getByText("This page has left the kingdom").waitFor({ timeout: 10000 });
+    await r.getByRole("link", { name: "Back to Nomarchy" }).waitFor({ timeout: 2000 });
+    await r.close();
+  });
   await step("profile modal + accessibility", async () => { await page.getByRole("button", { name: /@steve/ }).click(); await page.getByText("Your profile").first().waitFor({ timeout: 5000 }); await page.getByRole("button", { name: /Accessibility/ }).click(); await page.getByRole("switch", { name: "Larger text" }).click(); const t = await page.evaluate(() => document.documentElement.getAttribute("data-text")); if (t !== "large") throw new Error("larger text not applied"); await page.getByRole("switch", { name: "Larger text" }).click(); await page.keyboard.press("Escape"); });
   await step("profile saves", async () => { await page.getByRole("button", { name: /@steve/ }).click(); await page.getByText("Your profile").first().waitFor({ timeout: 5000 }); await page.getByRole("button", { name: /Settings/ }).click(); await page.getByRole("button", { name: "Save", exact: true }).click(); await page.getByText("Your profile").first().waitFor({ state: "detached", timeout: 5000 }); });
   await step("tour replay", async () => { await page.getByRole("button", { name: /@steve/ }).click(); await page.getByRole("button", { name: /Settings/ }).click(); await page.getByRole("button", { name: "Start" }).click(); await page.locator("[data-tour-box]").waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); });

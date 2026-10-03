@@ -6,13 +6,66 @@ import { Bookmark, Check, Crown, ExternalLink, Loader2, MapPin, Moon, Sun, Troph
 import { C, display, FontShell, LogoMark, OwnerBadge, RankBadge, useTheme } from "../../theme";
 import { getCuisineEmoji } from "../../cuisineIcons";
 import { PhotoStrip } from "../../components/shared";
-import { addToNextInLine, getUser, savedPlaceStatus } from "@/lib/data";
+import { addToNextInLine, getUser, savedPlaceStatus, submitFeedback } from "@/lib/data";
+import { formatDecreeReport } from "@/lib/decreeReports";
 import { bestRankLabel, crownedCuisines, googleMapsUrl, kingdomPath } from "@/lib/restaurantPage";
 
 const fmt = (t) => new Date(t).toLocaleDateString("en-CA", { month: "short", year: "numeric" });
 
 // Same wording the app uses when a place is already saved.
 const ALREADY = { crowned: "Already crowned in your Kingdom", visited: "Already visited", listed: "Already Next in Line" };
+
+// "Report" under a decree. Signed-in members only: the report goes to the
+// owner's Feedback list in Admin, with a link back to this decree.
+function ReportDecree({ crown, slug, viewer }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [err, setErr] = useState("");
+
+  if (viewer === undefined) return null;
+  const linkStyle = { color: C.muted };
+  if (!viewer) {
+    return <Link href="/#sign-in" className="mt-2 inline-block text-xs underline" style={linkStyle}>Sign in to report</Link>;
+  }
+  if (sent) return <p className="mt-2 text-xs" style={{ color: C.green }}>Thanks, we&apos;ll take a look.</p>;
+  if (!open) {
+    return <button type="button" onClick={() => setOpen(true)} className="mt-2 block text-xs underline" style={linkStyle}>Report</button>;
+  }
+  const send = async () => {
+    if (busy) return;
+    setBusy(true); setErr("");
+    try {
+      await submitFeedback(viewer.id, formatDecreeReport({ slug, username: crown.username, throneId: crown.id, reason }), `r/${slug}`);
+      setSent(true);
+    } catch {
+      setErr("Couldn't send that - try again in a moment.");
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="mt-2">
+      <textarea
+        aria-label="What's wrong with this decree? (optional)"
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        maxLength={1000}
+        rows={2}
+        placeholder="What's wrong with this decree? (optional)"
+        className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+        style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }}
+      />
+      {err && <p className="mt-1 text-xs" style={{ color: C.coup }}>{err}</p>}
+      <div className="mt-1.5 flex items-center gap-3">
+        <button type="button" onClick={send} disabled={busy} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.onGold }}>
+          {busy && <Loader2 size={12} className="animate-spin" />} Send report
+        </button>
+        <button type="button" onClick={() => setOpen(false)} className="text-xs underline" style={linkStyle}>Cancel</button>
+      </div>
+    </div>
+  );
+}
 
 // The visible half of a restaurant page - see page.js for how the data is
 // fetched and who it includes. Members' names and rank badges only, no
@@ -157,6 +210,7 @@ export default function RestaurantPageClient({ page }) {
                   <Crown size={11} /> {c.endorsements} {c.endorsements === 1 ? "endorsement" : "endorsements"}
                 </p>
               )}
+              <ReportDecree crown={c} slug={page.slug} viewer={viewer} />
             </article>
           );
         })}
