@@ -7,6 +7,7 @@ import { Avatar, AvatarPicker, ClosedBadge, MAX_IMPORT_CHARS, MIN_DECREE_LENGTH,
 import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
 import { loadDirectory, loadRestaurantProfile, loadRestaurantVisitCount, loadRestaurantWantingCount, loadSuggestedFriends, supabase } from "@/lib/data";
 import { safeMapsUrl } from "@/lib/safeUrl";
+import { clearDraft, loadDraft, saveDraft } from "@/lib/decreeDrafts";
 import { Bookmark, Check, Crown, ExternalLink, Loader2, MessageSquare, Search, Share2, Star, Swords, Wand2, X } from "lucide-react";
 
 // A restaurant's own page - every public crown on it app-wide, opened by
@@ -498,22 +499,40 @@ export function FeedbackModal({ onClose, onSubmit, initialMessage = "" }) {
 
 export function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, reigning, defaultCity, userId, closedIds, onClose, onSubmit }) {
   const isCoup = mode === "coup"; const isPretender = mode === "pretender";
-  const [cz, setCz] = useState(cuisineId);
+  // A crown or coup in progress is kept on this device as it's typed (see
+  // lib/decreeDrafts.js), so closing the pop-up by accident doesn't lose a
+  // half-written decree. One draft per cuisine slot, and per place when
+  // crowning something from Next in Line.
+  const draftKey = isPretender ? null : `${mode}:${cuisineId}:${prefill?.name || ""}`;
+  const [draft] = useState(() => (draftKey ? loadDraft(userId, draftKey) : null));
+  const [showRestored, setShowRestored] = useState(!!draft);
+  const [cz, setCz] = useState(draft?.cz && cuisines.some((c) => c.id === draft.cz) ? draft.cz : cuisineId);
   const [czTouched, setCzTouched] = useState(false);
   const [czSuggested, setCzSuggested] = useState("");
-  const [query, setQuery] = useState(prefill?.name || "");
-  const [city, setCity] = useState(defaultCity || "Toronto");
+  const [query, setQuery] = useState(draft?.query ?? (prefill?.name || ""));
+  const [city, setCity] = useState(draft?.city ?? (defaultCity || "Toronto"));
   const [results, setResults] = useState([]);
   const [fuzzy, setFuzzy] = useState(false);
   const [fromGoogle, setFromGoogle] = useState(false);
   const [searching, setSearching] = useState(false);
   const [err, setErr] = useState("");
-  const [sel, setSel] = useState(prefill?.mapsUrl ? prefill : null);
-  const [name, setName] = useState(prefill?.name || "");
-  const [area, setArea] = useState(prefill?.area || "");
-  const [text, setText] = useState("");
-  const [photos, setPhotos] = useState(prefill?.photos || []);
+  const [sel, setSel] = useState(draft ? draft.sel ?? null : prefill?.mapsUrl ? prefill : null);
+  const [name, setName] = useState(draft?.name ?? (prefill?.name || ""));
+  const [area, setArea] = useState(draft?.area ?? (prefill?.area || ""));
+  const [text, setText] = useState(draft?.text ?? "");
+  const [photos, setPhotos] = useState(draft?.photos ?? (prefill?.photos || []));
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (draftKey) saveDraft(userId, draftKey, { text, name, area, city, query, sel, photos, cz });
+  }, [draftKey, userId, text, name, area, city, query, sel, photos, cz]);
+
+  const startOver = () => {
+    clearDraft(userId, draftKey);
+    setText(""); setName(prefill?.name || ""); setArea(prefill?.area || ""); setQuery(prefill?.name || "");
+    setCity(defaultCity || "Toronto"); setSel(prefill?.mapsUrl ? prefill : null); setPhotos(prefill?.photos || []);
+    setCz(cuisineId); setResults([]); setShowRestored(false);
+  };
   const minLen = isPretender ? 0 : MIN_DECREE_LENGTH;
   const valid = name.trim().length > 1 && text.trim().length >= minLen && !!cz;
   const czName = cuisines.find((c) => c.id === cz)?.name || cuisineName;
@@ -523,6 +542,7 @@ export function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, re
     setSubmitting(true); setErr("");
     try {
       await onSubmit(cz, { name: name.trim().toUpperCase(), area: area.trim(), ...(isPretender ? { note: text.trim() } : { decree: text.trim(), photos }), address: sel?.address || "", rating: sel?.rating || "", mapsUrl: sel?.mapsUrl || "", googlePlaceId: sel?.googlePlaceId || null, lat: sel?.lat ?? null, lng: sel?.lng ?? null, city: city.trim() || defaultCity || null });
+      if (draftKey) clearDraft(userId, draftKey);
     } catch (e) {
       setErr(e.message || "That didn't save - try again.");
     }
@@ -633,6 +653,12 @@ export function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, re
 
         <input aria-label="Restaurant name" value={name} onChange={(e) => { setName(e.target.value); if (sel && e.target.value !== sel.name) setSel(null); }} placeholder="Restaurant name" className="mt-3 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
         <input aria-label="Neighbourhood (optional)" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Neighbourhood (optional)" className="mt-2 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+        {showRestored && (
+          <div className="mt-2 flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs" style={{ background: C.gold + "1A", border: `1px solid ${C.gold}66`, color: C.cream }}>
+            <span>Picked up where you left off - your unsaved decree is back.</span>
+            <button type="button" onClick={startOver} className="shrink-0 font-bold underline" style={{ color: C.goldText }}>Start over</button>
+          </div>
+        )}
         <textarea aria-label={isPretender ? "Why you want to go" : "Your decree (why it's your favourite)"} value={text} onChange={(e) => setText(e.target.value)} rows={isPretender ? 2 : 4}
           placeholder={isPretender ? "Why do you want to go? (optional)" : isCoup ? "The decree: why does this dethrone the reigning spot?" : "The decree: what makes this your one true spot?"}
           className="mt-2 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />

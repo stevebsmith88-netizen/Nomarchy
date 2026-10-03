@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { C, display } from "../theme";
 import { ClosedBadge, CuisineEmojiGrid, PhotoPicker } from "./shared";
 import { safeMapsUrl } from "@/lib/safeUrl";
+import { clearDraft, loadDraft, saveDraft } from "@/lib/decreeDrafts";
 import { Check, ChevronDown, Crown, ExternalLink, Loader2, MapPin, Pencil, RotateCcw, ScrollText, Share2, Swords, Trash2, X } from "lucide-react";
 
 export function PretenderCard({ p, closed, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onChangePhotos, onToggleVisited, onChangeVerdict, onCrown, onShare, userId, friendMatches }) {
@@ -143,9 +144,27 @@ export function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji,
   const [areaText, setAreaText] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState("");
+  // Unsaved edits to the decree are kept on this device (lib/decreeDrafts.js)
+  // and come back next time Edit is opened, until saved or cancelled.
+  const draftKey = r ? `edit:${r.id}` : null;
+  const [restored, setRestored] = useState(false);
+
+  useEffect(() => {
+    if (!editing || !draftKey) return;
+    if (decreeText !== r.decree) saveDraft(userId, draftKey, { text: decreeText });
+    else clearDraft(userId, draftKey);
+  }, [editing, draftKey, decreeText, r?.decree, userId]);
+
+  const stopEdit = () => {
+    clearDraft(userId, draftKey);
+    setRestored(false);
+    setEditing(false);
+  };
 
   const startEdit = () => {
-    setDecreeText(r.decree);
+    const draft = loadDraft(userId, draftKey);
+    setDecreeText(draft?.text ?? r.decree);
+    setRestored(!!draft);
     setTargetCuisineId(cuisineId || "");
     setAddressText(r.address || "");
     setAreaText(r.area || "");
@@ -162,7 +181,7 @@ export function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji,
       if (onEditLocation && (addressText.trim() !== (r.address || "") || areaText.trim() !== (r.area || ""))) {
         await onEditLocation({ address: addressText.trim(), neighbourhood: areaText.trim() });
       }
-      setEditing(false);
+      stopEdit();
     } catch (e) {
       setSaveErr(e.message || "Couldn't save that.");
     }
@@ -210,6 +229,12 @@ export function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji,
         </div>
         {editing ? (
           <div className="mt-2">
+            {restored && (
+              <div className="mb-2 flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs" style={{ background: C.gold + "1A", border: `1px solid ${C.gold}66`, color: C.cream }}>
+                <span>Your unsaved changes are back.</span>
+                <button type="button" onClick={() => { setDecreeText(r.decree); setRestored(false); }} className="shrink-0 font-bold underline" style={{ color: C.goldText }}>Undo</button>
+              </div>
+            )}
             <textarea aria-label="Your decree (why it's your favourite)"
               autoFocus
               value={decreeText}
@@ -242,7 +267,7 @@ export function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji,
             )}
             {saveErr && <p className="mt-1 text-xs" style={{ color: C.coup }}>{saveErr}</p>}
             <div className="mt-2 flex items-center gap-2">
-              <button onClick={() => setEditing(false)} className="rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>Cancel</button>
+              <button onClick={stopEdit} className="rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>Cancel</button>
               <button disabled={decreeText.trim().length < 30 || saving} onClick={confirmEdit} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={decreeText.trim().length >= 30 ? { background: C.gold, color: C.onGold } : { background: C.cardEdge, color: C.muted }}>
                 {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Save
               </button>
@@ -251,7 +276,7 @@ export function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji,
                   here that takes the pick off the throne, so it should
                   take a deliberate step to reach. */}
               {onUnCrown && (
-                <button onClick={() => { setEditing(false); onUnCrown(); }} className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><RotateCcw size={13} /> Un-crown</button>
+                <button onClick={() => { stopEdit(); onUnCrown(); }} className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}><RotateCcw size={13} /> Un-crown</button>
               )}
             </div>
           </div>

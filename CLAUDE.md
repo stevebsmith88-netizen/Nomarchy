@@ -23,11 +23,9 @@
 Pick these up when Steve asks "what's next" - each still needs his
 sign-off on the UI before building.
 
-- FAQ split into fold-down categories (about the app, using it, the
-  royal words, account & privacy), plus new questions: what the app is
-  for, and how it differs from review apps (without naming any).
-- Auto-saved decree drafts, so a half-written decree survives closing
-  the pop-up.
 - Public restaurant pages.
 - Personal invite links.
 - Group Privy Council (deciding where to eat together).
+- Paid placement (e.g. a sponsored Privy Council suggestion) is a
+  possibility later, so never promise "no ads" or "no paid placements"
+  in user-facing copy.

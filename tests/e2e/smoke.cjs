@@ -73,6 +73,7 @@ function filterRows(url, rows) {
 
   await page.goto(BASE + "/");
   await step("kingdom loads", () => page.getByText("Your one favourite restaurant for each cuisine").first().waitFor({ timeout: 15000 }));
+  await step("unsent decree is kept", async () => { await page.getByRole("button", { name: /Crown a spot/ }).first().click(); await page.getByRole("textbox", { name: /Your decree/ }).fill("Half-written thoughts on this place"); await page.keyboard.press("Escape"); await page.getByRole("dialog").first().waitFor({ state: "detached", timeout: 5000 }); await page.getByRole("button", { name: /Crown a spot/ }).first().click(); await page.getByText("Picked up where you left off").waitFor({ timeout: 5000 }); const v = await page.getByRole("textbox", { name: /Your decree/ }).inputValue(); if (v !== "Half-written thoughts on this place") throw new Error("draft not restored: " + v); await page.getByRole("button", { name: "Start over" }).click(); await page.keyboard.press("Escape"); await page.getByRole("dialog").first().waitFor({ state: "detached", timeout: 5000 }); });
   await step("crowned place shows", () => page.getByText("PIZZERIA LIBRETTO").first().waitFor({ timeout: 5000 }));
   await step("next in line tab", async () => { await page.click('[data-tour="tab-pretenders"]'); await page.getByText("SUSHI PLACE").first().waitFor({ timeout: 5000 }); });
   await step("been-to tab", async () => { await page.getByRole("tab", { name: /Been to/ }).click(); await page.getByText("BEEN SUSHI").first().waitFor({ timeout: 5000 }); });
