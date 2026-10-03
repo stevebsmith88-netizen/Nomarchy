@@ -14,7 +14,7 @@ export const TOUR_STEPS = [
   { tab: "pretenders", target: '[data-tour="tab-pretenders"]', title: "Next in Line", text: "Places you want to try. Add one, or paste in a whole list from your notes." },
   { tab: "court", target: '[data-tour="tab-court"]', title: "Your Court", text: "Follow friends by username to see their crowns, and endorse the ones you agree with." },
   { tab: "top25", target: '[data-tour="tab-top25"]', title: "Best in the Land", text: "The most-crowned restaurants across everyone's kingdoms." },
-  { tab: "kingdom", target: '[data-tour="bell"]', title: "Keep up, and make it yours", text: "The bell shows what's new - friends' crowns, follows and updates. Tap your name above for your profile: stats, settings, light or dark mode, and this tour again." },
+  { tab: "kingdom", target: '[data-tour="bell"]', title: "Keep up, and make it yours", text: "The bell shows what's new - friends' crowns, follows and updates. Tap your name above for your profile: stats, settings, light or dark mode, and this tour again.", link: { href: "/faq#royal-words", label: "What the royal words mean" } },
 ];
 
 const PAD = 6;
@@ -153,6 +153,9 @@ export default function Tour({ steps = TOUR_STEPS, onSetTab, onDone }) {
         </div>
         <h3 className="mt-1.5 text-lg" style={{ ...display, fontWeight: 800 }}>{step.title}</h3>
         <p className="mt-1 text-sm leading-relaxed" style={{ color: C.cream + "DD" }}>{step.text}</p>
+        {step.link && (
+          <a href={step.link.href} target="_blank" rel="noreferrer" className="mt-1.5 inline-block text-sm font-semibold underline" style={{ color: C.goldText }}>{step.link.label}</a>
+        )}
         <div className="mt-3 flex items-center justify-end gap-2">
           {index > 0 && (
             <button onClick={() => setIndex((i) => i - 1)} className="rounded-lg px-3 py-2 text-sm font-bold" style={{ color: C.muted, border: `1px solid ${C.cardEdge}` }}>Back</button>

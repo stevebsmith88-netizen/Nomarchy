@@ -144,7 +144,7 @@ export function ProfileModal({ profile, title, rank, nextRank, score, stats, onC
         </ProfileSection>
 
         <ProfileSection
-          title="Conquests"
+          title="Conquests (one-time achievements)"
           right={conquests ? `${conquests.filter((c) => c.completed).length}/${conquests.length}` : null}
         >
           {!conquests && !conquestsError && <RowSkeleton count={3} />}

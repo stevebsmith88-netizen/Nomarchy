@@ -170,7 +170,7 @@ export function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji,
   };
 
   const coupButton = (
-    <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
+    <button onClick={() => setModal({ cuisineId, cuisineName, mode: "coup" })} aria-label="Coup: replace this favourite with a better place" title="Coup: replace this favourite with a better place" className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.coup + "22", color: C.coup, border: `1px solid ${C.coup}66` }}><Swords size={13} /> Coup</button>
   );
 
   return (
@@ -210,7 +210,7 @@ export function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji,
         </div>
         {editing ? (
           <div className="mt-2">
-            <textarea aria-label="Your decree"
+            <textarea aria-label="Your decree (why it's your favourite)"
               autoFocus
               value={decreeText}
               onChange={(e) => setDecreeText(e.target.value)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ChevronDown, Sun, Moon } from "lucide-react";
 import { C, display, LogoMark, FontShell, useTheme } from "../theme";
@@ -25,6 +25,25 @@ const QUESTIONS = [
         decent you&apos;ve tried, just the one place you&apos;d actually send a friend for pizza, for ramen, for
         tacos. When somewhere better comes along, you dethrone the old one - that&apos;s a <strong>coup</strong>.
       </p>
+    ),
+  },
+  {
+    id: "royal-words",
+    q: "What do the royal words mean?",
+    a: (
+      <ul className="list-disc space-y-1 pl-5">
+        <li><strong>Kingdom</strong> - your favourite restaurant for each cuisine.</li>
+        <li><strong>Throne / Crown</strong> - your one favourite in a cuisine, and choosing it.</li>
+        <li><strong>Decree</strong> - your short review of why it&apos;s your favourite.</li>
+        <li><strong>Coup / Dethrone</strong> - replacing a favourite with a better place. The old one goes to your history.</li>
+        <li><strong>Next in Line</strong> - places you want to try.</li>
+        <li><strong>Privy Council</strong> - a suggestion when you can&apos;t decide, from your list and your friends&apos; picks.</li>
+        <li><strong>Court</strong> - the friends you follow.</li>
+        <li><strong>Endorse</strong> - agreeing with a friend&apos;s pick, like a thumbs-up.</li>
+        <li><strong>Best in the Land</strong> - the restaurants most people have picked as a favourite.</li>
+        <li><strong>Conquests</strong> - one-time achievements.</li>
+        <li><strong>Ranks</strong> - your level, from Peckish Peasant up to Monarch of Taste, which rises as you use the app.</li>
+      </ul>
     ),
   },
   {
@@ -242,6 +261,15 @@ export default function FaqContent() {
   const { theme, toggleTheme } = useTheme();
   const [open, setOpen] = useState(() => new Set());
 
+  // A link like /faq#royal-words opens that answer and scrolls to it.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    const i = QUESTIONS.findIndex((item) => item.id && item.id === id);
+    if (i === -1) return;
+    setOpen(new Set([i]));
+    requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: "start" }));
+  }, []);
+
   const toggle = (i) => {
     setOpen((prev) => {
       const next = new Set(prev);
@@ -287,7 +315,7 @@ export default function FaqContent() {
 
         <div className="mt-6">
           {QUESTIONS.map((item, i) => (
-            <FaqItem key={item.q} question={item.q} isOpen={open.has(i)} onToggle={() => toggle(i)}>
+            <FaqItem key={item.q} id={item.id} question={item.q} isOpen={open.has(i)} onToggle={() => toggle(i)}>
               {item.a}
             </FaqItem>
           ))}
@@ -307,9 +335,9 @@ export default function FaqContent() {
   );
 }
 
-function FaqItem({ question, isOpen, onToggle, children }) {
+function FaqItem({ id, question, isOpen, onToggle, children }) {
   return (
-    <div className="mb-2 overflow-hidden rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+    <div id={id} className="mb-2 scroll-mt-4 overflow-hidden rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
       <button
         onClick={onToggle}
         aria-expanded={isOpen}

@@ -283,7 +283,7 @@ export function FriendKingdomModal({ friend: f, closedIds, onClose, onEndorse, o
             <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>{p.cuisine}</div>
             <div className="mt-0.5 flex items-center justify-between gap-2">
               <div><span style={{ ...display, fontWeight: 700 }} className="text-base">{p.name}</span><span className="ml-2 text-xs" style={{ color: C.muted }}>{p.area}</span>{p.googlePlaceId && closedIds?.has(p.googlePlaceId) && <span className="ml-2"><ClosedBadge /></span>}</div>
-              <button onClick={() => onEndorse(p.id, p.endorsedByMe)} className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
+              <button onClick={() => onEndorse(p.id, p.endorsedByMe)} aria-label={p.endorsedByMe ? "Endorsed - tap to take it back" : "Endorse: agree with this pick"} title={p.endorsedByMe ? "Endorsed - tap to take it back" : "Endorse: agree with this pick"} className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
                 style={p.endorsedByMe ? { background: C.gold, color: C.onGold } : { border: `1px solid ${C.cardEdge}`, color: C.muted }}>
                 <Crown size={12} /> {p.endorsedByMe ? "Endorsed" : "Endorse"}
               </button>
@@ -574,6 +574,10 @@ export function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, re
           <button onClick={onClose} aria-label="Close" style={{ color: C.muted }}><X size={18} /></button>
         </div>
 
+        {isCoup && (
+          <p className="mt-2 text-xs" style={{ color: C.muted }}>
+            A coup replaces your current favourite with a better place. The old one is kept in your history.
+          </p>)}
         {isCoup && reigning && (
           <p className="mt-2 rounded-lg p-2.5 text-xs" style={{ background: C.bg, color: C.muted, border: `1px solid ${C.cardEdge}` }}>
             <Crown size={11} className="mr-1 inline" style={{ color: C.goldText }} />{reigning.name} holds this throne. Your decree must say why the new spot takes it.
@@ -620,7 +624,7 @@ export function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, re
 
         <input aria-label="Restaurant name" value={name} onChange={(e) => { setName(e.target.value); if (sel && e.target.value !== sel.name) setSel(null); }} placeholder="Restaurant name" className="mt-3 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
         <input aria-label="Neighbourhood (optional)" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Neighbourhood (optional)" className="mt-2 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
-        <textarea aria-label={isPretender ? "Why you want to go" : "Your decree"} value={text} onChange={(e) => setText(e.target.value)} rows={isPretender ? 2 : 4}
+        <textarea aria-label={isPretender ? "Why you want to go" : "Your decree (why it's your favourite)"} value={text} onChange={(e) => setText(e.target.value)} rows={isPretender ? 2 : 4}
           placeholder={isPretender ? "Why do you want to go? (optional)" : isCoup ? "The decree: why does this dethrone the reigning spot?" : "The decree: what makes this your one true spot?"}
           className="mt-2 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
         {!isPretender && (<div className="mt-1 text-right text-xs" style={{ color: text.trim().length >= minLen ? C.green : C.muted }}>

@@ -53,7 +53,7 @@ function table(url) { return new URL(url).pathname.replace(/^\/rest\/v1\//, "");
   const step = async (name, fn) => { try { await fn(); console.log("ok   " + name); } catch (e) { errors.push(`${name}: ${e.message.split("\n")[0]}`); console.log("FAIL " + name); } };
 
   await page.goto(BASE + "/");
-  await step("kingdom loads", () => page.getByText("One throne per cuisine").first().waitFor({ timeout: 15000 }));
+  await step("kingdom loads", () => page.getByText("Your one favourite restaurant for each cuisine").first().waitFor({ timeout: 15000 }));
   await step("crowned place shows", () => page.getByText("PIZZERIA LIBRETTO").first().waitFor({ timeout: 5000 }));
   await step("next in line tab", async () => { await page.click('[data-tour="tab-pretenders"]'); await page.getByText("SUSHI PLACE").first().waitFor({ timeout: 5000 }); });
   await step("been-to tab", async () => { await page.getByRole("tab", { name: /Been to/ }).click(); await page.getByText("BEEN SUSHI").first().waitFor({ timeout: 5000 }); });
@@ -61,7 +61,7 @@ function table(url) { return new URL(url).pathname.replace(/^\/rest\/v1\//, "");
   await step("add a place modal", async () => { await page.getByRole("button", { name: /Add a place/i }).first().click(); await page.getByRole("dialog").first().waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); await page.getByRole("dialog").first().waitFor({ state: "detached", timeout: 5000 }); });
   await step("privy council opens", async () => { await page.getByRole("button", { name: /Privy Council/ }).click(); await page.getByRole("combobox", { name: "Privy Council cuisine" }).waitFor({ timeout: 5000 }); });
   await step("court tab", async () => { await page.click('[data-tour="tab-court"]'); await page.getByText(/Invite a friend/).first().waitFor({ timeout: 5000 }); });
-  await step("best in the land tab", async () => { await page.click('[data-tour="tab-top25"]'); await page.getByText(/most-crowned restaurants/).first().waitFor({ timeout: 5000 }); });
+  await step("best in the land tab", async () => { await page.click('[data-tour="tab-top25"]'); await page.getByText(/picked as a favourite|picked by the friends you follow/).first().waitFor({ timeout: 5000 }); });
   await step("notifications", async () => { await page.click('[data-tour="bell"]'); await page.getByText("Notifications").first().waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); });
   await step("profile modal + accessibility", async () => { await page.getByRole("button", { name: /@steve/ }).click(); await page.getByText("Your profile").first().waitFor({ timeout: 5000 }); await page.getByRole("button", { name: /Accessibility/ }).click(); await page.getByRole("switch", { name: "Larger text" }).click(); const t = await page.evaluate(() => document.documentElement.getAttribute("data-text")); if (t !== "large") throw new Error("larger text not applied"); await page.getByRole("switch", { name: "Larger text" }).click(); await page.keyboard.press("Escape"); });
   await step("tour replay", async () => { await page.getByRole("button", { name: /@steve/ }).click(); await page.getByRole("button", { name: /Settings/ }).click(); await page.getByRole("button", { name: "Start" }).click(); await page.locator("[data-tour-box]").waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); });

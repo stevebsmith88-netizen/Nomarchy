@@ -1052,7 +1052,7 @@ export default function NomarchyApp({ user }) {
               one tab that opened straight into a card with no lead-in,
               making the top of the page feel like it jumped around
               between tabs rather than starting the same way each time. */}
-          <p className="mb-3 text-sm" style={{ color: C.muted }}>One throne per cuisine. Choose like it matters.</p>
+          <p className="mb-3 text-sm" style={{ color: C.muted }}>Your one favourite restaurant for each cuisine. Choose like it matters.</p>
 
           {overallCuisine && (
             <div className="mb-4">
@@ -1164,7 +1164,7 @@ export default function NomarchyApp({ user }) {
 
         {/* PRETENDERS */}
         {tab === "pretenders" && (<div>
-          <p className="mb-3 text-sm" style={{ color: C.muted }}>The places waiting for their shot at a throne. Go, eat, then decide.</p>
+          <p className="mb-3 text-sm" style={{ color: C.muted }}>Places you want to try. Go, eat, then decide if one deserves a crown.</p>
 
           <div className="mb-4 rounded-xl" style={{ background: C.card, border: `1px solid ${C.gold}66` }}>
             <button onClick={() => setCouncilOpen((v) => !v)} aria-expanded={councilOpen} className="flex w-full items-center justify-between gap-3 p-4 text-left">
@@ -1321,7 +1321,7 @@ export default function NomarchyApp({ user }) {
 
         {/* COURT */}
         {tab === "court" && (<div>
-          <p className="mb-3 text-sm" style={{ color: C.muted }}>Your friends&apos; reigning picks. Endorse the good ones, or add them to your own shortlist.</p>
+          <p className="mb-3 text-sm" style={{ color: C.muted }}>The friends you follow and their favourite spots. Endorse (agree with) the good ones, or add them to your list.</p>
 
           <button onClick={handleInviteFriend} className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-bold" style={{ background: C.gold, color: C.onGold }}>
             <Share2 size={14} /> Invite a friend
@@ -1454,7 +1454,7 @@ export default function NomarchyApp({ user }) {
         {/* BEST IN THE LAND (restaurants: the trending leaderboard, plus search across every crown app-wide) */}
         {tab === "top25" && (<div>
           <p className="mb-3 text-sm" style={{ color: C.muted }}>
-            {top25Scope === "friends" ? "The most-crowned restaurants in your Court" : "The most-crowned restaurants across everyone's public kingdoms"} - or search for any of them.
+            {top25Scope === "friends" ? "The favourites most picked by the friends you follow" : "The restaurants most people have picked as a favourite"} - or search for any of them.
           </p>
           <div className="mb-3 flex overflow-hidden rounded-full" style={{ border: `1px solid ${C.cardEdge}`, width: "fit-content" }}>
             <button onClick={() => setTop25Scope("everyone")} className="px-4 py-1.5 text-xs font-semibold" style={{ background: top25Scope === "everyone" ? C.gold : C.card, color: top25Scope === "everyone" ? C.onGold : C.muted }}>
