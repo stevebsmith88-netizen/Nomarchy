@@ -22,6 +22,8 @@ const friendProfile = { id: FRIEND, username: "alex", display_name: "Alex", is_o
 const follows = [{ follower_id: UID, followee_id: FRIEND, profiles: friendProfile }];
 // Alex joined from Steve's invite link.
 const invites = [{ invitee_id: FRIEND, inviter_id: UID, created_at: now, profiles: friendProfile }];
+// Restaurant page addresses, for the name links on cards.
+const place_pages = [{ slug: "pizzeria-libretto", google_place_id: "GID1" }, { slug: "sushi-place", google_place_id: "GID2" }, { slug: "friend-sushi", google_place_id: "GID3" }];
 const thrones = [{ id: "t2", user_id: FRIEND, cuisine_id: "c2", cuisines: { name: "Sushi" }, profiles: friendProfile, place_name: "FRIEND SUSHI", neighbourhood: "Annex", decree: "The omakase is worth every penny.", photos: [], crowned_at: now, google_place_id: "GID3", lat: 43.6, lng: -79.4 }, { id: "t1", user_id: UID, cuisine_id: "c1", cuisines: { name: "Pizza" }, place_name: "PIZZERIA LIBRETTO", address: "221 Ossington Ave", neighbourhood: "Ossington", decree: "Best margherita in the city, hands down.", photos: [], crowned_at: now, google_place_id: "GID1", lat: 43.6, lng: -79.4, maps_url: "https://www.google.com/maps/search/?api=1&query=x" }];
 const nil = [
   { id: "n1", user_id: UID, cuisine_id: "c2", cuisines: { name: "Sushi" }, place_name: "SUSHI PLACE", neighbourhood: "Annex", note: "", photos: [], added_at: now, visited_at: null, google_place_id: "GID2" },
@@ -67,7 +69,7 @@ function filterRows(url, rows) {
     if (req.method() === "POST" && t === "next_in_line") { try { listInserts.push(JSON.parse(req.postData() || "null")); } catch {} }
     if (req.method() !== "GET" && req.method() !== "HEAD") return json(single ? {} : [], 200);
     if (t.startsWith("rpc/")) return json(t.includes("count") ? 0 : []);
-    const data = { profiles: single ? profile : [profile], cuisines, thrones, next_in_line: nil, follows, invites, standings: single ? { id: UID, score: 42, thrones: 1, coups: 0 } : [{ id: UID, score: 42 }] }[t];
+    const data = { profiles: single ? profile : [profile], cuisines, thrones, next_in_line: nil, follows, invites, place_pages, standings: single ? { id: UID, score: 42, thrones: 1, coups: 0 } : [{ id: UID, score: 42 }] }[t];
     if (single) return json(data ?? {});
     return json(filterRows(url, data ?? []));
   };
@@ -82,8 +84,16 @@ function filterRows(url, rows) {
   await page.goto(BASE + "/");
   await step("kingdom loads", () => page.getByText("Your one favourite restaurant for each cuisine").first().waitFor({ timeout: 15000 }));
   await step("unsent decree is kept", async () => { await page.getByRole("button", { name: /Crown a spot/ }).first().click(); await page.getByRole("textbox", { name: /Your decree/ }).fill("Half-written thoughts on this place"); await page.keyboard.press("Escape"); await page.getByRole("dialog").first().waitFor({ state: "detached", timeout: 5000 }); await page.getByRole("button", { name: /Crown a spot/ }).first().click(); await page.getByText("Picked up where you left off").waitFor({ timeout: 5000 }); const v = await page.getByRole("textbox", { name: /Your decree/ }).inputValue(); if (v !== "Half-written thoughts on this place") throw new Error("draft not restored: " + v); await page.getByRole("button", { name: "Start over" }).click(); await page.keyboard.press("Escape"); await page.getByRole("dialog").first().waitFor({ state: "detached", timeout: 5000 }); });
+  await step("a crowned name links to its restaurant page, in the same tab, with a Back link", async () => {
+    const link = page.getByRole("link", { name: "PIZZERIA LIBRETTO - restaurant page" });
+    await link.waitFor({ timeout: 8000 });
+    if ((await link.getAttribute("href")) !== "/r/pizzeria-libretto") throw new Error("wrong link: " + (await link.getAttribute("href")));
+    if (await link.getAttribute("target")) throw new Error("should open in the same tab");
+    if ((await link.evaluate((el) => getComputedStyle(el).textDecorationLine)) !== "none") throw new Error("name should not be underlined");
+  });
   await step("crowned place shows", () => page.getByText("PIZZERIA LIBRETTO").first().waitFor({ timeout: 5000 }));
   await step("next in line tab", async () => { await page.click('[data-tour="tab-pretenders"]'); await page.getByText("SUSHI PLACE").first().waitFor({ timeout: 5000 }); });
+  await step("an open Next in Line card links to its restaurant page", async () => { await page.getByText("SUSHI PLACE").first().click(); await page.getByRole("link", { name: /Restaurant page/ }).first().waitFor({ timeout: 5000 }); await page.getByText("SUSHI PLACE").first().click(); });
   await step("been-to tab", async () => { await page.getByRole("tab", { name: /Been to/ }).click(); await page.getByText("BEEN SUSHI").first().waitFor({ timeout: 5000 }); });
   await step("import checks places with Google and saves the details", async () => {
     await page.route("**/api/ai", async (route) => {
@@ -115,7 +125,7 @@ function filterRows(url, rows) {
   await step("court tab", async () => { await page.click('[data-tour="tab-court"]'); await page.getByText(/Invite a friend/).first().waitFor({ timeout: 5000 }); });
   await step("best in the land tab", async () => { await page.click('[data-tour="tab-top25"]'); await page.getByText(/picked as a favourite|picked by the friends you follow/).first().waitFor({ timeout: 5000 }); });
   await step("notifications", async () => { await page.click('[data-tour="bell"]'); await page.getByText("Notifications").first().waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); });
-  await step("crown notification opens the pick", async () => { await page.click('[data-tour="bell"]'); await page.getByRole("button", { name: /Alex crowned FRIEND SUSHI - view it/ }).click(); await page.getByRole("dialog").getByText("FRIEND SUSHI").waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); await page.getByRole("dialog").first().waitFor({ state: "detached", timeout: 5000 }); });
+  await step("crown notification opens the pick", async () => { await page.click('[data-tour="bell"]'); await page.getByRole("button", { name: /Alex crowned FRIEND SUSHI - view it/ }).click(); await page.getByRole("dialog").getByText("FRIEND SUSHI").waitFor({ timeout: 5000 }); await page.getByRole("dialog").getByRole("link", { name: "FRIEND SUSHI - restaurant page" }).waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); await page.getByRole("dialog").first().waitFor({ state: "detached", timeout: 5000 }); });
   await step("invite joined notification opens their kingdom", async () => { await page.click('[data-tour="bell"]'); await page.getByRole("button", { name: /Alex joined from your invite - view their kingdom/ }).click(); await page.getByRole("dialog").getByText("FRIEND SUSHI").waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); await page.getByRole("dialog").first().waitFor({ state: "detached", timeout: 5000 }); });
   await step("invite link shows the invite to a visitor", async () => {
     const guest = await browser.newContext({ viewport: { width: 390, height: 844 } });

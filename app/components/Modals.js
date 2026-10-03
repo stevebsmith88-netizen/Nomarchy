@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { C, OwnerBadge, RankBadge, body, display, getTitle } from "../theme";
-import { Avatar, AvatarPicker, ClosedBadge, MAX_IMPORT_CHARS, MIN_DECREE_LENGTH, PersonRow, PhotoPicker, PhotoStrip, RowSkeleton, knownFor } from "./shared";
+import { Avatar, AvatarPicker, ClosedBadge, MAX_IMPORT_CHARS, MIN_DECREE_LENGTH, PersonRow, PhotoPicker, PhotoStrip, PlaceNameLink, RowSkeleton, knownFor } from "./shared";
 import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
 import { loadDirectory, loadPlaceSlug, loadRestaurantProfile, loadRestaurantVisitCount, loadRestaurantWantingCount, loadSuggestedFriends, supabase } from "@/lib/data";
 import { safeMapsUrl } from "@/lib/safeUrl";
 import { suggestedNames } from "@/lib/welcomeNames";
 import { clearDraft, loadDraft, saveDraft } from "@/lib/decreeDrafts";
-import { Bookmark, Check, Crown, ExternalLink, Loader2, MessageSquare, Search, Share2, Star, Swords, Wand2, X } from "lucide-react";
+import { ArrowUpRight, Bookmark, Check, Crown, ExternalLink, Loader2, MessageSquare, Search, Share2, Star, Swords, Wand2, X } from "lucide-react";
 
 // A restaurant's own page - every public crown on it app-wide, opened by
 // tapping a RestaurantRow. Same "profile pop up" shell used everywhere
@@ -55,9 +55,9 @@ export function RestaurantProfileModal({ restaurant, onClose }) {
             <h3 className="truncate text-lg" style={{ ...display, fontWeight: 700 }}>{restaurant.name}</h3>
             <p className="truncate text-xs" style={{ color: C.muted }}>{[restaurant.area, restaurant.address].filter(Boolean).join(" · ")}</p>
             {slug && (
-              <a href={`/r/${slug}`} target="_blank" rel="noopener" className="mt-1 inline-flex items-center gap-1 text-xs font-bold" style={{ color: C.goldText }}>
-                Restaurant page <ExternalLink size={10} />
-              </a>
+              <Link href={`/r/${slug}`} className="mt-1 inline-flex items-center gap-1 text-xs font-bold" style={{ color: C.goldText }}>
+                Restaurant page <ArrowUpRight size={11} />
+              </Link>
             )}
           </div>
           <button onClick={onClose} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center" style={{ color: C.muted }}><X size={18} /></button>
@@ -250,7 +250,7 @@ export function PromotionModal({ rank, nextRank, score, thrones, reviewCount, pr
   );
 }
 
-export function FriendKingdomModal({ friend: f, closedIds, highlight, onClose, onEndorse, onAddToList, onBlock, onReport }) {
+export function FriendKingdomModal({ friend: f, slugs, closedIds, highlight, onClose, onEndorse, onAddToList, onBlock, onReport }) {
   const specialty = knownFor(f);
   // Opened from a notification: scroll that crown or review into view and
   // ring it in gold so it's obvious which one the notification meant.
@@ -308,7 +308,7 @@ export function FriendKingdomModal({ friend: f, closedIds, highlight, onClose, o
             style={{ background: C.bg, border: isHighlighted("crown", p.id) ? `2px solid ${C.gold}` : `1px solid ${C.cardEdge}` }}>
             <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>{p.cuisine}</div>
             <div className="mt-0.5 flex items-center justify-between gap-2">
-              <div><span style={{ ...display, fontWeight: 700 }} className="text-base">{p.name}</span><span className="ml-2 text-xs" style={{ color: C.muted }}>{p.area}</span>{p.googlePlaceId && closedIds?.has(p.googlePlaceId) && <span className="ml-2"><ClosedBadge /></span>}</div>
+              <div><span style={{ ...display, fontWeight: 700 }} className="text-base"><PlaceNameLink name={p.name} slug={slugs?.[p.googlePlaceId]} size={15} /></span><span className="ml-2 text-xs" style={{ color: C.muted }}>{p.area}</span>{p.googlePlaceId && closedIds?.has(p.googlePlaceId) && <span className="ml-2"><ClosedBadge /></span>}</div>
               <button onClick={() => onEndorse(p.id, p.endorsedByMe)} aria-label={p.endorsedByMe ? "Endorsed - tap to take it back" : "Endorse: agree with this pick"} title={p.endorsedByMe ? "Endorsed - tap to take it back" : "Endorse: agree with this pick"} className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
                 style={p.endorsedByMe ? { background: C.gold, color: C.onGold } : { border: `1px solid ${C.cardEdge}`, color: C.muted }}>
                 <Crown size={12} /> {p.endorsedByMe ? "Endorsed" : "Endorse"}
@@ -331,7 +331,7 @@ export function FriendKingdomModal({ friend: f, closedIds, highlight, onClose, o
             style={{ background: C.bg, border: isHighlighted("review", r.id) ? `2px solid ${C.gold}` : `1px dashed ${C.cardEdge}` }}>
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-1.5" style={{ ...display, fontWeight: 700 }}>
-                <span className="text-sm">{r.name}</span>
+                <span className="text-sm"><PlaceNameLink name={r.name} slug={slugs?.[r.googlePlaceId]} size={13} /></span>
                 {r.verdict && (
                   <span
                     className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"

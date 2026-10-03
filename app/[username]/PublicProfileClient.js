@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Crown, MapPin, ExternalLink, ScrollText, UserPlus, Loader2, Check, Lock, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { getUser, loadPublicKingdom, followByUsername, isFollowing } from "@/lib/data";
 import { C, display, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell, useTheme } from "../theme";
+import { PlaceNameLink } from "../components/shared";
 
 // Matches the reserved cuisine name seeded in schema.sql - see app/page.js
 // for the fuller explanation of why the overall favourite piggybacks on
@@ -184,10 +185,7 @@ export default function PublicProfileClient({ username, invited = false }) {
 
   const { profile, slots, standing, slugs } = data;
   // A crowned place's name opens its public restaurant page, when it has one.
-  const placeName = (r) => {
-    const slug = slugs?.[r.googlePlaceId];
-    return slug ? <Link href={`/r/${slug}`} style={{ color: "inherit" }} className="underline decoration-1 underline-offset-4" title="See who else crowned it">{r.name}</Link> : r.name;
-  };
+  const placeName = (r) => <PlaceNameLink name={r.name} slug={slugs?.[r.googlePlaceId]} size={16} />;
   const isSelf = viewer && viewer.id === profile.id;
   const isPrivate = !profile.is_public && !isSelf;
 

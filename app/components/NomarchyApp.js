@@ -48,8 +48,24 @@ export default function NomarchyApp({ user }) {
   const { theme, toggleTheme } = useTheme();
   const [profile, setProfile] = useState(null);
 
-  const [tab, setTab] = useState("kingdom");
+  // The tab is remembered for the visit, so Back from a restaurant page (or
+  // a reload) lands where you were instead of on Kingdom. Admin is never
+  // restored, only chosen.
+  const [tab, setTabState] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("nomarchy-tab");
+      return ["kingdom", "pretenders", "court", "top25"].includes(saved) ? saved : "kingdom";
+    } catch { return "kingdom"; }
+  });
+  const setTab = (next) => {
+    setTabState(next);
+    try { sessionStorage.setItem("nomarchy-tab", next); } catch {}
+  };
   const [slots, setSlots] = useState({});
+  // Public restaurant page addresses by Google place ID, for the name links
+  // on cards. Looked up in one batch per new set of places, never twice.
+  const [placeSlugs, setPlaceSlugs] = useState({});
+  const slugsRequested = useRef(new Set());
   const [pretenders, setPretenders] = useState([]);
   const [cuisineList, setCuisineList] = useState([]);
   const [standing, setStanding] = useState(null);
@@ -145,6 +161,24 @@ export default function NomarchyApp({ user }) {
     }, 300);
     return () => { cancelled = true; clearTimeout(t); };
   }, [restaurantSearch]);
+
+  // Looks up the restaurant page address of every place on screen that
+  // doesn't have one yet (your thrones, Next in Line, your Court's picks).
+  useEffect(() => {
+    const ids = new Set();
+    for (const s of Object.values(slots)) if (s.current?.googlePlaceId) ids.add(s.current.googlePlaceId);
+    for (const p of pretenders) if (p.googlePlaceId) ids.add(p.googlePlaceId);
+    for (const f of court) {
+      for (const p of f.picks) if (p.googlePlaceId) ids.add(p.googlePlaceId);
+      for (const r of f.reviews) if (r.googlePlaceId) ids.add(r.googlePlaceId);
+    }
+    const missing = [...ids].filter((id) => !slugsRequested.current.has(id));
+    if (!missing.length) return;
+    missing.forEach((id) => slugsRequested.current.add(id));
+    loadPlaceSlugs(missing)
+      .then((found) => setPlaceSlugs((prev) => ({ ...prev, ...found })))
+      .catch(() => missing.forEach((id) => slugsRequested.current.delete(id)));
+  }, [slots, pretenders, court]);
 
   // Fetch the pop-ups quietly in the background once the app is showing,
   // so opening one later is instant.
@@ -1147,6 +1181,7 @@ export default function NomarchyApp({ user }) {
             <div className="mb-4">
               <ThroneCard
                 featured
+                slug={placeSlugs[slots[OVERALL_FAVOURITE_NAME]?.current?.googlePlaceId]}
                 cuisineName={OVERALL_FAVOURITE_NAME}
                 cuisineId={overallCuisine.id}
                 slot={slots[OVERALL_FAVOURITE_NAME]}
@@ -1212,6 +1247,7 @@ export default function NomarchyApp({ user }) {
               return (
                 <ThroneCard
                   key={cuisineName}
+                  slug={placeSlugs[slots[cuisineName]?.current?.googlePlaceId]}
                   cuisineName={cuisineName}
                   cuisineId={thisId}
                   slot={slots[cuisineName]}
@@ -1389,7 +1425,7 @@ export default function NomarchyApp({ user }) {
               </p>
             )}
             {(nilList === "want" ? stillToTry : beenTo).map((p) => (
-              <PretenderCard key={p.id} p={p} selectableCuisines={selectableCuisines} userId={user.id}
+              <PretenderCard key={p.id} p={p} slug={placeSlugs[p.googlePlaceId]} selectableCuisines={selectableCuisines} userId={user.id}
                 friendMatches={friendMatchesFor(p)} closed={isClosed(p.googlePlaceId)}
                 onShare={sharePretender}
                 onRemove={handleRemovePretender} onChangeNote={handleChangePretenderNote}
@@ -1876,6 +1912,7 @@ export default function NomarchyApp({ user }) {
         return (
           <FriendKingdomModal
             friend={f}
+            slugs={placeSlugs}
             closedIds={closedIds}
             highlight={courtModalHighlight}
             onClose={() => { setCourtModalFriendId(null); setCourtModalHighlight(null); }}

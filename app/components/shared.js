@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { C, OwnerBadge, RANKS, display, getRank } from "../theme";
 import { MAX_REVIEW_PHOTOS, deleteReviewPhoto, uploadAvatar, uploadReviewPhoto } from "@/lib/data";
 import { safeMapsUrl } from "@/lib/safeUrl";
-import { Camera, ChevronDown, ChevronLeft, ChevronRight, Crown, ExternalLink, Loader2, Trash2, UserPlus, Users, X } from "lucide-react";
+import { ArrowUpRight, Camera, ChevronDown, ChevronLeft, ChevronRight, Crown, ExternalLink, Loader2, Trash2, UserPlus, Users, X } from "lucide-react";
 
 export const MIN_DECREE_LENGTH = 30;
 
@@ -134,6 +135,20 @@ export function RowSkeleton({ count = 3 }) {
         </div>
       ))}
     </>
+  );
+}
+
+// A restaurant's name that opens its public page (nomarchy.ca/r/...), shown
+// as plain text with a small arrow rather than an underlined link. Same tab,
+// and the page has a Back link. With no page (a place with no Google ID) it
+// is just the name.
+export function PlaceNameLink({ name, slug, size = 14 }) {
+  if (!slug) return name;
+  return (
+    <Link href={`/r/${slug}`} aria-label={`${name} - restaurant page`} title="See the restaurant page" style={{ color: "inherit", textDecoration: "none" }}>
+      {name}
+      <ArrowUpRight size={size} aria-hidden="true" className="ml-0.5 inline align-baseline" style={{ color: C.goldText }} />
+    </Link>
   );
 }
 

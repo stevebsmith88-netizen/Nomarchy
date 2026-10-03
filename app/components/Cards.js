@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { C, display } from "../theme";
-import { ClosedBadge, CuisineEmojiGrid, PhotoPicker } from "./shared";
+import Link from "next/link";
+import { ClosedBadge, CuisineEmojiGrid, PhotoPicker, PlaceNameLink } from "./shared";
 import { safeMapsUrl } from "@/lib/safeUrl";
 import { clearDraft, loadDraft, saveDraft } from "@/lib/decreeDrafts";
-import { Check, ChevronDown, Crown, ExternalLink, Loader2, MapPin, Pencil, RotateCcw, ScrollText, Share2, Swords, Trash2, X } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, Crown, ExternalLink, Loader2, MapPin, Pencil, RotateCcw, ScrollText, Share2, Swords, Trash2, X } from "lucide-react";
 
-export function PretenderCard({ p, closed, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onChangePhotos, onToggleVisited, onChangeVerdict, onCrown, onShare, userId, friendMatches }) {
+export function PretenderCard({ p, slug, closed, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onChangePhotos, onToggleVisited, onChangeVerdict, onCrown, onShare, userId, friendMatches }) {
   // Compact by default - name, cuisine and area - and opens on tap to show
   // the note, photos, verdict and actions. Leaving it closed keeps a long
   // list scannable.
@@ -50,10 +51,19 @@ export function PretenderCard({ p, closed, selectableCuisines, onRemove, onChang
         </div>
       </div>
       {open && (<>
-        {safeMapsUrl(p.mapsUrl) && (
-          <a href={safeMapsUrl(p.mapsUrl)} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.goldText }}>
-            <MapPin size={11} /> Map <ExternalLink size={10} />
-          </a>
+        {(safeMapsUrl(p.mapsUrl) || slug) && (
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            {safeMapsUrl(p.mapsUrl) && (
+              <a href={safeMapsUrl(p.mapsUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.goldText }}>
+                <MapPin size={11} /> Map <ExternalLink size={10} />
+              </a>
+            )}
+            {slug && (
+              <Link href={`/r/${slug}`} className="inline-flex items-center gap-0.5 text-xs font-semibold" style={{ color: C.goldText }}>
+                Restaurant page <ArrowUpRight size={11} />
+              </Link>
+            )}
+          </div>
         )}
       {friendMatches && friendMatches.length > 0 && (
         <div className="mt-2 rounded-lg p-2.5" style={{ background: C.bg, border: `1px dashed ${C.gold}66` }}>
@@ -129,7 +139,7 @@ export function PretenderCard({ p, closed, selectableCuisines, onRemove, onChang
   );
 }
 
-export function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji, onChangeEmoji, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown, onEditDecree, onEditLocation, onEditPhotos, onHide, userId }) {
+export function ThroneCard({ slug, cuisineName, cuisineId, slot, closed, cuisineEmoji, onChangeEmoji, featured, historyOpen, setHistoryOpen, setModal, sharePick, fmt, emptyCuisines, onMoveCuisine, onUnCrown, onEditDecree, onEditLocation, onEditPhotos, onHide, userId }) {
   const r = slot?.current;
 
   // One edit panel covers both the decree text and the cuisine it's filed
@@ -218,7 +228,7 @@ export function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji,
       {pickingEmoji && onChangeEmoji && <CuisineEmojiGrid onPick={(emoji) => { onChangeEmoji(emoji); setPickingEmoji(false); }} />}
       {r ? (<div className="mt-2">
         <h3 className={featured ? "text-2xl" : "text-xl"} style={{ ...display, fontWeight: 700 }}>
-          {r.name}
+          <PlaceNameLink name={r.name} slug={slug} size={featured ? 20 : 17} />
           <Crown size={featured ? 18 : 16} className="relative -top-0.5 ml-2 inline" style={{ color: C.goldText }} fill={C.gold} strokeWidth={0} />
           {closed && <ClosedBadge />}
         </h3>

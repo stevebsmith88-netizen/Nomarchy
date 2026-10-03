@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bookmark, Check, Crown, ExternalLink, Loader2, MapPin, Moon, Sun, Trophy } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Bookmark, Check, Crown, ExternalLink, Loader2, MapPin, Moon, Sun, Trophy } from "lucide-react";
 import { C, display, FontShell, LogoMark, OwnerBadge, RankBadge, useTheme } from "../../theme";
 import { getCuisineEmoji } from "../../cuisineIcons";
 import { PhotoStrip } from "../../components/shared";
@@ -72,6 +73,7 @@ function ReportDecree({ crown, slug, viewer }) {
 // profile photos, matching how shared links preview.
 export default function RestaurantPageClient({ page }) {
   const { theme, toggleTheme } = useTheme();
+  const router = useRouter();
   const [viewer, setViewer] = useState(undefined); // undefined = still checking
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
@@ -132,6 +134,26 @@ export default function RestaurantPageClient({ page }) {
       </nav>
 
       <main className="mx-auto max-w-2xl px-5 pb-12">
+        {viewer && (
+          // For members: back to where they came from inside the app (the
+          // tab they were on is remembered), or to the app itself if they
+          // arrived from elsewhere.
+          <Link
+            href="/"
+            onClick={(e) => {
+              try {
+                if (window.history.length > 1 && document.referrer && new URL(document.referrer).origin === window.location.origin) {
+                  e.preventDefault();
+                  router.back();
+                }
+              } catch {}
+            }}
+            className="mb-4 inline-flex items-center gap-1 text-sm font-semibold"
+            style={{ color: C.goldText }}
+          >
+            <ArrowLeft size={15} /> Back to Nomarchy
+          </Link>
+        )}
         {page.closed && (
           <div className="mb-4 rounded-xl px-4 py-3 text-sm font-semibold" style={{ background: C.coup + "1A", border: `1px solid ${C.coup}66`, color: C.coup }}>
             This restaurant has permanently closed.
