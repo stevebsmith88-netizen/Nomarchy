@@ -148,7 +148,8 @@ const SECTIONS = [
           <p>
             Yes - paste the whole thing (Notes, a spreadsheet, anything) into Next in Line&apos;s <strong>Import a
             list</strong>, and it&apos;ll sort out the names, cuisines, and notes for you. No need to add them one
-            at a time.
+            at a time. Each place is then checked on Google, so the ones it recognises arrive with their address and
+            map pin, and a suggested cuisine when you didn&apos;t say one - you can change anything before adding.
           </p>
         ),
       },
