@@ -29,6 +29,7 @@ const PromotionModal = dynamic(() => import("./Modals").then((m) => m.PromotionM
 const ProfileModal = dynamic(() => import("./ProfileModal").then((m) => m.ProfileModal));
 const FixThroneTool = dynamic(() => import("./AdminTools").then((m) => m.FixThroneTool));
 const PlaceMatchTool = dynamic(() => import("./AdminTools").then((m) => m.PlaceMatchTool));
+const PlaceDetailsTool = dynamic(() => import("./AdminTools").then((m) => m.PlaceDetailsTool));
 const ClosureCheckTool = dynamic(() => import("./AdminTools").then((m) => m.ClosureCheckTool));
 
 // The Google map loader touches window/document, which breaks server-side
