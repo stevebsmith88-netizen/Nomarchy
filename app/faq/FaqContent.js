@@ -353,9 +353,13 @@ export default function FaqContent() {
     const section = SECTIONS.find((sec) => sec.questions.some((item) => item.id === id));
     if (!section) return;
     const item = section.questions.find((x) => x.id === id);
+    // The page is pre-rendered without a #hash, so this can only happen
+    // after it loads in the browser.
+    /* eslint-disable react-hooks/set-state-in-effect */
     setOpenSections((prev) => new Set(prev).add(section.id));
     setOpen(new Set([item.q]));
     setScrollTarget(id);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   // Scrolls once the section holding the linked answer has rendered.

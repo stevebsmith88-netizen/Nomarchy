@@ -14,9 +14,11 @@
 //     profile row, so the profile is kept but anonymized: a random
 //     placeholder username replaces the one built from their email, the
 //     display name becomes "No longer a user", the avatar and its file are
-//     removed, and every purely personal record (follows, blocks, Next in
-//     Line, feedback, signup source, conquests, rank history, endorsements
-//     they gave, notification dismissals) is deleted. The crowns that stay
+//     removed, their personal settings are reset (accessibility,
+//     notifications, hidden cuisines; reminder emails off), and every
+//     purely personal record (follows, blocks, invites, Next in Line,
+//     feedback, signup source, conquests, rank history, endorsements they
+//     gave, notification dismissals) is deleted. The crowns that stay
 //     are still stored under an internal id - pseudonymous, not shown with
 //     any name. The privacy policy says exactly this.
 //
@@ -87,8 +89,8 @@ export async function POST(request) {
 
   if (eraseContent) {
     // Deleting the sign-in cascades through profiles to thrones, fallen,
-    // next_in_line, endorsements, follows, blocks, conquests, rank history,
-    // dismissed notifications, signup source and AI call log.
+    // next_in_line, endorsements, follows, blocks, invites, conquests, rank
+    // history, dismissed notifications, signup source and AI call log.
     const { error: delErr } = await admin.auth.admin.deleteUser(userId);
     if (delErr) {
       return NextResponse.json({ error: "Couldn't delete your account" }, { status: 500 });
@@ -106,6 +108,11 @@ export async function POST(request) {
       is_public: true,
       discoverable: false,
       is_owner: false,
+      // Personal settings go too, and the placeholder email must never be
+      // sent a reminder (it would bounce).
+      reminders_opt_out: true,
+      a11y_prefs: {},
+      hidden_cuisine_ids: [],
     })
     .eq("id", userId);
   if (profileErr) {
@@ -124,6 +131,7 @@ export async function POST(request) {
   // the app reads or shows these once the owner is gone.
   await Promise.all([
     admin.from("blocks").delete().or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`),
+    admin.from("invites").delete().or(`invitee_id.eq.${userId},inviter_id.eq.${userId}`),
     admin.from("next_in_line").delete().eq("user_id", userId),
     admin.from("ai_calls").delete().eq("user_id", userId),
     admin.from("signup_sources").delete().eq("user_id", userId),

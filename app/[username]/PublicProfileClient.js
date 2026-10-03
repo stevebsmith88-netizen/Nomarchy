@@ -114,7 +114,7 @@ function InviteBanner({ name, isPublic, viewer, following, followBusy, onFollow 
   );
 }
 
-export default function PublicProfileClient({ username }) {
+export default function PublicProfileClient({ username, invited = false }) {
   // Subscribes this page to theme changes so a visitor who's already set a
   // light/dark preference in the main app (saved in their browser) sees it
   // respected here too - see theme.js.
@@ -127,15 +127,10 @@ export default function PublicProfileClient({ username }) {
   const [following, setFollowing] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
   const [followErr, setFollowErr] = useState("");
-  const [invited, setInvited] = useState(false);
 
   useEffect(() => {
     getUser().then((u) => { setViewer(u); setAuthChecked(true); });
-    try {
-      const invite = new URLSearchParams(window.location.search).get("invite");
-      setInvited(!!invite && invite.trim().toLowerCase() === username.toLowerCase());
-    } catch {}
-  }, [username]);
+  }, []);
 
   // On an invite link, a signed-in visitor who already follows them sees
   // "Following" straight away rather than a button that does nothing.

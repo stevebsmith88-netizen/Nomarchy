@@ -85,13 +85,11 @@ export default function NomarchyApp({ user }) {
   const [pcCuisine, setPcCuisine] = useState("");
   const [pcIndex, setPcIndex] = useState(0);
   const [courtView, setCourtView] = useState("grid");
-  const [courtDensity, setCourtDensity] = useState("expanded");
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("nomarchy-court-density");
-      if (saved === "compact" || saved === "expanded") setCourtDensity(saved);
-    } catch {}
-  }, []);
+  // Read up front rather than in an effect: this component only ever
+  // renders in the browser, after sign-in, so localStorage is available.
+  const [courtDensity, setCourtDensity] = useState(() => {
+    try { return localStorage.getItem("nomarchy-court-density") === "compact" ? "compact" : "expanded"; } catch { return "expanded"; }
+  });
   const changeCourtDensity = (next) => {
     setCourtDensity(next);
     try { localStorage.setItem("nomarchy-court-density", next); } catch {}
@@ -137,7 +135,7 @@ export default function NomarchyApp({ user }) {
   // client-side, since an uncrowned place has no throne row to search.
   useEffect(() => {
     const q = restaurantSearch.trim();
-    if (!q) { setUncrownedMatches([]); return; }
+    if (!q) return; // nothing to search; uncrownedResults below shows nothing for an empty search
     let cancelled = false;
     const t = setTimeout(() => {
       searchAllRestaurants(q).then((rows) => { if (!cancelled) setUncrownedMatches(rows); }).catch(() => { if (!cancelled) setUncrownedMatches([]); });
@@ -145,31 +143,12 @@ export default function NomarchyApp({ user }) {
     return () => { cancelled = true; clearTimeout(t); };
   }, [restaurantSearch]);
 
-  // Records which link a brand-new signup came from, once. Runs on every
-  // sign-in but only does anything when there's a saved tag, and never
-  // throws - it must not be able to get in the way of loading the app.
   // Fetch the pop-ups quietly in the background once the app is showing,
   // so opening one later is instant.
   useEffect(() => {
     const t = setTimeout(() => { import("./Modals"); import("./ProfileModal"); }, 2500);
     return () => clearTimeout(t);
   }, []);
-
-  // The sign-up source goes first, so a tagged link (say, from Instagram)
-  // that brought someone in before an invite keeps the credit. Then a
-  // friend's invite link, if they arrived on one, connects them both ways.
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      await claimSignupSource(supabase, user);
-      const inviter = await claimInvite(supabase, user);
-      if (inviter) {
-        flash(`You and ${inviter} are now in each other's Courts`);
-        refreshCourt().catch(() => {});
-        refreshFollowers().catch(() => {});
-      }
-    })();
-  }, [user?.id]);
 
   useEffect(() => {
     if (!user || !loaded || !profile?.onboarded || tourChecked.current) return;
@@ -227,27 +206,6 @@ export default function NomarchyApp({ user }) {
     })();
   }, [user]);
 
-  // Fires the promotion celebration whenever the live, computed rank is
-  // higher than the last one this person was shown it for (last_rank_min,
-  // backfilled in schema.sql so existing users don't get celebrated for a
-  // rank they already held before this shipped). Persisting the new value
-  // happens right away, not on close, so refreshing or closing the modal
-  // before reading it can never bring it back on the next load.
-  useEffect(() => {
-    if (!profile || !standing) return;
-    const currentRank = getRank(standing.score ?? 0);
-    if (currentRank.min > 0 && currentRank.min > (profile.last_rank_min ?? 0)) {
-      // Calmer celebrations: a short message instead of the full-screen takeover.
-      if (a11y.calmCelebrations) flash(`You've been promoted to ${currentRank.title}`);
-      else setPromotion(currentRank);
-      handleUpdateProfile({ last_rank_min: currentRank.min }).catch(() => {});
-      // Best-effort and independent of the line above - a friend never
-      // seeing this in their feed shouldn't stop the celebration itself,
-      // and vice versa.
-      logRankPromotion(user.id, currentRank).catch(() => {});
-    }
-  }, [profile, standing]);
-
   // Long enough to read without rushing (2.2s was too quick for many
   // people) - or, if they've chosen it, it stays until they dismiss it.
   const flash = (m) => setToast(m);
@@ -269,6 +227,26 @@ export default function NomarchyApp({ user }) {
   const refreshStanding = async () => setStanding(await loadStanding(user.id));
   const refreshCourt = async () => setCourt(await loadCourt(user.id));
   const refreshFollowers = async () => setFollowers(await loadFollowers(user.id));
+
+  // Records which link a brand-new signup came from, once (it never throws,
+  // so it can't get in the way of loading the app). The sign-up source goes
+  // first, so a tagged link (say, from Instagram) that brought someone in
+  // before an invite keeps the credit. Then a friend's invite link, if they
+  // arrived on one, connects them both ways.
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      await claimSignupSource(supabase, user);
+      const inviter = await claimInvite(supabase, user);
+      if (inviter) {
+        flash(`You and ${inviter} are now in each other's Courts`);
+        refreshCourt().catch(() => {});
+        refreshFollowers().catch(() => {});
+      }
+    })();
+    // Once per signed-in person, not on every change to the helpers it uses.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const handleFollowBack = async (targetId) => {
     setFollowBackBusy(targetId);
@@ -539,11 +517,14 @@ export default function NomarchyApp({ user }) {
   // it. Not every browser can share a file though (most desktop browsers
   // can't), so this always has the old copy-the-text behaviour to fall
   // back to.
-  const shareCard = async (text, params, filename) => {
+  // `text` can be a promise (sharePick looks up a link for it): it's
+  // fetched alongside the image rather than after it, because phones only
+  // allow a share sheet shortly after the tap that asked for it.
+  const shareCard = async (textOrPromise, params, filename) => {
     const cardUrl = `/api/card?${params.toString()}`;
+    const textPromise = Promise.resolve(textOrPromise);
     try {
-      const res = await fetch(cardUrl);
-      const blob = await res.blob();
+      const [blob, text] = await Promise.all([fetch(cardUrl).then((res) => res.blob()), textPromise]);
       const file = new File([blob], filename, { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], title: "Nomarchy", text });
@@ -554,6 +535,7 @@ export default function NomarchyApp({ user }) {
     }
 
     try {
+      const text = await textPromise;
       await navigator.clipboard.writeText(text);
       flash("Copied, paste it in the group chat");
     } catch {
@@ -563,13 +545,14 @@ export default function NomarchyApp({ user }) {
 
   // Links to the restaurant's public page (who else crowned it), plus the
   // sharer's own kingdom when it's Public.
-  const sharePick = async (cuisineName, r) => {
-    const slug = r.googlePlaceId ? await loadPlaceSlug(r.googlePlaceId).catch(() => null) : null;
-    const links = [
-      slug && `Who else crowned it: ${restaurantUrl(slug)}`,
-      profile?.is_public && profile?.username && `My kingdom: https://nomarchy.ca/${profile.username}`,
-    ].filter(Boolean).join("\n");
-    const text = `My ${cuisineName} throne on Nomarchy: ${r.name}${r.area ? ` (${r.area})` : ""}\n\n"${r.decree}"${links ? `\n\n${links}` : ""}`;
+  const sharePick = (cuisineName, r) => {
+    const text = (r.googlePlaceId ? loadPlaceSlug(r.googlePlaceId).catch(() => null) : Promise.resolve(null)).then((slug) => {
+      const links = [
+        slug && `Who else crowned it: ${restaurantUrl(slug)}`,
+        profile?.is_public && profile?.username && `My kingdom: https://nomarchy.ca/${profile.username}`,
+      ].filter(Boolean).join("\n");
+      return `My ${cuisineName} throne on Nomarchy: ${r.name}${r.area ? ` (${r.area})` : ""}\n\n"${r.decree}"${links ? `\n\n${links}` : ""}`;
+    });
     const params = new URLSearchParams({
       cuisine: cuisineName, name: r.name, area: r.area || "",
       rating: r.rating || "", blurb: r.decree || "", username: profile?.username || "",
@@ -712,6 +695,34 @@ export default function NomarchyApp({ user }) {
     const updated = await updateProfile(user.id, fields);
     setProfile(updated);
   };
+
+  // Fires the promotion celebration whenever the live, computed rank is
+  // higher than the last one this person was shown it for (last_rank_min,
+  // backfilled in schema.sql so existing users don't get celebrated for a
+  // rank they already held before this shipped). Persisting the new value
+  // happens right away, not on close, so refreshing or closing the modal
+  // before reading it can never bring it back on the next load.
+  useEffect(() => {
+    if (!profile || !standing) return;
+    const currentRank = getRank(standing.score ?? 0);
+    if (currentRank.min > 0 && currentRank.min > (profile.last_rank_min ?? 0)) {
+      // Calmer celebrations: a short message instead of the full-screen takeover.
+      // (Reacting to a newly loaded score is exactly what this effect is
+      // for, and it only fires once per promotion.)
+      /* eslint-disable react-hooks/set-state-in-effect */
+      if (a11y.calmCelebrations) flash(`You've been promoted to ${currentRank.title}`);
+      else setPromotion(currentRank);
+      /* eslint-enable react-hooks/set-state-in-effect */
+      handleUpdateProfile({ last_rank_min: currentRank.min }).catch(() => {});
+      // Best-effort and independent of the line above - a friend never
+      // seeing this in their feed shouldn't stop the celebration itself,
+      // and vice versa.
+      logRankPromotion(user.id, currentRank).catch(() => {});
+    }
+    // Only a new profile or score should re-check; the settings and helpers
+    // it reads don't change what counts as a promotion.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, standing]);
 
   const handleDeleteAccount = async (eraseContent) => {
     await deleteAccount(eraseContent);
@@ -1041,7 +1052,7 @@ export default function NomarchyApp({ user }) {
                               }}
                             >report it here</button>.
                           </>)}
-                          {n.type === "announcement" && <><span style={{ fontWeight: 700, color: C.goldText }}>What's new:</span> {n.text}</>}
+                          {n.type === "announcement" && <><span style={{ fontWeight: 700, color: C.goldText }}>What&apos;s new:</span> {n.text}</>}
                         </div>
                         <div className="mt-0.5 text-[10px]" style={{ color: C.muted }}>{timeAgo(n.at)}</div>
                       </div>
@@ -1220,7 +1231,7 @@ export default function NomarchyApp({ user }) {
                 <button type="button" onClick={() => setPickingNewEmoji((v) => !v)} aria-label="Pick an icon" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg" style={{ background: C.bg, border: `1px solid ${pickingNewEmoji ? C.gold : C.cardEdge}` }}>
                   {newCuisineEmoji || "🍽️"}
                 </button>
-                <input aria-label="New cuisine name" autoFocus value={newCuisine} onChange={(e) => setNewCuisine(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddCuisine()} placeholder="e.g. Pho, Wings" className="w-full rounded-lg px-3 py-2 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+                <input aria-label="New cuisine name" autoFocus maxLength={60} value={newCuisine} onChange={(e) => setNewCuisine(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddCuisine()} placeholder="e.g. Pho, Wings" className="w-full rounded-lg px-3 py-2 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
                 <button onClick={handleAddCuisine} className="rounded-lg px-3 text-sm font-bold" style={{ background: C.gold, color: C.onGold }}>Add</button>
               </div>
               {pickingNewEmoji && <CuisineEmojiGrid onPick={(e) => { setNewCuisineEmoji(e); setPickingNewEmoji(false); }} />}
@@ -1881,6 +1892,7 @@ export default function NomarchyApp({ user }) {
       {profile && !profile.onboarded && (
         <WelcomeModal
           profile={profile}
+          email={user.email}
           onChangeAvatar={(avatar_url) => handleUpdateProfile({ avatar_url })}
           onSubmit={(fields) => handleUpdateProfile({ ...fields, onboarded: true })}
         />

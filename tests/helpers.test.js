@@ -87,3 +87,19 @@ describe("changelog", () => {
     expect(CHANGELOG.filter((c) => c.featured).length).toBeGreaterThanOrEqual(4);
   });
 });
+
+import { suggestedNames } from "@/lib/welcomeNames";
+
+describe("welcome step suggestions", () => {
+  it("works the name out from the person's own email for a new account", () => {
+    expect(suggestedNames("Jane.Smith+food@example.com", { username: "member-1a2b3c4d", display_name: null }))
+      .toEqual({ handle: "jane-smith-food", displayName: "Jane.Smith+food" });
+  });
+  it("tidies an older account's username and keeps its name", () => {
+    expect(suggestedNames("x@example.com", { username: "steve-8f3a", display_name: "Steve" }))
+      .toEqual({ handle: "steve", displayName: "Steve" });
+  });
+  it("copes with no email", () => {
+    expect(suggestedNames(undefined, { username: "member-1a2b3c4d" })).toEqual({ handle: "", displayName: "" });
+  });
+});

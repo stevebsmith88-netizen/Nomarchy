@@ -243,7 +243,7 @@ export function ProfileModal({ profile, title, rank, nextRank, score, stats, onC
 
         <div className="mt-3">
           <label className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Your city</label>
-          <input aria-label="City"
+          <input aria-label="City" maxLength={100}
             value={city}
             onChange={(e) => setCity(e.target.value)}
             placeholder="e.g. Toronto, Austin, Manchester"

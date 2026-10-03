@@ -1,6 +1,7 @@
-# Runs on every push and pull request: the unit tests, a production build,
-# and the database file applied twice to a fresh Postgres. A red cross on
-# GitHub means something here broke - nothing is deployed differently.
+# Runs on every push and pull request: code-quality checks (lint), the unit
+# tests, a production build, and the database file applied twice to a fresh
+# Postgres. A red cross on GitHub means something here broke - nothing is
+# deployed differently.
 name: CI
 
 on:
@@ -17,6 +18,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run lint
       - run: npm test
       - run: npm run build
         env:

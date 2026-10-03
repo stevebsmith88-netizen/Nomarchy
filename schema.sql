@@ -101,8 +101,11 @@ alter table profiles add column if not exists notify_endorsements boolean not nu
 -- that works for a per-user preference this small.
 alter table profiles add column if not exists hidden_cuisine_ids uuid[] not null default '{}';
 
--- Auto-create a profile whenever someone signs up.
--- Username is always the email prefix plus a random suffix, so it can never collide.
+-- Auto-create a profile whenever someone signs up. The starting username
+-- is a neutral placeholder ("member-1a2b3c4d") with no display name, so
+-- nothing taken from the person's email is ever stored where others can
+-- read it. The welcome step suggests a name from their email on their own
+-- screen only, and saves whatever they choose.
 create or replace function handle_new_user()
 returns trigger
 language plpgsql
@@ -110,12 +113,7 @@ security definer set search_path = public
 as $$
 begin
   insert into profiles (id, username, display_name)
-  values (
-    new.id,
-    lower(regexp_replace(split_part(new.email, '@', 1), '[^a-zA-Z0-9]+', '-', 'g'))
-      || '-' || substr(md5(random()::text || clock_timestamp()::text), 1, 4),
-    split_part(new.email, '@', 1)
-  );
+  values (new.id, 'member-' || substr(md5(random()::text || clock_timestamp()::text || new.id::text), 1, 8), null);
   return new;
 end;
 $$;
@@ -133,6 +131,7 @@ create trigger on_auth_user_created
 create or replace function protect_is_owner()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   if new.is_owner is distinct from old.is_owner and current_user <> 'postgres' then
@@ -259,10 +258,13 @@ create index if not exists fallen_user_idx on fallen(user_id);
 -- The coup trigger: any time a throne row is replaced by a DIFFERENT
 -- restaurant, the old monarch is copied into fallen automatically. Editing
 -- the decree or rating for the SAME restaurant is not a coup and does not
--- archive anything.
+-- archive anything. Runs as the table owner (security definer) because
+-- this trigger is the only way a row gets into fallen - people can't write
+-- to it directly (see "fallen" in section 8).
 create or replace function archive_dethroned()
 returns trigger
 language plpgsql
+security definer set search_path = public
 as $$
 begin
   insert into fallen (user_id, cuisine_id, place_name, address, neighbourhood, decree, crowned_at)
@@ -420,14 +422,13 @@ create table if not exists place_lookup_cache (
 
 alter table place_lookup_cache enable row level security;
 
+-- Readable by anyone; written only by the server (app/api/ai, with the
+-- service role). It used to be writable by any signed-in user, which let
+-- someone plant fake search results that everyone else would then see.
 drop policy if exists "lookup cache readable" on place_lookup_cache;
 create policy "lookup cache readable" on place_lookup_cache for select using (true);
 drop policy if exists "signed-in users populate the cache" on place_lookup_cache;
-create policy "signed-in users populate the cache" on place_lookup_cache for insert
-  with check ((select auth.uid()) is not null);
 drop policy if exists "signed-in users refresh the cache" on place_lookup_cache;
-create policy "signed-in users refresh the cache" on place_lookup_cache for update
-  using ((select auth.uid()) is not null) with check ((select auth.uid()) is not null);
 
 -- ------------------------------------------------------------
 -- 7bb. RESTAURANTS (pre-loaded local reference data)
@@ -474,11 +475,14 @@ create policy "restaurants readable" on restaurants for select using (true);
 -- names at least 0.3 similar using the index; the similarity() check then
 -- applies this function's own stricter cut-off, so matching is the same as
 -- before. (Supabase doesn't allow changing the "%" threshold itself.)
+-- search_path includes "extensions" because Supabase installs pg_trgm
+-- (the "%" and similarity() used here) in that schema.
 drop function if exists match_restaurant(text);
 create function match_restaurant(search_name text)
 returns table (name text, address text, neighbourhood text, lat numeric, lng numeric, city text)
 language sql
 stable
+set search_path = public, extensions
 as $$
   select r.name, r.address, r.neighbourhood, r.lat, r.lng, r.city
   from restaurants r
@@ -506,6 +510,7 @@ create or replace function search_restaurants_fuzzy(search_name text)
 returns table (name text, address text, neighbourhood text)
 language sql
 stable
+set search_path = public, extensions
 as $$
   select r.name, r.address, r.neighbourhood
   from restaurants r
@@ -661,9 +666,10 @@ create policy "fallen readable" on fallen for select
     (select auth.uid()) = fallen.user_id
     or exists (select 1 from profiles p where p.id = fallen.user_id and p.is_public)
   );
+-- No write policy: past crowns are only ever added by the coup trigger
+-- (archive_dethroned, which runs as the owner). The score counts coups, so
+-- letting people write here directly would let them fake their own.
 drop policy if exists "own fallen writable" on fallen;
-create policy "own fallen writable" on fallen for all
-  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 -- Next in line: PRIVATE. Your shortlist is nobody else's business.
 drop policy if exists "own list only" on next_in_line;
@@ -913,14 +919,20 @@ create policy "thrones coup rate limit" on thrones as restrictive for update
 -- A security definer function breaks the loop: it runs with the
 -- function owner's privileges rather than the caller's row security, so
 -- its internal count query never re-triggers this policy.
+-- Only ever counts the caller's own entries (anyone else's count is 0),
+-- so it can't be used to watch how active someone else is.
 create or replace function next_in_line_recent_count(uid uuid)
 returns bigint
 language sql
 stable
 security definer set search_path = public
 as $$
-  select count(*) from next_in_line where user_id = uid and added_at > now() - interval '1 hour';
+  select count(*) from next_in_line
+  where user_id = uid and uid = (select auth.uid()) and added_at > now() - interval '1 hour';
 $$;
+
+revoke all on function next_in_line_recent_count(uuid) from public;
+grant execute on function next_in_line_recent_count(uuid) to authenticated;
 
 drop policy if exists "next in line insert rate limit" on next_in_line;
 create policy "next in line insert rate limit" on next_in_line as restrictive for insert
@@ -943,9 +955,13 @@ security definer set search_path = public
 as $$
   select count(*) from storage.objects
   where bucket_id = 'review-photos'
+    and uid = (select auth.uid())
     and (storage.foldername(name))[1] = uid::text
     and created_at > now() - interval '1 hour';
 $$;
+
+revoke all on function review_photos_recent_count(uuid) from public;
+grant execute on function review_photos_recent_count(uuid) to authenticated;
 
 drop policy if exists "review photos insert rate limit" on storage.objects;
 create policy "review photos insert rate limit" on storage.objects as restrictive for insert
@@ -1221,6 +1237,7 @@ alter table next_in_line add column if not exists coords_refreshed_at timestampt
 create or replace function stamp_coords_refreshed()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   if new.lat is null or new.lng is null then return new; end if;
@@ -1318,6 +1335,7 @@ create policy "cuisines icon updatable by creator" on cuisines for update
 create or replace function protect_cuisine_fields()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   if current_user <> 'postgres'
@@ -1381,6 +1399,7 @@ create or replace function place_street_key(p_text text)
 returns text
 language sql
 immutable
+set search_path = public
 as $$
   select coalesce(string_agg(coalesce(m.short, w.word), ' ' order by w.ord), '')
   from unnest(string_to_array(
@@ -1401,6 +1420,7 @@ create or replace function place_text_key(p_name text, p_address text, p_area te
 returns text
 language sql
 immutable
+set search_path = public
 as $$
   select regexp_replace(regexp_replace(lower(trim(coalesce(p_name, ''))), '[\s\-–—:,.]+$', ''), '\s+', ' ', 'g')
     || '|' || coalesce(nullif(place_street_key(p_address), ''), place_street_key(p_area));
@@ -1416,6 +1436,7 @@ create or replace function best_in_land(
 returns table (name text, area text, address text, rating numeric, maps_url text, google_place_id text, crown_count bigint)
 language sql
 stable
+set search_path = public
 as $$
   with crowns as (
     select t.user_id, t.place_name, t.address, t.neighbourhood, t.rating, t.maps_url, t.google_place_id, t.crowned_at,
@@ -1490,6 +1511,7 @@ create or replace function slug_part(t text)
 returns text
 language sql
 immutable
+set search_path = public
 as $$
   select trim(both '-' from regexp_replace(
     translate(replace(replace(lower(coalesce(t, '')), '''', ''), '’', ''),
@@ -1732,3 +1754,104 @@ end;
 $$;
 
 grant execute on function report_error(text, text, text, text, text) to anon, authenticated;
+
+-- ------------------------------------------------------------
+-- PRIVACY & SECURITY HARDENING (October 2026 review)
+-- ------------------------------------------------------------
+
+-- Profiles: other people (and signed-out visitors) can read only the
+-- public parts - name, username, photo, city, and the public/discoverable
+-- switches - which Court, notifications and restaurant pages need. A row
+-- also holds personal settings (accessibility choices, notification
+-- preferences, when you last checked notifications, the email unsubscribe
+-- code) that are nobody else's business, so those columns are no longer
+-- readable through the API. Your own full profile comes from my_profile().
+-- Safe to re-run: the grants are reset to exactly this each time.
+revoke select on profiles from anon, authenticated;
+grant select (id, username, display_name, city, avatar_url, is_owner, is_public, discoverable)
+  on profiles to anon, authenticated;
+
+create or replace function my_profile()
+returns jsonb
+language sql
+stable
+security definer set search_path = public
+as $$
+  select to_jsonb(p) - 'unsubscribe_token' from profiles p where p.id = (select auth.uid());
+$$;
+
+revoke all on function my_profile() from public;
+grant execute on function my_profile() to authenticated;
+
+-- Admin > Users: the owner's view of everyone's sign-up details. Returns
+-- nothing to anyone who isn't the owner.
+create or replace function admin_profiles()
+returns table (id uuid, username text, display_name text, created_at timestamptz, onboarded boolean, is_public boolean, discoverable boolean)
+language sql
+stable
+security definer set search_path = public
+as $$
+  select p.id, p.username, p.display_name, p.created_at, p.onboarded, p.is_public, p.discoverable
+  from profiles p
+  where exists (select 1 from profiles me where me.id = (select auth.uid()) and me.is_owner);
+$$;
+
+revoke all on function admin_profiles() from public;
+grant execute on function admin_profiles() to authenticated;
+
+-- Usernames: the app already only offers 3-30 lowercase letters, numbers
+-- and hyphens; this makes the database insist on it too, and keeps names
+-- that would clash with the site's own pages (nomarchy.ca/faq, /r, ...).
+-- Checked only when a username actually changes, so nobody's existing
+-- username stops them saving anything else.
+create or replace function check_username()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if tg_op = 'INSERT' or new.username is distinct from old.username then
+    if new.username !~ '^[a-z0-9-]{3,30}$'
+       or new.username in ('faq', 'privacy', 'terms', 'r', 'api', 'admin', 'about', 'help', 'support', 'settings', 'login', 'signup', 'sitemap', 'robots', 'manifest') then
+      raise exception 'That username isn''t available' using errcode = '23514';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists check_username_trigger on profiles;
+create trigger check_username_trigger
+  before insert or update of username on profiles
+  for each row execute function check_username();
+
+-- Sensible upper limits on free text, so nobody can store a novel (or
+-- megabytes of junk) that then loads on everyone's screen. Generous enough
+-- that no real decree, note or name comes close. NOT VALID: existing rows
+-- aren't re-checked, only new and edited ones.
+alter table profiles drop constraint if exists profiles_display_name_length;
+alter table profiles add constraint profiles_display_name_length check (char_length(display_name) <= 100) not valid;
+alter table profiles drop constraint if exists profiles_city_length;
+alter table profiles add constraint profiles_city_length check (char_length(city) <= 100) not valid;
+alter table thrones drop constraint if exists thrones_decree_length;
+alter table thrones add constraint thrones_decree_length check (char_length(decree) <= 10000) not valid;
+alter table thrones drop constraint if exists thrones_place_name_length;
+alter table thrones add constraint thrones_place_name_length check (char_length(place_name) <= 300) not valid;
+alter table next_in_line drop constraint if exists nil_note_length;
+alter table next_in_line add constraint nil_note_length check (char_length(note) <= 5000) not valid;
+alter table next_in_line drop constraint if exists nil_place_name_length;
+alter table next_in_line add constraint nil_place_name_length check (char_length(place_name) <= 300) not valid;
+alter table cuisines drop constraint if exists cuisines_name_length;
+alter table cuisines add constraint cuisines_name_length check (char_length(name) <= 80) not valid;
+alter table feedback drop constraint if exists feedback_message_length;
+alter table feedback add constraint feedback_message_length check (char_length(message) <= 10000) not valid;
+alter table rank_promotions drop constraint if exists rank_promotions_title_length;
+alter table rank_promotions add constraint rank_promotions_title_length check (char_length(rank_title) <= 80) not valid;
+
+-- ------------------------------------------------------------
+-- VERSION STAMP
+-- Records that this exact version of the file ran all the way through, so
+-- database-check.sql can tell whether the live database is up to date.
+-- Written by `npm run db:check` (scripts/build-db-check.mjs) - don't edit.
+-- ------------------------------------------------------------
+insert into schema_migrations (name) values ('schema-version:4f6a328bac1b') on conflict (name) do nothing;

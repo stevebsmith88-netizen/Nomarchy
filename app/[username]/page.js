@@ -24,7 +24,10 @@ export async function generateMetadata({ params, searchParams }) {
   return profilePreview(await fetchProfileForMeta(username), invite);
 }
 
-export default async function Page({ params }) {
+export default async function Page({ params, searchParams }) {
   const { username } = await params;
-  return <PublicProfileClient username={username} />;
+  const { invite } = (await searchParams) || {};
+  // An invite link (?invite=<this username>) shows the invite banner.
+  const invited = typeof invite === "string" && invite.trim().toLowerCase() === username.toLowerCase();
+  return <PublicProfileClient username={username} invited={invited} />;
 }

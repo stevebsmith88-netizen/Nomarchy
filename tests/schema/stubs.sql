@@ -30,3 +30,12 @@ alter table storage.objects owner to supabase_like;
 alter function auth.uid() owner to supabase_like;
 alter function storage.foldername(text) owner to supabase_like;
 grant anon, authenticated, service_role to supabase_like;
+
+-- Like Supabase: every table created in public is fully granted to the API
+-- roles at creation time, and row-level security (plus any column grants
+-- schema.sql narrows afterwards) decides what they can actually see.
+grant usage on schema public to anon, authenticated, service_role;
+grant usage on schema auth to anon, authenticated;
+grant execute on all functions in schema auth to anon, authenticated;
+alter default privileges for role supabase_like in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges for role supabase_like in schema public grant all on sequences to anon, authenticated, service_role;

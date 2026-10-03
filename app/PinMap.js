@@ -70,6 +70,9 @@ export default function PinMap({ pins }) {
 
   useEffect(() => {
     let cancelled = false;
+    const box = boxRef.current;
+    // A theme change rebuilds the map, so it starts from "loading" again.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus("loading"); setProblem("");
     const stopAuth = onMapsAuthFailure(() => { if (!cancelled) { setProblem("auth"); setStatus("error"); } });
     (async () => {
@@ -104,7 +107,7 @@ export default function PinMap({ pins }) {
       mapRef.current = null;
       infoRef.current = null;
       setMap(null);
-      if (boxRef.current) boxRef.current.innerHTML = "";
+      if (box) box.innerHTML = "";
     };
   }, [theme]);
 
@@ -145,6 +148,9 @@ export default function PinMap({ pins }) {
       }
     })();
     return () => { stale = true; };
+    // pinsKey (the pins as text) stands in for `pins`, which is a new array
+    // on every render even when nothing changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, pinsKey]);
 
   return (

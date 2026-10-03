@@ -7,6 +7,7 @@ import { Avatar, AvatarPicker, ClosedBadge, MAX_IMPORT_CHARS, MIN_DECREE_LENGTH,
 import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
 import { loadDirectory, loadPlaceSlug, loadRestaurantProfile, loadRestaurantVisitCount, loadRestaurantWantingCount, loadSuggestedFriends, supabase } from "@/lib/data";
 import { safeMapsUrl } from "@/lib/safeUrl";
+import { suggestedNames } from "@/lib/welcomeNames";
 import { clearDraft, loadDraft, saveDraft } from "@/lib/decreeDrafts";
 import { Bookmark, Check, Crown, ExternalLink, Loader2, MessageSquare, Search, Share2, Star, Swords, Wand2, X } from "lucide-react";
 
@@ -107,14 +108,16 @@ export function RestaurantProfileModal({ restaurant, onClose }) {
 }
 
 // One-time, non-dismissable first-run step - a brand new signup (email
-// or Google) lands with an auto-generated username like "steve-8f3a"
-// that reads fine internally but poorly to a cold Instagram contact.
-// Pre-filling the cleaned-up slug (stripping the random suffix the
-// handle_new_user() trigger appends) means most people can just tap
-// Continue, while anyone who cares can still change it right here.
-export function WelcomeModal({ profile, onChangeAvatar, onSubmit }) {
-  const suggested = (profile?.username || "").replace(/-[0-9a-f]{4}$/, "");
-  const [displayName, setDisplayName] = useState(profile?.display_name || suggested);
+// or Google) lands with a neutral placeholder username ("member-1a2b3c4d",
+// from handle_new_user() in schema.sql). Pre-filling a name and handle
+// worked out from their own email - here on their screen only, never
+// stored until they press Continue - means most people can just tap
+// Continue, while anyone who cares can change them right here. Accounts
+// from before the placeholder change still get their old username tidied
+// (the random "-1a2b" suffix stripped).
+export function WelcomeModal({ profile, email, onChangeAvatar, onSubmit }) {
+  const { handle: suggested, displayName: suggestedName } = suggestedNames(email, profile);
+  const [displayName, setDisplayName] = useState(suggestedName);
   const [username, setUsername] = useState(suggested);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -206,7 +209,7 @@ export function PromotionModal({ rank, nextRank, score, thrones, reviewCount, pr
     <div data-modal-backdrop className="fixed inset-0 z-[1150] flex items-center justify-center p-5" style={{ background: "rgba(10,5,16,0.92)" }} onClick={onClose}>
       <div role="dialog" aria-modal="true" tabIndex={-1} className="w-full max-w-sm rounded-2xl p-6 text-center" style={{ background: C.card, border: `1px solid ${C.gold}` }} onClick={(e) => e.stopPropagation()}>
         <Crown size={34} className="mx-auto" style={{ color: C.goldText }} fill={C.gold} strokeWidth={0} />
-        <p className="mt-2 text-xs font-bold uppercase" style={{ color: C.goldText, letterSpacing: "0.14em" }}>You've been promoted</p>
+        <p className="mt-2 text-xs font-bold uppercase" style={{ color: C.goldText, letterSpacing: "0.14em" }}>You&apos;ve been promoted</p>
         <h2 className="mt-1 text-2xl" style={{ ...display, fontWeight: 900 }}>{rank.title}</h2>
 
         <p className="mt-4 text-sm italic leading-relaxed" style={{ color: C.cream }}>&ldquo;{proclamation}&rdquo;</p>
@@ -485,7 +488,7 @@ export function FeedbackModal({ onClose, onSubmit, initialMessage = "" }) {
             <p className="mt-2 text-sm" style={{ color: C.muted }}>
               Found a bug, something confusing, or an idea? Say as much or as little as you like.
             </p>
-            <textarea aria-label="Feedback message"
+            <textarea aria-label="Feedback message" maxLength={10000}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={5}
@@ -639,7 +642,7 @@ export function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, re
           <div className="text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.12em" }}>Find the real place</div>
           <div className="mt-2 flex gap-2">
             <input aria-label="Restaurant name to search" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && find()} placeholder="Restaurant name" className="w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
-            <input aria-label="City" value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="w-24 rounded-lg px-2 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+            <input aria-label="City" maxLength={100} value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="w-24 rounded-lg px-2 py-2.5 text-sm outline-none" style={{ background: C.card, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
           </div>
           <button onClick={find} disabled={searching || !query.trim()} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold" style={searching || !query.trim() ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.onGold }}>
             {searching ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}{searching ? "Searching the realm..." : "Look it up"}
@@ -665,7 +668,7 @@ export function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, re
           {sel?.googlePlaceId && <p className="mt-1.5 text-right text-[10px]" style={{ color: C.muted }}>Place details from Google Maps</p>}
         </div>
 
-        <input aria-label="Restaurant name" value={name} onChange={(e) => { setName(e.target.value); if (sel && e.target.value !== sel.name) setSel(null); }} placeholder="Restaurant name" className="mt-3 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
+        <input aria-label="Restaurant name" maxLength={300} value={name} onChange={(e) => { setName(e.target.value); if (sel && e.target.value !== sel.name) setSel(null); }} placeholder="Restaurant name" className="mt-3 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
         <input aria-label="Neighbourhood (optional)" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Neighbourhood (optional)" className="mt-2 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
         {showRestored && (
           <div className="mt-2 flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs" style={{ background: C.gold + "1A", border: `1px solid ${C.gold}66`, color: C.cream }}>
@@ -673,7 +676,7 @@ export function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, re
             <button type="button" onClick={startOver} className="shrink-0 font-bold underline" style={{ color: C.goldText }}>Start over</button>
           </div>
         )}
-        <textarea aria-label={isPretender ? "Why you want to go" : "Your decree (why it's your favourite)"} value={text} onChange={(e) => setText(e.target.value)} rows={isPretender ? 2 : 4}
+        <textarea aria-label={isPretender ? "Why you want to go" : "Your decree (why it's your favourite)"} maxLength={isPretender ? 5000 : 10000} value={text} onChange={(e) => setText(e.target.value)} rows={isPretender ? 2 : 4}
           placeholder={isPretender ? "Why do you want to go? (optional)" : isCoup ? "The decree: why does this dethrone the reigning spot?" : "The decree: what makes this your one true spot?"}
           className="mt-2 w-full rounded-lg px-3 py-2.5 text-sm outline-none" style={{ background: C.bg, border: `1px solid ${C.cardEdge}`, color: C.cream }} />
         {!isPretender && (<div className="mt-1 text-right text-xs" style={{ color: text.trim().length >= minLen ? C.green : C.muted }}>

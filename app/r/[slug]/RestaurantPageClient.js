@@ -6,10 +6,13 @@ import { Bookmark, Check, Crown, ExternalLink, Loader2, MapPin, Moon, Sun, Troph
 import { C, display, FontShell, LogoMark, OwnerBadge, RankBadge, useTheme } from "../../theme";
 import { getCuisineEmoji } from "../../cuisineIcons";
 import { PhotoStrip } from "../../components/shared";
-import { addToNextInLine, getUser } from "@/lib/data";
+import { addToNextInLine, getUser, savedPlaceStatus } from "@/lib/data";
 import { bestRankLabel, crownedCuisines, googleMapsUrl, kingdomPath } from "@/lib/restaurantPage";
 
 const fmt = (t) => new Date(t).toLocaleDateString("en-CA", { month: "short", year: "numeric" });
+
+// Same wording the app uses when a place is already saved.
+const ALREADY = { crowned: "Already crowned in your Kingdom", visited: "Already visited", listed: "Already Next in Line" };
 
 // The visible half of a restaurant page - see page.js for how the data is
 // fetched and who it includes. Members' names and rank badges only, no
@@ -35,6 +38,12 @@ export default function RestaurantPageClient({ page }) {
     if (!viewer || adding || added) return;
     setAdding(true); setAddErr("");
     try {
+      const already = await savedPlaceStatus(viewer.id, page.google_place_id);
+      if (already) {
+        setAddErr(ALREADY[already]);
+        setAdding(false);
+        return;
+      }
       // Filed under the cuisine it's most crowned for (not Overall Favourite).
       const cuisine = cuisines.find((c) => c.name !== "Overall Favourite");
       await addToNextInLine(viewer.id, {

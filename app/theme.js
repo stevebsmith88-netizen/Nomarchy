@@ -65,11 +65,15 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     let saved;
     try { saved = localStorage.getItem(STORAGE_KEY); } catch { saved = null; }
+    // Has to happen after the first render: the page is rendered on the
+    // server in light mode, and the saved choice only exists in the browser.
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (saved === "dark") {
       Object.assign(C, DARK);
       setTheme("dark");
     }
     setRestored(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   // Keeps the parts outside React's tree in step with the theme: the
@@ -104,8 +108,9 @@ export function ThemeProvider({ children }) {
 export function useTheme() {
   return useContext(ThemeContext);
 }
-export const display = { fontFamily: "'Raleway', sans-serif" };
-export const body = { fontFamily: "'Work Sans', sans-serif" };
+// Raleway and Work Sans, self-hosted by next/font in app/layout.js.
+export const display = { fontFamily: "var(--font-display), 'Raleway', sans-serif" };
+export const body = { fontFamily: "var(--font-body), 'Work Sans', sans-serif" };
 
 // The gap to the next tier widens as you climb - the first promotion is
 // quick (you just need to try the app), the last one is a real reign.
@@ -231,7 +236,6 @@ export function LogoMark({ size = 32 }) {
 export function FontShell({ children }) {
   return (
     <div className="min-h-screen w-full" style={{ background: C.bg, color: C.cream, ...body }}>
-      <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
       {children}
     </div>
   );

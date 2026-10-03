@@ -53,6 +53,8 @@ describe("delete account", () => {
     expect(ops).not.toContain("deleteUser U1");
     expect(ops.some((o) => o.startsWith("set profiles") && o.includes("No longer a user") && o.includes("former-member-"))).toBe(true);
     expect(ops.some((o) => o.startsWith("updateUser U1 deleted-U1@deleted.invalid"))).toBe(true);
+    expect(ops.some((o) => o.startsWith("set profiles") && o.includes('"reminders_opt_out":true') && o.includes('"a11y_prefs":{}'))).toBe(true);
+    expect(ops.some((o) => o.startsWith("delete invites") && o.includes("invitee_id.eq.U1") && o.includes("inviter_id.eq.U1"))).toBe(true);
   });
   it("refuses without a sign-in", async () => {
     const { POST } = await import("@/app/api/delete-account/route");
@@ -78,5 +80,20 @@ describe("scheduled jobs", () => {
       expect((await GET(new Request("http://x", { headers: { authorization: "Bearer wrong" } }))).status).toBe(401);
     }
     delete process.env.CRON_SECRET;
+  });
+});
+
+describe("reminder unsubscribe", () => {
+  it("works from the email link and from a mail app's one-click button", async () => {
+    const { GET, POST } = await import("@/app/api/reengage/unsubscribe/route");
+    const token = "1b4e28ba-2fa1-11d2-883f-0016d3cca427";
+    expect((await POST(new Request(`http://x/api/reengage/unsubscribe?token=${token}`, { method: "POST" }))).status).toBe(200);
+    expect(state.log.some((l) => l[0] === "set" && l[1] === "profiles" && l[2].includes('"reminders_opt_out":true'))).toBe(true);
+    expect(await (await GET(new Request(`http://x/api/reengage/unsubscribe?token=${token}`))).text()).toContain("You're unsubscribed");
+  });
+  it("ignores a missing or malformed code", async () => {
+    const { POST } = await import("@/app/api/reengage/unsubscribe/route");
+    expect((await POST(new Request("http://x/api/reengage/unsubscribe?token=nope", { method: "POST" }))).status).toBe(400);
+    expect(state.log.some((l) => l[0] === "set")).toBe(false);
   });
 });

@@ -14,6 +14,9 @@ picks, and see who's earned the most taste credibility in your Court.
 2. **Create a Supabase project** at [supabase.com](https://supabase.com):
    - **SQL Editor**: paste `schema.sql` and run it. Every statement is
      `if not exists` / `drop ... if exists` + `create`, so re-running is safe.
+     To confirm the database is up to date at any time, paste and run
+     `database-check.sql` - it changes nothing and answers "All good" or
+     lists what's missing.
    - **Authentication -> Providers**: enable Email, and turn ON "Confirm
      email". This app uses magic links only, no passwords.
    - **Authentication -> URL Configuration**: add `http://localhost:3000/**`

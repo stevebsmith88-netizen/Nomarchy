@@ -18,16 +18,28 @@ function page(message) {
   );
 }
 
-export async function GET(request) {
-  const token = new URL(request.url).searchParams.get("token");
-  if (!token) return page("Missing unsubscribe link. Nothing changed.");
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+async function unsubscribe(token) {
+  if (!token || !UUID.test(token)) return "missing";
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
   const { error } = await supabase
     .from("profiles")
     .update({ reminders_opt_out: true })
     .eq("unsubscribe_token", token);
+  return error ? "error" : "ok";
+}
 
-  if (error) return page("Something went wrong - try the toggle in your profile settings instead.");
+export async function GET(request) {
+  const result = await unsubscribe(new URL(request.url).searchParams.get("token"));
+  if (result === "missing") return page("Missing unsubscribe link. Nothing changed.");
+  if (result === "error") return page("Something went wrong - try the toggle in your profile settings instead.");
   return page("You're unsubscribed from inactivity reminders. You can turn them back on any time from your profile in the app.");
+}
+
+// Mail apps' own "Unsubscribe" button (the List-Unsubscribe-Post header on
+// the reminder email) sends a POST to the same link.
+export async function POST(request) {
+  const result = await unsubscribe(new URL(request.url).searchParams.get("token"));
+  return new Response(null, { status: result === "ok" ? 200 : 400 });
 }

@@ -23,20 +23,27 @@ import { searchGooglePlaces } from "../../../lib/googlePlaces";
 import { logGoogleCall } from "../../../lib/googleUsage";
 
 // Import is a batch, wait-a-moment task where getting cuisines right
-// matters most, so it stays on Opus. Lookup happens mid-flow while
+// matters most, so it uses the Opus model. Lookup happens mid-flow while
 // someone's filling out a crown/next-in-line form and needs to feel fast -
 // it's also a narrower task (search + extract up to 3 matches), so a
-// lighter model at lower effort is the right trade there, not a downgrade
-// for its own sake.
-const IMPORT_MODEL = "claude-opus-5";
-const LOOKUP_MODEL = "claude-sonnet-5";
+// lighter model at low effort is the right trade there, not a downgrade
+// for its own sake. Effort is set explicitly for each: the defaults differ
+// between models.
+const IMPORT_MODEL = "claude-opus-5-5";
+const IMPORT_EFFORT = "medium";
+const LOOKUP_MODEL = "claude-sonnet-5-5";
+const LOOKUP_EFFORT = "low";
 const MAX_IMPORT_CHARS = 20000;
 const HOURLY_CALL_LIMIT = 30;
 
-// Claude Opus 5 thinks by default, and those thinking tokens count against
-// max_tokens - a low cap here doesn't just clip the answer, it can eat the
-// whole budget during thinking and leave nothing but an empty response.
-// Give it real headroom; billing is by tokens actually used, not this cap.
+// If a request is declined by the model's safety checks, the API retries it
+// on Anthropic's recommended fallback model instead of returning nothing.
+const FALLBACK = { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" };
+
+// Both models think before answering, and those thinking tokens count
+// against max_tokens - a low cap here doesn't just clip the answer, it can
+// eat the whole budget during thinking and leave nothing but an empty
+// response. Give it real headroom; billing is by tokens actually used.
 const MAX_OUTPUT_TOKENS = 16000;
 
 // Give slow web-search-backed lookups room to finish instead of Vercel
@@ -52,6 +59,14 @@ function supabaseForToken(token) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     { global: { headers: { Authorization: `Bearer ${token}` } } }
   );
+}
+
+// The shared search cache is written only by this server (members can read
+// it but not write it - see place_lookup_cache in schema.sql).
+function serviceClient() {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    : null;
 }
 
 async function requireUser(token) {
@@ -208,25 +223,38 @@ async function handleLookup(supabase, query, city, userId) {
     return { result: { results: cachedRow.results }, cached: true };
   }
 
-  const response = await anthropic.messages.create({
-    model: LOOKUP_MODEL,
-    max_tokens: MAX_OUTPUT_TOKENS,
-    output_config: { effort: "low" },
-    tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 3 }],
-    messages: [
-      {
-        role: "user",
-        content:
-          `Search the web for the restaurant "${query.trim()}" in ${city?.trim() || "Toronto"}. ` +
-          `Find up to 3 real matching restaurants, exact match first. ` +
-          `Respond with ONLY a raw JSON array, no markdown fences: ` +
-          `[{"name":"...","address":"street address","neighbourhood":"short name","rating":"4.5",` +
-          `"mapsUrl":"https://www.google.com/maps/search/?api=1&query=URLENCODED"}]. ` +
-          `Empty string for unknown fields. If nothing matches, respond with [].`,
-      },
-    ],
-  });
+  // The AI web search is the last resort. If it fails (an outage, a
+  // decline, no API credit), answer "no matches" so the form simply asks
+  // for the details by hand, rather than showing an error.
+  let response;
+  try {
+    response = await anthropic.beta.messages.create({
+      ...FALLBACK,
+      model: LOOKUP_MODEL,
+      max_tokens: MAX_OUTPUT_TOKENS,
+      output_config: { effort: LOOKUP_EFFORT },
+      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 3 }],
+      messages: [
+        {
+          role: "user",
+          content:
+            `Search the web for the restaurant "${query.trim()}" in ${city?.trim() || "Toronto"}. ` +
+            `Find up to 3 real matching restaurants, exact match first. ` +
+            `Respond with ONLY a raw JSON array, no markdown fences: ` +
+            `[{"name":"...","address":"street address","neighbourhood":"short name","rating":"4.5",` +
+            `"mapsUrl":"https://www.google.com/maps/search/?api=1&query=URLENCODED"}]. ` +
+            `Empty string for unknown fields. If nothing matches, respond with [].`,
+        },
+      ],
+    });
+  } catch (err) {
+    console.error("AI lookup failed", err?.message);
+    return { result: { results: [] }, cached: true };
+  }
 
+  if (response.stop_reason === "refusal") {
+    return { result: { results: [] }, cached: false };
+  }
   if (response.stop_reason === "max_tokens") {
     throw new Error("That search took too long to answer. Try again.");
   }
@@ -240,8 +268,9 @@ async function handleLookup(supabase, query, city, userId) {
 
   // Only cache real matches - an empty/failed search shouldn't get stuck
   // permanently returning nothing for everyone who searches it later.
-  if (results.length > 0) {
-    await supabase.from("place_lookup_cache").upsert(
+  const writer = serviceClient();
+  if (results.length > 0 && writer) {
+    await writer.from("place_lookup_cache").upsert(
       { query_key: queryKey, results },
       { onConflict: "query_key" }
     );
@@ -276,10 +305,11 @@ async function handleImport(raw, cuisines) {
     additionalProperties: false,
   };
 
-  const response = await anthropic.messages.create({
+  const response = await anthropic.beta.messages.create({
+    ...FALLBACK,
     model: IMPORT_MODEL,
     max_tokens: MAX_OUTPUT_TOKENS,
-    output_config: { format: { type: "json_schema", schema } },
+    output_config: { effort: IMPORT_EFFORT, format: { type: "json_schema", schema } },
     messages: [
       {
         role: "user",
@@ -300,6 +330,9 @@ async function handleImport(raw, cuisines) {
     ],
   });
 
+  if (response.stop_reason === "refusal") {
+    throw new Error("The list couldn't be read. Try removing anything that isn't a restaurant.");
+  }
   if (response.stop_reason === "max_tokens") {
     throw new Error("That list took too long to sort out. Try a shorter paste, or try again.");
   }

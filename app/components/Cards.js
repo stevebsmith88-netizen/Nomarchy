@@ -70,7 +70,7 @@ export function PretenderCard({ p, closed, selectableCuisines, onRemove, onChang
           )}
         </div>
       )}
-      <textarea aria-label={p.visitedAt ? "Your review" : "Your note"}
+      <textarea aria-label={p.visitedAt ? "Your review" : "Your note"} maxLength={5000}
         key={p.id + (p.note || "")}
         defaultValue={p.note || ""}
         onBlur={(e) => { if (e.target.value !== (p.note || "")) onChangeNote(p.id, e.target.value.trim()); }}
@@ -235,7 +235,7 @@ export function ThroneCard({ cuisineName, cuisineId, slot, closed, cuisineEmoji,
                 <button type="button" onClick={() => { setDecreeText(r.decree); setRestored(false); }} className="shrink-0 font-bold underline" style={{ color: C.goldText }}>Undo</button>
               </div>
             )}
-            <textarea aria-label="Your decree (why it's your favourite)"
+            <textarea aria-label="Your decree (why it's your favourite)" maxLength={10000}
               autoFocus
               value={decreeText}
               onChange={(e) => setDecreeText(e.target.value)}

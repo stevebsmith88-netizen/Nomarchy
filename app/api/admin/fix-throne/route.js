@@ -19,7 +19,7 @@
 // ============================================================
 
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { requireOwner } from "../../../../lib/requireOwner";
 
 // Same fix as updateThroneLocation in lib/data.js: correcting the address
 // text alone never moved the map pin, since that lives in separate
@@ -38,34 +38,6 @@ async function geocodeAddress(address) {
   } catch {
     return { lat: null, lng: null };
   }
-}
-
-function anonClient(token) {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-}
-
-async function requireOwner(request) {
-  const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (!token) return { error: NextResponse.json({ error: "Not signed in" }, { status: 401 }) };
-
-  const anon = anonClient(token);
-  const { data: userData } = await anon.auth.getUser(token);
-  if (!userData.user) return { error: NextResponse.json({ error: "Not signed in" }, { status: 401 }) };
-
-  const { data: profile, error: profileErr } = await anon
-    .from("profiles")
-    .select("is_owner")
-    .eq("id", userData.user.id)
-    .single();
-  if (profileErr || !profile?.is_owner) {
-    return { error: NextResponse.json({ error: "Not authorized" }, { status: 403 }) };
-  }
-
-  return { admin: createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY) };
 }
 
 export async function GET(request) {

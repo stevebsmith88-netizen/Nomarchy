@@ -85,9 +85,6 @@ begin
 end $$;
 
 -- Row-level security still keeps a private Next in Line private.
-grant usage on schema public, auth to authenticated;
-grant select on all tables in schema public to authenticated;
-grant execute on all functions in schema auth to authenticated;
 insert into next_in_line (user_id, place_name) values ('00000000-0000-0000-0000-0000000000b1', 'Secret Spot');
 set role authenticated;
 select set_config('app.uid', '00000000-0000-0000-0000-0000000000b2', false);
@@ -115,7 +112,6 @@ insert into auth.users (id, email) values
 update auth.users set created_at = now() - interval '2 hours' where id = '00000000-0000-0000-0000-0000000000d2';
 update profiles set username = 'inviter', display_name = 'Ivy' where id = '00000000-0000-0000-0000-0000000000b1';
 insert into blocks (blocker_id, blocked_id) values ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000d3');
-grant insert, update, delete on all tables in schema public to authenticated;
 set role authenticated;
 do $$
 declare got text; n int;
@@ -155,8 +151,6 @@ insert into next_in_line (user_id, place_name, neighbourhood, city, google_place
   ('00000000-0000-0000-0000-0000000000b2', 'Rudy''s Café', 'Annex', 'Toronto', 'GID_RUDY2'),
   ('00000000-0000-0000-0000-0000000000b2', 'Rudy''s Café', 'Annex', 'Toronto', 'GID_RUDY3'),
   ('00000000-0000-0000-0000-0000000000b2', 'Rudy''s Café', 'Annex', 'Toronto', 'GID_RUDY1');
-grant usage on schema public to anon;
-grant select on all tables in schema public to anon;
 do $$
 declare page jsonb;
 begin
@@ -200,3 +194,98 @@ begin
   end if;
 end $$;
 reset role;
+
+-- Privacy: other people can read names, not settings; your own full
+-- profile comes from my_profile(); the owner's user list from
+-- admin_profiles() (nobody else gets anything).
+set role anon;
+select set_config('app.uid', '', false);
+do $$
+begin
+  perform username, display_name, avatar_url, city, is_public from profiles limit 1;
+  begin
+    perform a11y_prefs from profiles limit 1;
+    raise exception 'a signed-out visitor could read accessibility settings';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform unsubscribe_token from profiles limit 1;
+    raise exception 'a signed-out visitor could read unsubscribe codes';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+set role authenticated;
+select set_config('app.uid', '00000000-0000-0000-0000-0000000000b2', false);
+do $$
+declare me jsonb;
+begin
+  begin
+    perform notifications_seen_at from profiles where id = '00000000-0000-0000-0000-0000000000b1';
+    raise exception 'a member could read when someone else last checked notifications';
+  exception when insufficient_privilege then null;
+  end;
+  me := my_profile();
+  if me->>'id' is distinct from '00000000-0000-0000-0000-0000000000b2' or not (me ? 'a11y_prefs') then
+    raise exception 'my_profile did not return the caller''s own settings';
+  end if;
+  if me ? 'unsubscribe_token' then raise exception 'my_profile leaked the unsubscribe code'; end if;
+  if (select count(*) from admin_profiles()) <> 0 then raise exception 'a non-owner got the admin user list'; end if;
+  -- Saving your own profile still works without being able to read it back.
+  update profiles set display_name = 'Bee', a11y_prefs = '{"largerText": true}' where id = '00000000-0000-0000-0000-0000000000b2';
+  if (my_profile()->'a11y_prefs'->>'largerText') is distinct from 'true' then raise exception 'own settings did not save'; end if;
+end $$;
+
+-- Usernames: format and the site's own page names are enforced when a
+-- username changes.
+do $$
+begin
+  begin
+    update profiles set username = 'faq' where id = '00000000-0000-0000-0000-0000000000b2';
+    raise exception 'a reserved username was accepted';
+  exception when check_violation then null;
+  end;
+  begin
+    update profiles set username = 'Not Valid!' where id = '00000000-0000-0000-0000-0000000000b2';
+    raise exception 'a badly formed username was accepted';
+  exception when check_violation then null;
+  end;
+  update profiles set username = 'bee-two' where id = '00000000-0000-0000-0000-0000000000b2';
+end $$;
+
+-- Scores can't be faked: past crowns come only from a real coup, and the
+-- shared search cache can't be written by members.
+do $$
+declare before_count int;
+begin
+  begin
+    insert into fallen (user_id, cuisine_id, place_name) values ('00000000-0000-0000-0000-0000000000b2', (select id from cuisines where name = 'Sushi' and is_default), 'Fake coup');
+    raise exception 'a member could write fake past crowns';
+  exception when insufficient_privilege then null;
+  end;
+  insert into thrones (user_id, cuisine_id, place_name, decree)
+  values ('00000000-0000-0000-0000-0000000000b2', (select id from cuisines where name = 'Sushi' and is_default), 'First Sushi', 'a decree that is long enough to pass');
+  select count(*) into before_count from fallen where user_id = '00000000-0000-0000-0000-0000000000b2';
+  update thrones set place_name = 'Better Sushi' where user_id = '00000000-0000-0000-0000-0000000000b2' and place_name = 'First Sushi';
+  if (select count(*) from fallen where user_id = '00000000-0000-0000-0000-0000000000b2') <> before_count + 1 then
+    raise exception 'a real coup no longer archives the old crown';
+  end if;
+  begin
+    insert into place_lookup_cache (query_key, results) values ('x|toronto', '[]');
+    raise exception 'a member could plant search results in the shared cache';
+  exception when insufficient_privilege then null;
+  end;
+  if next_in_line_recent_count('00000000-0000-0000-0000-0000000000b1') <> 0 then
+    raise exception 'a member could see someone else''s activity count';
+  end if;
+end $$;
+reset role;
+
+-- New signups get a neutral username with nothing from their email.
+insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000e1', 'jane.private.1985@example.com');
+do $$
+declare u text; d text;
+begin
+  select username, display_name into u, d from profiles where id = '00000000-0000-0000-0000-0000000000e1';
+  if u !~ '^member-[0-9a-f]{8}$' or d is not null then raise exception 'new profile still built from the email: %, %', u, d; end if;
+end $$;

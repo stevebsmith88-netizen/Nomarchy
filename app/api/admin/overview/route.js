@@ -12,7 +12,7 @@
 // ============================================================
 
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { requireOwner } from "../../../../lib/requireOwner";
 
 async function listAllAuthUsers(admin) {
   const users = new Map();
@@ -34,27 +34,9 @@ async function listAllAuthUsers(admin) {
 }
 
 export async function GET(request) {
-  const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (!token) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  const { admin, error } = await requireOwner(request);
+  if (error) return error;
 
-  const anon = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-  const { data: userData } = await anon.auth.getUser(token);
-  if (!userData.user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-
-  const { data: profile, error: profileErr } = await anon
-    .from("profiles")
-    .select("is_owner")
-    .eq("id", userData.user.id)
-    .single();
-  if (profileErr || !profile?.is_owner) {
-    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
-  }
-
-  const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
   let authUsers;
   try {
     authUsers = await listAllAuthUsers(admin);

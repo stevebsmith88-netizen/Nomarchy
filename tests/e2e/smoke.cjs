@@ -60,6 +60,9 @@ function filterRows(url, rows) {
     if (url.includes("/auth/v1/")) return json({});
     const t = table(url);
     const single = (req.headers()["accept"] || "").includes("vnd.pgrst.object");
+    // Your own profile and the owner's user list (both database functions).
+    if (t === "rpc/my_profile") return json(profile);
+    if (t === "rpc/admin_profiles") return json([profile]);
     if (req.method() !== "GET" && req.method() !== "HEAD") return json(single ? {} : [], 200);
     if (t.startsWith("rpc/")) return json(t.includes("count") ? 0 : []);
     const data = { profiles: single ? profile : [profile], cuisines, thrones, next_in_line: nil, follows, invites, standings: single ? { id: UID, score: 42, thrones: 1, coups: 0 } : [{ id: UID, score: 42 }] }[t];
@@ -101,6 +104,7 @@ function filterRows(url, rows) {
     await guest.close();
   });
   await step("profile modal + accessibility", async () => { await page.getByRole("button", { name: /@steve/ }).click(); await page.getByText("Your profile").first().waitFor({ timeout: 5000 }); await page.getByRole("button", { name: /Accessibility/ }).click(); await page.getByRole("switch", { name: "Larger text" }).click(); const t = await page.evaluate(() => document.documentElement.getAttribute("data-text")); if (t !== "large") throw new Error("larger text not applied"); await page.getByRole("switch", { name: "Larger text" }).click(); await page.keyboard.press("Escape"); });
+  await step("profile saves", async () => { await page.getByRole("button", { name: /@steve/ }).click(); await page.getByText("Your profile").first().waitFor({ timeout: 5000 }); await page.getByRole("button", { name: /Settings/ }).click(); await page.getByRole("button", { name: "Save", exact: true }).click(); await page.getByText("Your profile").first().waitFor({ state: "detached", timeout: 5000 }); });
   await step("tour replay", async () => { await page.getByRole("button", { name: /@steve/ }).click(); await page.getByRole("button", { name: /Settings/ }).click(); await page.getByRole("button", { name: "Start" }).click(); await page.locator("[data-tour-box]").waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); });
   await step("admin tab", async () => { await page.getByRole("button", { name: "Admin" }).click(); await page.getByText(/admin|Loading admin overview|Couldn't load/i).first().waitFor({ timeout: 5000 }); });
   await step("kingdom map view", async () => { await page.click('[data-tour="tab-kingdom"]'); await page.getByRole("button", { name: "Map" }).first().click(); await page.waitForTimeout(500); });

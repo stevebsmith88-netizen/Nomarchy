@@ -1,8 +1,16 @@
 import "./globals.css";
+import { Raleway, Work_Sans } from "next/font/google";
 import { ThemeProvider } from "./theme";
 import RefCapture from "./RefCapture";
 import A11yHelpers from "./A11yHelpers";
 import ErrorReporter from "./ErrorReporter";
+
+// The two brand fonts, bundled with the site when it's built rather than
+// fetched from Google on every visit: pages show sooner, text doesn't jump
+// when the font arrives, and no visitor details go to Google just to draw
+// text. theme.js reads them through these CSS variables.
+const raleway = Raleway({ subsets: ["latin"], display: "swap", variable: "--font-display" });
+const workSans = Work_Sans({ subsets: ["latin"], display: "swap", variable: "--font-body" });
 
 const description = "Crown your favourite restaurant in every cuisine, stage a coup when something better comes along, and compare your kingdom with friends.";
 
@@ -41,7 +49,7 @@ export default function RootLayout({ children }) {
   return (
     // suppressHydrationWarning: the inline script below may set an
     // attribute and style on <html> before React hydrates it.
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={`${raleway.variable} ${workSans.variable}`} suppressHydrationWarning>
       <head>
         {/* Applies saved accessibility choices (motion, text size) first.
             Light is the default theme. For someone whose saved choice is

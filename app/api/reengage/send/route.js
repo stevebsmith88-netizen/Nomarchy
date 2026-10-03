@@ -38,7 +38,7 @@ async function listAllUsers(supabase) {
   for (;;) {
     const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
     if (error) throw error;
-    for (const u of data.users) users.set(u.id, { email: u.email, lastSignInAt: u.last_sign_in_at });
+    for (const u of data.users) users.set(u.id, { email: u.email, lastSignInAt: u.last_sign_in_at, bannedUntil: u.banned_until });
     if (data.users.length < 200) break;
     page += 1;
   }
@@ -82,7 +82,14 @@ function renderEmail({ name, unsubscribeUrl, friendCrownCount, changes }) {
   </div>`;
 }
 
-async function sendEmail(to, subject, html) {
+// Closed accounts keep a placeholder address and are blocked from signing
+// in (app/api/delete-account) - never email those.
+function isClosedAccount(user) {
+  if (!user?.email || user.email.endsWith("@deleted.invalid")) return true;
+  return Boolean(user.bannedUntil && new Date(user.bannedUntil).getTime() > Date.now());
+}
+
+async function sendEmail(to, subject, html, unsubscribeUrl) {
   const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
     method: "POST",
     headers: {
@@ -90,7 +97,12 @@ async function sendEmail(to, subject, html) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      personalizations: [{ to: [{ email: to }] }],
+      // The standard one-click unsubscribe header: mail apps show their own
+      // "Unsubscribe" link for it (it POSTs to the same address).
+      personalizations: [{
+        to: [{ email: to }],
+        headers: { "List-Unsubscribe": `<${unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+      }],
       from: { email: SENDGRID_FROM, name: "Nomarchy" },
       subject,
       content: [{ type: "text/html", value: html }],
@@ -154,7 +166,7 @@ export async function GET(request) {
       .filter((p) => !p.reminders_opt_out && new Date(p.created_at).getTime() < cutoffMs)
       .map(async (p) => {
         const user = users.get(p.id);
-        if (!user?.email) { skipped += 1; return; }
+        if (isClosedAccount(user)) { skipped += 1; return; }
 
         const lastSignInMs = user.lastSignInAt ? new Date(user.lastSignInAt).getTime() : 0;
         const lastActivityMs = lastActivity.get(p.id) || 0;
@@ -175,13 +187,14 @@ export async function GET(request) {
           // is flagged, so the section never silently disappears.
           const featured = CHANGELOG.filter((c) => c.featured);
           const changes = (featured.length > 0 ? featured : CHANGELOG).slice(-4);
+          const unsubscribeUrl = `${SITE_URL}/api/reengage/unsubscribe?token=${p.unsubscribe_token}`;
           const html = renderEmail({
             name: p.display_name || p.username,
-            unsubscribeUrl: `${SITE_URL}/api/reengage/unsubscribe?token=${p.unsubscribe_token}`,
+            unsubscribeUrl,
             friendCrownCount,
             changes,
           });
-          await sendEmail(user.email, "Your kingdom's been quiet", html);
+          await sendEmail(user.email, "Your kingdom's been quiet", html, unsubscribeUrl);
           sent += 1;
         } catch {
           failed += 1;
