@@ -181,6 +181,110 @@ export function ReviewCard({ group: g, saving, hasCoords, entryCount, onChoose, 
 // One-time Google ID backfill. Scanning searches Google but saves nothing;
 // the owner then approves the automatic matches and picks the right result
 // for the doubtful ones. See /api/admin/backfill-places.
+// Second step after matching: places that already have a Google ID but still
+// have blank details (cuisine, address, neighbourhood, city, map link). Looks
+// each one up by its ID, shows what it would fill, and saves nothing until
+// approved. Only blanks are ever filled.
+export function PlaceDetailsTool() {
+  const [phase, setPhase] = useState("idle");
+  const [progress, setProgress] = useState({ checked: 0, total: 0 });
+  const [groups, setGroups] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  const fills = groups.filter((g) => g.status === "fill");
+  const unreachable = groups.filter((g) => g.status === "gone" || g.status === "error");
+  const sum = (key) => fills.reduce((n, g) => n + g.plan.counts[key], 0);
+  const noSuggestion = fills.reduce((n, g) => n + (g.plan.noCuisineSuggestion || 0), 0);
+
+  const scan = async () => {
+    setPhase("scanning"); setErr(""); setMsg(""); setGroups([]); setProgress({ checked: 0, total: 0 });
+    try {
+      let offset = 0;
+      let all = [];
+      for (;;) {
+        const data = await adminPlaceMatch({ mode: "details-preview", offset });
+        all = all.concat(data.groups);
+        setGroups(all);
+        setProgress({ checked: all.length, total: data.total });
+        if (data.nextOffset == null) break;
+        offset = data.nextOffset;
+      }
+    } catch (e) {
+      setErr(e.message || "The scan stopped early.");
+    }
+    setPhase("done");
+  };
+
+  const save = async () => {
+    if (saving || fills.length === 0) return;
+    setSaving(true); setErr(""); setMsg("");
+    try {
+      let rows = 0, cuisines = 0;
+      for (let i = 0; i < fills.length; i += 50) {
+        const chunk = fills.slice(i, i + 50);
+        const data = await adminPlaceMatch({
+          mode: "details-apply",
+          updates: chunk.map((g) => ({
+            thrones: g.thrones, nextInLine: g.nextInLine, googlePlaceId: g.googlePlaceId,
+            address: g.plan.values.address || undefined, neighbourhood: g.plan.values.neighbourhood || undefined,
+            city: g.plan.values.city || undefined, mapsUrl: g.plan.values.mapsUrl || undefined, cuisine: g.plan.values.cuisine || undefined,
+          })),
+        });
+        rows += data.rows; cuisines += data.cuisinesFilled || 0;
+        const done = new Set(chunk.map((g) => g.googlePlaceId));
+        setGroups((gs) => gs.filter((g) => !done.has(g.googlePlaceId)));
+      }
+      setMsg(`Filled in details on ${rows} entr${rows === 1 ? "y" : "ies"}, including ${cuisines} cuisine${cuisines === 1 ? "" : "s"}.`);
+    } catch (e) {
+      setErr(e.message || "Couldn't save those.");
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="mb-5">
+      <p className="mb-2 text-xs" style={{ color: C.muted }}>
+        For places that already have a Google ID but are missing a cuisine, address, neighbourhood, city or map link. Each is looked up by its ID (so it can&apos;t be the wrong restaurant). Scanning only looks; nothing is saved until you approve it, and anything already filled in is left exactly as it is.
+      </p>
+      <button onClick={scan} disabled={phase === "scanning" || saving} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold" style={phase === "scanning" ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.onGold }}>
+        {phase === "scanning" ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+        {phase === "scanning" ? `Checked ${progress.checked} of ${progress.total || "..."}` : phase === "done" ? "Scan again" : "Scan for missing details"}
+      </button>
+      {err && <p className="mt-2 text-xs" style={{ color: C.coup }}>{err}</p>}
+      {msg && <p className="mt-2 text-xs" style={{ color: C.green }}>{msg}</p>}
+      {phase === "done" && groups.length === 0 && !err && (
+        <p className="mt-2 text-sm" style={{ color: C.muted }}>Nothing missing - every place with a Google ID has its details.</p>
+      )}
+      {fills.length > 0 && (
+        <div className="mt-3 rounded-xl p-3" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+          <div className="text-xs" style={{ color: C.muted }}>
+            {fills.length} place{fills.length === 1 ? "" : "s"} to fill · {sum("cuisine")} cuisine{sum("cuisine") === 1 ? "" : "s"} · {sum("address")} address{sum("address") === 1 ? "" : "es"} · {sum("neighbourhood")} neighbourhood{sum("neighbourhood") === 1 ? "" : "s"} · {sum("city")} cit{sum("city") === 1 ? "y" : "ies"} · {sum("mapsUrl")} map link{sum("mapsUrl") === 1 ? "" : "s"}
+            {noSuggestion > 0 ? ` · ${noSuggestion} Next in Line entr${noSuggestion === 1 ? "y" : "ies"} Google gave no clear cuisine for (set by hand)` : ""}
+          </div>
+          <button onClick={save} disabled={saving || phase === "scanning"} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold" style={saving || phase === "scanning" ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.onGold }}>
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+            Fill in {fills.length} place{fills.length === 1 ? "" : "s"}
+          </button>
+          <details className="mt-2">
+            <summary className="cursor-pointer text-xs font-semibold" style={{ color: C.muted }}>See what will be filled</summary>
+            {fills.map((g) => (
+              <div key={g.googlePlaceId} className="mt-2 text-xs" style={{ color: C.muted }}>
+                <div><span style={{ color: C.cream, fontWeight: 600 }}>{g.name}</span>{g.matchName && g.matchName.toLowerCase() !== g.name.toLowerCase() ? ` → ${g.matchName}` : ""}</div>
+                <div>{[g.plan.counts.cuisine && g.plan.values.cuisine && `cuisine: ${g.plan.values.cuisine}`, g.plan.counts.address && g.plan.values.address, g.plan.counts.neighbourhood && g.plan.values.neighbourhood, g.plan.counts.city && g.plan.values.city].filter(Boolean).join(" · ")}</div>
+              </div>
+            ))}
+          </details>
+        </div>
+      )}
+      {unreachable.length > 0 && phase === "done" && (
+        <p className="mt-2 text-xs" style={{ color: C.muted }}>{unreachable.length} place{unreachable.length === 1 ? "" : "s"} couldn&apos;t be looked up (Google doesn&apos;t know the ID any more, or couldn&apos;t be reached): {unreachable.map((g) => g.name).join(", ")}.</p>
+      )}
+    </div>
+  );
+}
+
 export function PlaceMatchTool() {
   const [phase, setPhase] = useState("idle");
   const [progress, setProgress] = useState({ checked: 0, total: 0 });

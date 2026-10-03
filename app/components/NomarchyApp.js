@@ -1822,6 +1822,7 @@ export default function NomarchyApp({ user }) {
             <div className="mt-5 mb-1 text-xs font-bold uppercase" style={{ color: C.goldText, letterSpacing: "0.14em" }}>Tools</div>
             <AdminSection title="Fix a restaurant"><FixThroneTool cuisines={selectableCuisines} /></AdminSection>
             <AdminSection title="Match places to Google"><PlaceMatchTool /></AdminSection>
+            <AdminSection title="Fill in missing details"><PlaceDetailsTool /></AdminSection>
             <AdminSection title="Check for closures"><ClosureCheckTool /></AdminSection>
               </>);
             })()}

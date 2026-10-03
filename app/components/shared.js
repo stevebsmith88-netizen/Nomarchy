@@ -358,6 +358,7 @@ export function PhotoPicker({ userId, photos, onChange, action, canRemove = true
 export const GOOGLE_USAGE_LABELS = {
   search: "Place searches",
   backfill_search: "Backfill searches",
+  backfill_details: "Backfill detail lookups",
   place_refresh: "Coordinate refreshes",
   closure_check: "Closure checks",
   map_load: "Map loads",
