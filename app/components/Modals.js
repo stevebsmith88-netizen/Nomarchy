@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { C, OwnerBadge, RankBadge, body, display, getTitle } from "../theme";
-import { Avatar, AvatarPicker, ClosedBadge, MAX_IMPORT_CHARS, MIN_DECREE_LENGTH, PersonRow, PhotoPicker, PhotoStrip, PlaceNameLink, RowSkeleton, knownFor } from "./shared";
+import { Avatar, AvatarPicker, CORNY_VISIT_NOTES, ClosedBadge, MAX_IMPORT_CHARS, MIN_DECREE_LENGTH, PersonRow, PhotoPicker, PhotoStrip, PlaceNameLink, RowSkeleton, knownFor } from "./shared";
 import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
 import { loadDirectory, loadPlaceSlug, loadRestaurantProfile, loadRestaurantVisitCount, loadRestaurantWantingCount, loadSuggestedFriends, supabase } from "@/lib/data";
 import { safeMapsUrl } from "@/lib/safeUrl";
@@ -536,13 +536,17 @@ export function PlaceModal({ mode, cuisineId, cuisineName, cuisines, prefill, re
   const [sel, setSel] = useState(draft ? draft.sel ?? null : prefill?.mapsUrl ? prefill : null);
   const [name, setName] = useState(draft?.name ?? (prefill?.name || ""));
   const [area, setArea] = useState(draft?.area ?? (prefill?.area || ""));
-  const [text, setText] = useState(draft?.text ?? "");
+  // Crowning from Next in Line starts the decree from the note or review
+  // already written there (never the jokey placeholder), so nothing typed is lost.
+  const seedText = !isPretender && prefill?.note && !CORNY_VISIT_NOTES.includes(prefill.note) ? prefill.note : "";
+  const [text, setText] = useState(draft?.text ?? seedText);
   const [photos, setPhotos] = useState(draft?.photos ?? (prefill?.photos || []));
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (draftKey) saveDraft(userId, draftKey, { text, name, area, city, query, sel, photos, cz });
-  }, [draftKey, userId, text, name, area, city, query, sel, photos, cz]);
+    // An untouched starting note isn't an unsent draft.
+    if (draftKey && (text !== seedText || draft)) saveDraft(userId, draftKey, { text, name, area, city, query, sel, photos, cz });
+  }, [draftKey, userId, text, seedText, draft, name, area, city, query, sel, photos, cz]);
 
   const startOver = () => {
     clearDraft(userId, draftKey);

@@ -124,10 +124,12 @@ const SECTIONS = [
         q: "What's Next in Line for?",
         a: (
           <p>
-            Places you keep meaning to try, or have been to but aren&apos;t ready to crown. Mark one as
-            &ldquo;been&rdquo; to leave a note and tag it <strong>Worth it</strong> or <strong>Not for me</strong> -
-            visible to people who follow you once you have. This is meant to stay a quick personal take, not a
-            public rating system - there&apos;s no star scores or public rankings of a place.
+            Places you keep meaning to try, or have been to but aren&apos;t ready to crown. Tap{" "}
+            <strong>Mark as been</strong> and it asks how it was - tag it <strong>Worth it</strong> or{" "}
+            <strong>Not for me</strong> and write a review if you like (or skip it) - visible to people who follow
+            you once you have. If you decide to crown a place instead, whatever you wrote there becomes the start
+            of your decree. This is meant to stay a quick personal take, not a public rating system - there&apos;s
+            no star scores or public rankings of a place.
           </p>
         ),
       },

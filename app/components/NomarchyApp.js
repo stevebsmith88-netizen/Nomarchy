@@ -496,15 +496,24 @@ export default function NomarchyApp({ user }) {
     await refreshPretenders();
   };
 
-  const handleToggleVisited = async (id, currentlyVisited, cuisineId, note, verdict) => {
+  // `details` ({ note, verdict }) comes from the "How was it?" pop-up (what
+  // was written there, or in the note box, replaces what's saved). Without
+  // anything written the cheeky placeholder note goes in, as before.
+  const handleToggleVisited = async (id, currentlyVisited, cuisineId, note, verdict, details) => {
     if (!currentlyVisited && !cuisineId) {
       flash("Pick a cuisine below first");
       return;
     }
     await markVisited(id, !currentlyVisited);
-    if (!currentlyVisited && !note?.trim() && !verdict) {
-      const corny = CORNY_VISIT_NOTES[Math.floor(Math.random() * CORNY_VISIT_NOTES.length)];
-      await updatePretenderNote(id, corny);
+    if (!currentlyVisited) {
+      const finalNote = details ? details.note?.trim() : note?.trim();
+      const finalVerdict = details ? details.verdict : verdict;
+      if (details && finalNote) await updatePretenderNote(id, finalNote);
+      if (details && finalVerdict !== (verdict || null)) await updatePretenderVerdict(id, finalVerdict);
+      if (!finalNote && !finalVerdict) {
+        const corny = CORNY_VISIT_NOTES[Math.floor(Math.random() * CORNY_VISIT_NOTES.length)];
+        await updatePretenderNote(id, corny);
+      }
     }
     await refreshPretenders();
   };

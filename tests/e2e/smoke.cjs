@@ -27,10 +27,12 @@ const place_pages = [{ slug: "pizzeria-libretto", google_place_id: "GID1" }, { s
 const thrones = [{ id: "t2", user_id: FRIEND, cuisine_id: "c2", cuisines: { name: "Sushi" }, profiles: friendProfile, place_name: "FRIEND SUSHI", neighbourhood: "Annex", decree: "The omakase is worth every penny.", photos: [], crowned_at: now, google_place_id: "GID3", lat: 43.6, lng: -79.4 }, { id: "t1", user_id: UID, cuisine_id: "c1", cuisines: { name: "Pizza" }, place_name: "PIZZERIA LIBRETTO", address: "221 Ossington Ave", neighbourhood: "Ossington", decree: "Best margherita in the city, hands down.", photos: [], crowned_at: now, google_place_id: "GID1", lat: 43.6, lng: -79.4, maps_url: "https://www.google.com/maps/search/?api=1&query=x" }];
 const nil = [
   { id: "n1", user_id: UID, cuisine_id: "c2", cuisines: { name: "Sushi" }, place_name: "SUSHI PLACE", neighbourhood: "Annex", note: "", photos: [], added_at: now, visited_at: null, google_place_id: "GID2" },
+  { id: "n3", user_id: UID, cuisine_id: "c2", cuisines: { name: "Sushi" }, place_name: "QUIET SPOT", neighbourhood: "Annex", note: "", photos: [], added_at: now, visited_at: null, google_place_id: "GID4" },
   { id: "n2", user_id: UID, cuisine_id: "c2", cuisines: { name: "Sushi" }, place_name: "BEEN SUSHI", neighbourhood: "Annex", note: "Great", photos: [], added_at: now, visited_at: now, verdict: "worth_it" },
 ];
 
-const listInserts = []; // what the app tried to save to Next in Line
+const listInserts = [];
+const listPatches = []; // updates to Next in Line rows (visited, note, verdict...) // what the app tried to save to Next in Line
 function table(url) { return new URL(url).pathname.replace(/^\/rest\/v1\//, ""); }
 // Applies the simple eq./in. filters in a query (user_id=eq.x,
 // followee_id=in.(a,b)) to rows that have that column, so "my thrones" and
@@ -66,6 +68,7 @@ function filterRows(url, rows) {
     // Your own profile and the owner's user list (both database functions).
     if (t === "rpc/my_profile") return json(profile);
     if (t === "rpc/admin_profiles") return json([profile]);
+    if (req.method() === "PATCH" && t === "next_in_line") { try { listPatches.push(JSON.parse(req.postData() || "null")); } catch {} }
     if (req.method() === "POST" && t === "next_in_line") { try { listInserts.push(JSON.parse(req.postData() || "null")); } catch {} }
     if (req.method() !== "GET" && req.method() !== "HEAD") return json(single ? {} : [], 200);
     if (t.startsWith("rpc/")) return json(t.includes("count") ? 0 : []);
@@ -76,10 +79,13 @@ function filterRows(url, rows) {
   await ctx.route("https://example.supabase.co/**", handleSupabase);
   await ctx.route("https://maps.googleapis.com/**", (r) => r.abort());
 
+  // A step that can't find what it needs fails in 10 seconds, not 30, so one
+  // failure can't hold up the run for minutes.
+  ctx.setDefaultTimeout(10000);
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
-  const step = async (name, fn) => { try { await fn(); console.log("ok   " + name); } catch (e) { errors.push(`${name}: ${e.message.split("\n")[0]}`); console.log("FAIL " + name); } };
+  const step = async (name, fn) => { try { await fn(); console.log("ok   " + name); } catch (e) { errors.push(`${name}: ${e.message.split("\n")[0]}`); console.log("FAIL " + name + " - " + e.message.split("\n")[0].slice(0, 220)); } };
 
   await page.goto(BASE + "/");
   await step("kingdom loads", () => page.getByText("Your one favourite restaurant for each cuisine").first().waitFor({ timeout: 15000 }));
@@ -94,6 +100,45 @@ function filterRows(url, rows) {
   await step("crowned place shows", () => page.getByText("PIZZERIA LIBRETTO").first().waitFor({ timeout: 5000 }));
   await step("next in line tab", async () => { await page.click('[data-tour="tab-pretenders"]'); await page.getByText("SUSHI PLACE").first().waitFor({ timeout: 5000 }); });
   await step("an open Next in Line card links to its restaurant page", async () => { await page.getByText("SUSHI PLACE").first().click(); await page.getByRole("link", { name: /Restaurant page/ }).first().waitFor({ timeout: 5000 }); await page.getByText("SUSHI PLACE").first().click(); });
+  await step("a note typed on Next in Line carries into the crown pop-up", async () => {
+    const note = "Best omakase in the city and worth the trip across town";
+    await page.getByText("SUSHI PLACE").first().click();
+    await page.getByRole("textbox", { name: "Your note" }).first().fill(note);
+    await page.getByRole("button", { name: /Crown it/ }).first().click();
+    const decree = await page.getByRole("dialog").getByRole("textbox", { name: /Your decree/ }).inputValue();
+    if (decree !== note) throw new Error("decree not carried over: " + JSON.stringify(decree));
+    await page.keyboard.press("Escape");
+    await page.getByRole("dialog").first().waitFor({ state: "detached", timeout: 5000 });
+  });
+  await step("Mark as been asks how it was, and saves the review and verdict", async () => {
+    await page.getByRole("button", { name: "Mark as been" }).first().click();
+    const dlg = page.getByRole("dialog", { name: /How was SUSHI PLACE/ });
+    await dlg.waitFor({ timeout: 5000 });
+    const shown = await dlg.getByRole("textbox", { name: /Your review/ }).inputValue();
+    if (!shown.includes("Best omakase")) throw new Error("review box did not start with the note: " + shown);
+    await dlg.getByRole("button", { name: "Worth it" }).click();
+    await dlg.getByRole("button", { name: "Save", exact: true }).click();
+    await dlg.waitFor({ state: "detached", timeout: 5000 });
+    await page.waitForTimeout(300);
+    const flat = listPatches.filter(Boolean);
+    if (!flat.some((x) => x.visited_at)) throw new Error("not marked as been");
+    if (!flat.some((x) => x.verdict === "worth_it")) throw new Error("verdict not saved");
+    if (!flat.some((x) => (x.note || "").includes("Best omakase"))) throw new Error("review not saved");
+  });
+  await step("Skip for now marks it as been with a cheeky note", async () => {
+    const before = listPatches.length;
+    await page.getByText("QUIET SPOT").first().click();
+    await page.getByRole("button", { name: "Mark as been" }).first().click(); // QUIET SPOT sorts before SUSHI PLACE
+    const dlg = page.getByRole("dialog", { name: /How was QUIET SPOT/ });
+    await dlg.waitFor({ timeout: 5000 });
+    await dlg.getByRole("button", { name: "Skip for now" }).click();
+    await dlg.waitFor({ state: "detached", timeout: 5000 });
+    await page.waitForTimeout(300);
+    const cheeky = ["The Crown attended", "A visit was paid", "Present and accounted for", "The throne was visited", "Attendance confirmed", "Here, apparently"];
+    const added = listPatches.slice(before).filter(Boolean);
+    if (!added.some((x) => x.visited_at)) throw new Error("not marked as been");
+    if (!added.some((x) => cheeky.some((c) => (x.note || "").startsWith(c)))) throw new Error("no cheeky note: " + JSON.stringify(added));
+  });
   await step("been-to tab", async () => { await page.getByRole("tab", { name: /Been to/ }).click(); await page.getByText("BEEN SUSHI").first().waitFor({ timeout: 5000 }); });
   await step("import checks places with Google and saves the details", async () => {
     await page.route("**/api/ai", async (route) => {

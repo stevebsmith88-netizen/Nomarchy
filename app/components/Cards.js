@@ -1,18 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { C, display } from "../theme";
 import Link from "next/link";
-import { ClosedBadge, CuisineEmojiGrid, PhotoPicker, PlaceNameLink } from "./shared";
+import { CORNY_VISIT_NOTES, ClosedBadge, CuisineEmojiGrid, PhotoPicker, PlaceNameLink } from "./shared";
 import { safeMapsUrl } from "@/lib/safeUrl";
 import { clearDraft, loadDraft, saveDraft } from "@/lib/decreeDrafts";
 import { ArrowUpRight, Check, ChevronDown, Crown, ExternalLink, Loader2, MapPin, Pencil, RotateCcw, ScrollText, Share2, Swords, Trash2, X } from "lucide-react";
+
+const BeenModal = dynamic(() => import("./BeenModal"));
 
 export function PretenderCard({ p, slug, closed, selectableCuisines, onRemove, onChangeNote, onChangeCuisine, onChangePhotos, onToggleVisited, onChangeVerdict, onCrown, onShare, userId, friendMatches }) {
   // Compact by default - name, cuisine and area - and opens on tap to show
   // the note, photos, verdict and actions. Leaving it closed keeps a long
   // list scannable.
   const [open, setOpen] = useState(false);
+  // null, or { note } - the review text to start the "How was it?" pop-up with.
+  const [askingBeen, setAskingBeen] = useState(null);
+  // The note box saves when you tap away from it, so tapping Crown it or
+  // Mark as been straight after typing would otherwise use the old note.
+  // These read what's in the box right now.
+  const noteRef = useRef(null);
+  const liveNote = () => (noteRef.current ? noteRef.current.value.trim() : (p.note || ""));
   const cuisineName = selectableCuisines.find((c) => c.id === p.cuisineId)?.name || p.cuisine || null;
   const courtCount = friendMatches?.length || 0;
   return (
@@ -81,6 +91,7 @@ export function PretenderCard({ p, slug, closed, selectableCuisines, onRemove, o
         </div>
       )}
       <textarea aria-label={p.visitedAt ? "Your review" : "Your note"} maxLength={5000}
+        ref={noteRef}
         key={p.id + (p.note || "")}
         defaultValue={p.note || ""}
         onBlur={(e) => { if (e.target.value !== (p.note || "")) onChangeNote(p.id, e.target.value.trim()); }}
@@ -119,12 +130,17 @@ export function PretenderCard({ p, slug, closed, selectableCuisines, onRemove, o
       {p.visitedAt && <PhotoPicker userId={userId} photos={p.photos || []} onChange={(photos) => onChangePhotos(p.id, photos)} removeInViewer />}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
-          onClick={() => onCrown(p)}
+          onClick={() => onCrown({ ...p, note: liveNote() })}
           className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.onGold }}>
           <Crown size={13} /> Crown it
         </button>
         <button
-          onClick={() => onToggleVisited(p.id, !!p.visitedAt, p.cuisineId, p.note, p.verdict)}
+          onClick={() => {
+            // Marking as been first asks how it was (needs a cuisine first -
+            // the app says so if there isn't one). Un-marking is immediate.
+            if (p.visitedAt || !p.cuisineId) onToggleVisited(p.id, !!p.visitedAt, p.cuisineId, p.note, p.verdict);
+            else setAskingBeen({ note: CORNY_VISIT_NOTES.includes(p.note) ? "" : liveNote() });
+          }}
           className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
           style={p.visitedAt ? { background: C.green + "22", color: C.green, border: `1px solid ${C.green}66` } : { color: C.muted, border: `1px solid ${C.cardEdge}` }}>
           <Check size={13} /> {p.visitedAt ? "Been here" : "Mark as been"}
@@ -135,6 +151,16 @@ export function PretenderCard({ p, slug, closed, selectableCuisines, onRemove, o
         <button onClick={() => onRemove(p.id)} aria-label="Remove" className="ml-auto p-1.5" style={{ color: C.muted }}><Trash2 size={15} /></button>
       </div>
       </>)}
+      {askingBeen && (
+        <BeenModal
+          name={p.name}
+          initialNote={askingBeen.note}
+          initialVerdict={p.verdict || null}
+          onClose={() => setAskingBeen(null)}
+          onSave={async (details) => { await onToggleVisited(p.id, false, p.cuisineId, p.note, p.verdict, details); setAskingBeen(null); }}
+          onSkip={async (details) => { await onToggleVisited(p.id, false, p.cuisineId, p.note, p.verdict, { note: details.note, verdict: p.verdict || null }); setAskingBeen(null); }}
+        />
+      )}
     </div>
   );
 }
