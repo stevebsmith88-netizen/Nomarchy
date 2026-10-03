@@ -30,7 +30,7 @@ export default function PrivacyContent() {
             "Account info: your email address (or your Google account info, if you sign in with Google), and a username you choose.",
             "Profile info: display name, city, and a profile photo, if you add them.",
             "Content you create: restaurants you crown or add to your list (along with the place's Google ID and map coordinates, so we can show it on a map), written reviews (“decrees”), ratings, and photos you attach.",
-            "Social info: who you follow and who follows you.",
+            "Social info: who you follow and who follows you. If you join through a friend's invite link, we note who invited you, connect your two accounts so you follow each other, and let them know you've joined.",
             "Feedback you submit through the in-app feedback form, including your device/browser type (captured automatically so bug reports are easier to act on).",
             "Basic usage data needed to run the app - e.g. when you signed up, when a review was posted, and a simple count of how many restaurant searches and map views are made (linked to your account), so we can keep an eye on running costs.",
             "Error reports: if something breaks, the app sends us a short technical report - what went wrong, on which page, and your browser type - so we can fix it. It isn't linked to your account, and we delete it after 90 days.",

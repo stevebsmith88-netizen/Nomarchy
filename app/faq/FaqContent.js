@@ -181,6 +181,19 @@ const SECTIONS = [
         ),
       },
       {
+        q: "How do invite links work?",
+        a: (
+          <p>
+            In Court, tap <strong>Invite a friend</strong> to send your personal link. When a friend signs up
+            from it, you&apos;re put in each other&apos;s Court straight away, and you&apos;ll get a notification
+            that they&apos;ve joined. Your first friend to join this way earns the <strong>Royal Envoy</strong>{" "}
+            Conquest. Only brand-new accounts are connected automatically - if someone who&apos;s already on
+            Nomarchy opens your link, they&apos;ll see a button to follow you instead. If your kingdom is
+            Private, friends you invite won&apos;t see your picks until you switch to Public.
+          </p>
+        ),
+      },
+      {
         q: "What's Best in the Land?",
         a: (
           <p>

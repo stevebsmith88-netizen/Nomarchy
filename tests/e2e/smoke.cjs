@@ -20,6 +20,8 @@ const cuisines = [
 const FRIEND = "22222222-2222-2222-2222-222222222222";
 const friendProfile = { id: FRIEND, username: "alex", display_name: "Alex", is_owner: false, avatar_url: null };
 const follows = [{ follower_id: UID, followee_id: FRIEND, profiles: friendProfile }];
+// Alex joined from Steve's invite link.
+const invites = [{ invitee_id: FRIEND, inviter_id: UID, created_at: now, profiles: friendProfile }];
 const thrones = [{ id: "t2", user_id: FRIEND, cuisine_id: "c2", cuisines: { name: "Sushi" }, profiles: friendProfile, place_name: "FRIEND SUSHI", neighbourhood: "Annex", decree: "The omakase is worth every penny.", photos: [], crowned_at: now, google_place_id: "GID3", lat: 43.6, lng: -79.4 }, { id: "t1", user_id: UID, cuisine_id: "c1", cuisines: { name: "Pizza" }, place_name: "PIZZERIA LIBRETTO", address: "221 Ossington Ave", neighbourhood: "Ossington", decree: "Best margherita in the city, hands down.", photos: [], crowned_at: now, google_place_id: "GID1", lat: 43.6, lng: -79.4, maps_url: "https://www.google.com/maps/search/?api=1&query=x" }];
 const nil = [
   { id: "n1", user_id: UID, cuisine_id: "c2", cuisines: { name: "Sushi" }, place_name: "SUSHI PLACE", neighbourhood: "Annex", note: "", photos: [], added_at: now, visited_at: null, google_place_id: "GID2" },
@@ -50,7 +52,7 @@ function filterRows(url, rows) {
     "sb-example-auth-token",
     JSON.stringify({ access_token: "fake", refresh_token: "fake", token_type: "bearer", expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, user }),
   ]);
-  await ctx.route("https://example.supabase.co/**", async (route) => {
+  const handleSupabase = async (route) => {
     const req = route.request();
     const url = req.url();
     const json = (body, status = 200, headers = {}) => route.fulfill({ status, contentType: "application/json", headers: { "content-range": "0-0/0", ...headers }, body: JSON.stringify(body) });
@@ -60,10 +62,11 @@ function filterRows(url, rows) {
     const single = (req.headers()["accept"] || "").includes("vnd.pgrst.object");
     if (req.method() !== "GET" && req.method() !== "HEAD") return json(single ? {} : [], 200);
     if (t.startsWith("rpc/")) return json(t.includes("count") ? 0 : []);
-    const data = { profiles: single ? profile : [profile], cuisines, thrones, next_in_line: nil, follows, standings: single ? { id: UID, score: 42, thrones: 1, coups: 0 } : [{ id: UID, score: 42 }] }[t];
+    const data = { profiles: single ? profile : [profile], cuisines, thrones, next_in_line: nil, follows, invites, standings: single ? { id: UID, score: 42, thrones: 1, coups: 0 } : [{ id: UID, score: 42 }] }[t];
     if (single) return json(data ?? {});
     return json(filterRows(url, data ?? []));
-  });
+  };
+  await ctx.route("https://example.supabase.co/**", handleSupabase);
   await ctx.route("https://maps.googleapis.com/**", (r) => r.abort());
 
   const page = await ctx.newPage();
@@ -84,6 +87,19 @@ function filterRows(url, rows) {
   await step("best in the land tab", async () => { await page.click('[data-tour="tab-top25"]'); await page.getByText(/picked as a favourite|picked by the friends you follow/).first().waitFor({ timeout: 5000 }); });
   await step("notifications", async () => { await page.click('[data-tour="bell"]'); await page.getByText("Notifications").first().waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); });
   await step("crown notification opens the pick", async () => { await page.click('[data-tour="bell"]'); await page.getByRole("button", { name: /Alex crowned FRIEND SUSHI - view it/ }).click(); await page.getByRole("dialog").getByText("FRIEND SUSHI").waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); await page.getByRole("dialog").first().waitFor({ state: "detached", timeout: 5000 }); });
+  await step("invite joined notification opens their kingdom", async () => { await page.click('[data-tour="bell"]'); await page.getByRole("button", { name: /Alex joined from your invite - view their kingdom/ }).click(); await page.getByRole("dialog").getByText("FRIEND SUSHI").waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); await page.getByRole("dialog").first().waitFor({ state: "detached", timeout: 5000 }); });
+  await step("invite link shows the invite to a visitor", async () => {
+    const guest = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    await guest.route("https://example.supabase.co/**", handleSupabase);
+    const g = await guest.newPage();
+    g.on("pageerror", (e) => errors.push("guest pageerror: " + e.message));
+    await g.goto(BASE + "/steve?invite=steve");
+    await g.getByText("Steve has invited you to Nomarchy.").waitFor({ timeout: 10000 });
+    await g.getByRole("link", { name: /Join Nomarchy/ }).waitFor({ timeout: 5000 });
+    const stored = await g.evaluate(() => localStorage.getItem("nomarchy-invite"));
+    if (stored !== "steve") throw new Error("invite not remembered: " + stored);
+    await guest.close();
+  });
   await step("profile modal + accessibility", async () => { await page.getByRole("button", { name: /@steve/ }).click(); await page.getByText("Your profile").first().waitFor({ timeout: 5000 }); await page.getByRole("button", { name: /Accessibility/ }).click(); await page.getByRole("switch", { name: "Larger text" }).click(); const t = await page.evaluate(() => document.documentElement.getAttribute("data-text")); if (t !== "large") throw new Error("larger text not applied"); await page.getByRole("switch", { name: "Larger text" }).click(); await page.keyboard.press("Escape"); });
   await step("tour replay", async () => { await page.getByRole("button", { name: /@steve/ }).click(); await page.getByRole("button", { name: /Settings/ }).click(); await page.getByRole("button", { name: "Start" }).click(); await page.locator("[data-tour-box]").waitFor({ timeout: 5000 }); await page.keyboard.press("Escape"); });
   await step("admin tab", async () => { await page.getByRole("button", { name: "Admin" }).click(); await page.getByText(/admin|Loading admin overview|Couldn't load/i).first().waitFor({ timeout: 5000 }); });

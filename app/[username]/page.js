@@ -1,51 +1,27 @@
 // Server component wrapper - the actual page is PublicProfileClient (a
 // client component, needed for the follow button and live data loading).
 // This file exists only so a shared link gets a real, per-person preview
-// card (name + avatar) on iMessage/Instagram/Slack instead of generic
+// card (their name + the Nomarchy logo) on iMessage/Instagram/Slack instead of generic
 // site-wide branding - generateMetadata only runs in a server component,
 // so the interactive page had to be split out to make room for it.
 import { createClient } from "@supabase/supabase-js";
 import PublicProfileClient from "./PublicProfileClient";
+import { profilePreview } from "@/lib/profilePreview";
 
 async function fetchProfileForMeta(username) {
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   const { data } = await supabase
     .from("profiles")
-    .select("username, display_name, avatar_url, is_public")
+    .select("username, display_name, is_public")
     .eq("username", username)
     .single();
   return data;
 }
 
-export async function generateMetadata({ params }) {
+export async function generateMetadata({ params, searchParams }) {
   const { username } = await params;
-  const profile = await fetchProfileForMeta(username);
-
-  if (!profile || !profile.is_public) {
-    return { title: "Nomarchy" };
-  }
-
-  const name = profile.display_name || profile.username;
-  const title = `${name}'s Kingdom`;
-  const description = `See ${name}'s crowned favourite restaurants on Nomarchy, and start your own kingdom.`;
-  // An "emoji:<char>" avatar (see AVATAR_EMOJI in app/page.js) isn't a
-  // real image URL - share previews just fall back to no image for those.
-  const avatarImageUrl = profile.avatar_url && !profile.avatar_url.startsWith("emoji:") ? profile.avatar_url : null;
-
-  return {
-    title,
-    description,
-    openGraph: {
-      title: `${title} | Nomarchy`,
-      description,
-      images: avatarImageUrl ? [{ url: avatarImageUrl }] : undefined,
-    },
-    twitter: {
-      card: "summary",
-      title: `${title} | Nomarchy`,
-      description,
-    },
-  };
+  const { invite } = (await searchParams) || {};
+  return profilePreview(await fetchProfileForMeta(username), invite);
 }
 
 export default async function Page({ params }) {

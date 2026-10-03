@@ -1084,6 +1084,84 @@ revoke all on function record_signup_source(text) from public;
 grant execute on function record_signup_source(text) to authenticated;
 
 -- ------------------------------------------------------------
+-- INVITES (personal invite links)
+-- A friend who signs up through someone's invite link
+-- (nomarchy.ca/<username>?invite=<username>) is connected to them both
+-- ways, and the inviter is told. One row per new account, ever, so an
+-- account can only be claimed by one inviter. The only way a row gets in
+-- is claim_invite() below.
+-- ------------------------------------------------------------
+create table if not exists invites (
+  invitee_id uuid primary key references profiles(id) on delete cascade,
+  inviter_id uuid not null references profiles(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists invites_inviter_idx on invites (inviter_id, created_at desc);
+
+alter table invites enable row level security;
+
+drop policy if exists "invites readable by the two people and the owner" on invites;
+create policy "invites readable by the two people and the owner" on invites for select
+  using (
+    (select auth.uid()) in (inviter_id, invitee_id)
+    or exists (select 1 from profiles p where p.id = (select auth.uid()) and p.is_owner)
+  );
+
+-- Called by the app right after someone signs in, with the username from
+-- the invite link they arrived on. Quietly does nothing (returns null,
+-- never raises) unless ALL of these hold:
+--   - the caller is signed in, and their account is under an hour old
+--     (so an existing member opening an invite link is never connected)
+--   - the username belongs to someone else
+--   - neither of them has blocked the other
+--   - the account hasn't already been claimed by an invite
+-- Otherwise it records the invite, follows both ways, notes "invite" as
+-- the sign-up source if there isn't one already, and returns the
+-- inviter's name for the welcome message.
+create or replace function claim_invite(p_username text)
+returns text
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  me uuid := auth.uid();
+  account_created timestamptz;
+  inviter profiles%rowtype;
+  claimed int;
+begin
+  if me is null then return null; end if;
+  select u.created_at into account_created from auth.users u where u.id = me;
+  if account_created is null or account_created < now() - interval '1 hour' then return null; end if;
+
+  select * into inviter from profiles where username = lower(trim(coalesce(p_username, '')));
+  if inviter.id is null or inviter.id = me then return null; end if;
+  if exists (
+    select 1 from blocks b
+    where (b.blocker_id = me and b.blocked_id = inviter.id)
+       or (b.blocker_id = inviter.id and b.blocked_id = me)
+  ) then return null; end if;
+
+  insert into invites (invitee_id, inviter_id) values (me, inviter.id)
+  on conflict (invitee_id) do nothing;
+  get diagnostics claimed = row_count;
+  if claimed = 0 then return null; end if;
+
+  insert into follows (follower_id, followee_id)
+  values (me, inviter.id), (inviter.id, me)
+  on conflict do nothing;
+
+  insert into signup_sources (user_id, source) values (me, 'invite')
+  on conflict (user_id) do nothing;
+
+  return coalesce(nullif(inviter.display_name, ''), inviter.username);
+end;
+$$;
+
+revoke all on function claim_invite(text) from public;
+grant execute on function claim_invite(text) to authenticated;
+
+-- ------------------------------------------------------------
 -- GOOGLE USAGE (a count of our own calls to Google)
 -- One row per request our server sends to Google, so the Admin tab can
 -- show usage before a bill does. Only the server writes here (with the

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Crown, MapPin, ExternalLink, ScrollText, UserPlus, Loader2, Check, Lock, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { getUser, loadPublicKingdom, followByUsername } from "@/lib/data";
+import { getUser, loadPublicKingdom, followByUsername, isFollowing } from "@/lib/data";
 import { C, display, getTitle, RankBadge, OwnerBadge, LogoMark, FontShell, useTheme } from "../theme";
 
 // Matches the reserved cuisine name seeded in schema.sql - see app/page.js
@@ -76,6 +76,44 @@ function PhotoStrip({ photos }) {
   );
 }
 
+// Shown when someone arrives on a personal invite link (?invite=<this
+// username>). Signed out, it invites them to join - their account is then
+// connected to the inviter both ways (lib/invite.js). Signed in, it offers
+// a plain Follow, since an existing account is never connected automatically.
+function InviteBanner({ name, isPublic, viewer, following, followBusy, onFollow }) {
+  return (
+    <div className="mx-auto mb-4 mt-4 flex max-w-2xl items-start gap-3 rounded-xl p-4 text-left" style={{ background: C.gold + "1A", border: `1px solid ${C.gold}` }}>
+      <div className="shrink-0 pt-0.5"><LogoMark size={22} /></div>
+      <div className="min-w-0 flex-1">
+        {viewer ? (
+          <>
+            <p className="text-sm" style={{ color: C.cream }}><strong>{name} has invited you to their Court.</strong></p>
+            <button
+              onClick={onFollow}
+              disabled={following || followBusy}
+              className="mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold"
+              style={following ? { background: C.green + "22", color: C.green, border: `1px solid ${C.green}66` } : { background: C.gold, color: C.onGold }}
+            >
+              {followBusy ? <Loader2 size={12} className="animate-spin" /> : following ? <Check size={12} /> : <UserPlus size={12} />}
+              {following ? `Following ${name}` : `Follow ${name}`}
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="text-sm" style={{ color: C.cream }}>
+              <strong>{name} has invited you to Nomarchy.</strong>{" "}
+              {isPublic ? `Join and ${name}'s picks will be waiting in your Court.` : "Join and you'll be in each other's Courts."}
+            </p>
+            <Link href="/#sign-in" className="mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold" style={{ background: C.gold, color: C.onGold }}>
+              <Crown size={12} /> Join Nomarchy
+            </Link>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function PublicProfileClient({ username }) {
   // Subscribes this page to theme changes so a visitor who's already set a
   // light/dark preference in the main app (saved in their browser) sees it
@@ -89,10 +127,22 @@ export default function PublicProfileClient({ username }) {
   const [following, setFollowing] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
   const [followErr, setFollowErr] = useState("");
+  const [invited, setInvited] = useState(false);
 
   useEffect(() => {
     getUser().then((u) => { setViewer(u); setAuthChecked(true); });
-  }, []);
+    try {
+      const invite = new URLSearchParams(window.location.search).get("invite");
+      setInvited(!!invite && invite.trim().toLowerCase() === username.toLowerCase());
+    } catch {}
+  }, [username]);
+
+  // On an invite link, a signed-in visitor who already follows them sees
+  // "Following" straight away rather than a button that does nothing.
+  useEffect(() => {
+    if (!invited || !viewer || !data || viewer.id === data.profile.id) return;
+    isFollowing(viewer.id, data.profile.id).then((yes) => { if (yes) setFollowing(true); }).catch(() => {});
+  }, [invited, viewer, data]);
 
   useEffect(() => {
     loadPublicKingdom(username).then((result) => {
@@ -141,9 +191,15 @@ export default function PublicProfileClient({ username }) {
   const isSelf = viewer && viewer.id === profile.id;
   const isPrivate = !profile.is_public && !isSelf;
 
+  const name = profile.display_name || profile.username;
+  const inviteBanner = invited && !isSelf && (
+    <InviteBanner name={name} isPublic={profile.is_public} viewer={viewer} following={following} followBusy={followBusy} onFollow={handleFollow} />
+  );
+
   if (isPrivate) {
     return (
       <FontShell>
+        {inviteBanner && <div className="px-5">{inviteBanner}</div>}
         <div className="flex min-h-screen flex-col items-center justify-center px-5 text-center">
           <Lock size={28} style={{ color: C.muted }} />
           <h1 className="mt-3 text-xl" style={{ ...display, fontWeight: 700 }}>
@@ -183,7 +239,7 @@ export default function PublicProfileClient({ username }) {
           <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: C.card, color: C.goldText, border: `1px solid ${C.cardEdge}` }}>
             {title}
           </span>
-          {authChecked && viewer && !isSelf && (
+          {authChecked && viewer && !isSelf && !inviteBanner && (
             <button
               onClick={handleFollow}
               disabled={following || followBusy}
@@ -195,8 +251,9 @@ export default function PublicProfileClient({ username }) {
             </button>
           )}
         </div>
+        {inviteBanner}
         {followErr && <p className="mt-2 text-xs" style={{ color: C.coup }}>{followErr}</p>}
-        {authChecked && !viewer && (
+        {authChecked && !viewer && !inviteBanner && (
           <p className="mt-2 text-xs" style={{ color: C.muted }}>
             <Link href="/" style={{ color: C.goldText }}>Sign in to Nomarchy</Link> to follow @{profile.username}.
           </p>

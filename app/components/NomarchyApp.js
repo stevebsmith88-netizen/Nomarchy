@@ -10,6 +10,7 @@ import { AdminSection, Avatar, CORNY_VISIT_NOTES, CuisineEmojiGrid, GOOGLE_USAGE
 import { A11Y_DEFAULTS, applyA11y, isDefaultA11y, normalizeA11y, readLocalA11y } from "@/lib/a11yPrefs";
 import { addCuisine, addToNextInLine, blockUser, clearAppErrors, deleteAccount, dismissAllNotifications, dismissNotification, followByUsername, followUser, getProfile, importToNextInLine, loadA11yPrefs, loadAdminOverview, loadBestInLand, loadClosedPlaceIds, loadCourt, loadCuisineEmojis, loadCuisines, loadFollowers, loadKingdom, loadNextInLine, loadNotifications, loadStanding, loadTourSeen, logRankPromotion, markNotificationsSeen, markTourSeen, markVisited, moveThroneCuisine, placeKey, promoteToThrone, removeFromNextInLine, saveA11yPrefs, searchAllRestaurants, setCuisineEmoji, signOut, submitFeedback, supabase, toggleEndorsement, unCrown, updatePretenderCuisine, updatePretenderNote, updatePretenderPhotos, updatePretenderVerdict, updateProfile, updateThroneDecree, updateThroneLocation, updateThronePhotos } from "@/lib/data";
 import { claimSignupSource } from "@/lib/signupSource";
+import { claimInvite, inviteUrl } from "@/lib/invite";
 import { rememberTourLocally, shouldAutoStartTour, tourSeenLocally } from "@/lib/tour";
 import { Bell, Bookmark, Check, ChevronDown, ClipboardPaste, Crown, Loader2, LogOut, Moon, Navigation, Pencil, Plus, Search, Share2, ShieldCheck, Sun, TrendingUp, UserPlus, Users, X } from "lucide-react";
 
@@ -153,8 +154,20 @@ export default function NomarchyApp({ user }) {
     return () => clearTimeout(t);
   }, []);
 
+  // The sign-up source goes first, so a tagged link (say, from Instagram)
+  // that brought someone in before an invite keeps the credit. Then a
+  // friend's invite link, if they arrived on one, connects them both ways.
   useEffect(() => {
-    if (user) claimSignupSource(supabase, user);
+    if (!user) return;
+    (async () => {
+      await claimSignupSource(supabase, user);
+      const inviter = await claimInvite(supabase, user);
+      if (inviter) {
+        flash(`You and ${inviter} are now in each other's Courts`);
+        refreshCourt().catch(() => {});
+        refreshFollowers().catch(() => {});
+      }
+    })();
   }, [user?.id]);
 
   useEffect(() => {
@@ -581,12 +594,19 @@ export default function NomarchyApp({ user }) {
   // real, personal landing page (their crowns, their decrees), not a bare
   // signup form, so whoever clicks it sees something worth joining for
   // before they're ever asked to.
+  //
+  // The link carries ?invite=, so a friend who signs up from it is put in
+  // your Court and you in theirs (see lib/invite.js). A Private kingdom
+  // stays private even from people you invite - the link can be passed
+  // on - so the inviter gets a gentle heads-up instead.
   const handleInviteFriend = async () => {
-    const url = `https://nomarchy.ca/${profile?.username || ""}`;
-    const text = "Join me on Nomarchy - crown your favourite restaurant in every cuisine, and see what your friends swear by.";
+    const url = inviteUrl(profile?.username || "");
+    const text = "Join me on Nomarchy - crown your favourite restaurant in every cuisine. Sign up with this link and you'll start with my picks in your Court.";
+    const privateNote = "Heads up: your kingdom is Private, so friends won't see your picks until you switch to Public in Settings.";
     try {
       if (navigator.canShare?.({ text, url })) {
         await navigator.share({ title: "Nomarchy", text, url });
+        if (profile && !profile.is_public) flash(privateNote);
         return;
       }
     } catch (e) {
@@ -594,7 +614,7 @@ export default function NomarchyApp({ user }) {
     }
     try {
       await navigator.clipboard.writeText(`${text} ${url}`);
-      flash("Invite link copied");
+      flash(profile && !profile.is_public ? `Invite link copied. ${privateNote}` : "Invite link copied");
     } catch {
       flash("Couldn't copy on this device");
     }
@@ -958,6 +978,24 @@ export default function NomarchyApp({ user }) {
                       <div className={n.isNew ? "min-w-0 flex-1" : "min-w-0 flex-1 pl-3.5"}>
                         <div>
                           {n.type === "follow" && <><span style={{ fontWeight: 700 }}>{n.name}</span> started following you</>}
+                          {n.type === "joined" && (() => {
+                            const text = <><span style={{ fontWeight: 700 }}>{n.name}</span> joined from your invite and is now in your Court</>;
+                            if (!court.some((f) => f.id === n.userId)) return text;
+                            return (
+                              <button
+                                type="button"
+                                className="text-left"
+                                aria-label={`${n.name} joined from your invite - view their kingdom`}
+                                onClick={() => {
+                                  setShowNotifications(false);
+                                  setCourtModalHighlight(null);
+                                  setCourtModalFriendId(n.userId);
+                                }}
+                              >
+                                {text} <span className="font-bold" style={{ color: C.goldText }}>· View</span>
+                              </button>
+                            );
+                          })()}
                           {(n.type === "crown" || n.type === "review") && (() => {
                             const text = n.type === "crown"
                               ? <><span style={{ fontWeight: 700 }}>{n.name}</span> crowned <span style={{ color: C.goldText }}>{n.place}</span> for {n.cuisine}</>
@@ -1658,6 +1696,17 @@ export default function NomarchyApp({ user }) {
                 <span className="text-right">{adminData.signupSources.unknown.allTime}</span>
               </div>
             </div>
+            {adminData.topInviters?.length > 0 && (
+              <div className="mt-3 rounded-xl" style={{ background: C.card, border: `1px solid ${C.cardEdge}` }}>
+                <div className="px-3 py-2 text-xs font-bold uppercase" style={{ color: C.muted, letterSpacing: "0.1em" }}>Top inviters</div>
+                {adminData.topInviters.map((r) => (
+                  <div key={r.id} className="flex justify-between px-3 py-2 text-sm" style={{ borderTop: `1px solid ${C.cardEdge}` }}>
+                    <span className="truncate font-semibold">{r.name}</span>
+                    <span style={{ color: C.goldText }}>{r.count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             </AdminSection>
 
             <AdminSection title={`All users (${adminData.users.length})`}>

@@ -105,3 +105,44 @@ begin
   end if;
 end $$;
 reset role;
+
+-- Invite links: a brand-new account is connected to its inviter both ways,
+-- once; an older account, a self-invite, or a block does nothing.
+insert into auth.users (id, email) values
+  ('00000000-0000-0000-0000-0000000000d1', 'd1@example.com'),
+  ('00000000-0000-0000-0000-0000000000d2', 'd2@example.com'),
+  ('00000000-0000-0000-0000-0000000000d3', 'd3@example.com');
+update auth.users set created_at = now() - interval '2 hours' where id = '00000000-0000-0000-0000-0000000000d2';
+update profiles set username = 'inviter', display_name = 'Ivy' where id = '00000000-0000-0000-0000-0000000000b1';
+insert into blocks (blocker_id, blocked_id) values ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000d3');
+grant insert, update, delete on all tables in schema public to authenticated;
+set role authenticated;
+do $$
+declare got text; n int;
+begin
+  perform set_config('app.uid', '00000000-0000-0000-0000-0000000000d1', false);
+  got := claim_invite('Inviter');
+  if got is distinct from 'Ivy' then raise exception 'claim_invite should return the inviter''s name, got %', got; end if;
+  select count(*) into n from follows
+    where (follower_id, followee_id) in (('00000000-0000-0000-0000-0000000000d1'::uuid, '00000000-0000-0000-0000-0000000000b1'::uuid),
+                                         ('00000000-0000-0000-0000-0000000000b1'::uuid, '00000000-0000-0000-0000-0000000000d1'::uuid));
+  if n <> 2 then raise exception 'invite did not follow both ways (% rows)', n; end if;
+  if claim_invite('inviter') is not null then raise exception 'an account was claimed by an invite twice'; end if;
+
+  perform set_config('app.uid', '00000000-0000-0000-0000-0000000000d2', false);
+  if claim_invite('inviter') is not null then raise exception 'an older account was connected by an invite link'; end if;
+
+  perform set_config('app.uid', '00000000-0000-0000-0000-0000000000d3', false);
+  if claim_invite('inviter') is not null then raise exception 'an invite connected two people across a block'; end if;
+
+  perform set_config('app.uid', '00000000-0000-0000-0000-0000000000b1', false);
+  if claim_invite('inviter') is not null then raise exception 'someone could invite themselves'; end if;
+end $$;
+reset role;
+do $$
+begin
+  if (select count(*) from invites) <> 1 then raise exception 'expected exactly one invite row'; end if;
+  if (select source from signup_sources where user_id = '00000000-0000-0000-0000-0000000000d1') is distinct from 'invite' then
+    raise exception 'an invited signup was not recorded as source "invite"';
+  end if;
+end $$;
