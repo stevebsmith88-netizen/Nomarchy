@@ -8,9 +8,12 @@
 //       unique places and reports what it would do. Writes nothing.
 //   POST { mode: "apply", updates }   - saves matches the owner approved.
 //
-// Apply only ever writes google_place_id, lat and lng, only onto rows that
-// still have no google_place_id (so it can never overwrite an existing
-// match), and never touches names, addresses, decrees, notes or photos.
+// Apply only ever acts on rows that still have no google_place_id (so it can
+// never overwrite an existing match). It sets google_place_id, lat and lng,
+// and fills in address, neighbourhood, city, map link - and, for Next in
+// Line entries with no cuisine, a cuisine suggested from Google's category -
+// but ONLY where that field is currently blank. It never changes a name, a
+// decree, a note, a photo, or anything a person already filled in.
 //
 // Same verify-then-service-role pattern as /api/admin/fix-throne: the
 // caller's own is_owner flag is checked via their own token before the
@@ -22,6 +25,7 @@ import { searchGooglePlaces } from "../../../../lib/googlePlaces";
 import { logGoogleCall } from "../../../../lib/googleUsage";
 import { decide, groupKey } from "../../../../lib/placeMatch";
 import { requireOwner } from "../../../../lib/requireOwner";
+import { safeMapsUrl } from "../../../../lib/safeUrl";
 
 export const maxDuration = 60;
 
@@ -72,6 +76,7 @@ async function preview(admin, offset) {
     const results = await searchGooglePlaces(`${g.row.name} ${g.row.address || g.row.area || ""}`.trim(), g.row.city, { onCall: () => logGoogleCall("backfill_search") });
     const base = {
       key: g.key,
+      city: g.row.city,
       name: g.row.name,
       address: g.row.address || "",
       area: g.row.area || "",
@@ -87,10 +92,14 @@ async function preview(admin, offset) {
   return { total: groups.length, offset, nextOffset: next < groups.length ? next : null, groups: checked };
 }
 
+const optionalText = (v, max) => v === undefined || v === null || (typeof v === "string" && v.length <= max);
+
 function validUpdate(u) {
   const ids = (list) => Array.isArray(list) && list.every((id) => typeof id === "string" && UUID.test(id));
   return (
     u &&
+    optionalText(u.address, 300) && optionalText(u.neighbourhood, 100) && optionalText(u.city, 100) && optionalText(u.cuisine, 80) &&
+    (u.mapsUrl === undefined || u.mapsUrl === null || safeMapsUrl(u.mapsUrl) !== null) &&
     ids(u.thrones || []) &&
     ids(u.nextInLine || []) &&
     typeof u.googlePlaceId === "string" && PLACE_ID.test(u.googlePlaceId) &&
@@ -103,18 +112,42 @@ async function apply(admin, updates) {
   if (!Array.isArray(updates) || updates.length === 0 || updates.length > 100 || !updates.every(validUpdate)) {
     return NextResponse.json({ error: "Invalid updates" }, { status: 400 });
   }
+  // Nomarchy's shared cuisines by name, for the suggested cuisine. A
+  // cuisine someone made themselves is never suggested.
+  const { data: defaults } = await admin.from("cuisines").select("id, name").eq("is_default", true);
+  const cuisineId = new Map((defaults || []).map((c) => [c.name.toLowerCase(), c.id]));
+
   let saved = 0;
+  let cuisinesFilled = 0;
   for (const u of updates) {
-    const fields = { google_place_id: u.googlePlaceId, lat: u.lat, lng: u.lng };
-    for (const [table, ids] of [["thrones", u.thrones || []], ["next_in_line", u.nextInLine || []]]) {
+    for (const [table, wanted] of [["thrones", u.thrones || []], ["next_in_line", u.nextInLine || []]]) {
+      if (wanted.length === 0) continue;
+      // Only rows still without a Google ID - the never-overwrite guarantee.
+      const { data: open, error: openErr } = await admin.from(table).select("id").in("id", wanted).is("google_place_id", null);
+      if (openErr) return NextResponse.json({ error: openErr.message }, { status: 500 });
+      const ids = (open || []).map((r) => r.id);
       if (ids.length === 0) continue;
-      // .is("google_place_id", null) is the never-overwrite guarantee.
-      const { data, error } = await admin.from(table).update(fields).in("id", ids).is("google_place_id", null).select("id");
+
+      // Fill blanks first (before the ID is set), so the restaurant's page
+      // address is made from the full name, neighbourhood and city.
+      const blanks = {
+        address: u.address, neighbourhood: u.neighbourhood, city: u.city,
+        maps_url: u.mapsUrl ? safeMapsUrl(u.mapsUrl) : null,
+        ...(table === "next_in_line" ? { cuisine_id: cuisineId.get((u.cuisine || "").toLowerCase()) } : {}),
+      };
+      for (const [column, value] of Object.entries(blanks)) {
+        if (!value) continue;
+        const { data: filled, error } = await admin.from(table).update({ [column]: value }).in("id", ids).is(column, null).select("id");
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        if (column === "cuisine_id") cuisinesFilled += filled?.length ?? 0;
+      }
+
+      const { error } = await admin.from(table).update({ google_place_id: u.googlePlaceId, lat: u.lat, lng: u.lng }).in("id", ids).is("google_place_id", null);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-      saved += data?.length || 0;
+      saved += ids.length;
     }
   }
-  return NextResponse.json({ saved });
+  return NextResponse.json({ saved, cuisinesFilled });
 }
 
 export async function POST(request) {

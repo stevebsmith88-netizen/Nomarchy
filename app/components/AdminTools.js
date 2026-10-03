@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { C, body } from "../theme";
 import { adminCheckClosures, adminClosedPlace, adminPlaceMatch, loadClosedPlaceRows, supabase } from "@/lib/data";
+import { suggestCuisineName } from "@/lib/cuisineFromGoogle";
 import { Check, Loader2, Pencil, Search } from "lucide-react";
 
 // Owner-only tool, rendered inside the Admin tab - corrects address,
@@ -189,7 +190,14 @@ export function PlaceMatchTool() {
   const [err, setErr] = useState("");
 
   const hasCoords = (m) => typeof m?.lat === "number" && typeof m?.lng === "number";
-  const toUpdate = (g, m) => ({ thrones: g.thrones, nextInLine: g.nextInLine, googlePlaceId: m.googlePlaceId, lat: m.lat, lng: m.lng });
+  // Besides the Google ID and pin, the matched place's address, map link and
+  // (for Next in Line entries) suggested cuisine are sent so blanks get
+  // filled in - the server only ever fills fields that are empty.
+  const toUpdate = (g, m) => ({
+    thrones: g.thrones, nextInLine: g.nextInLine, googlePlaceId: m.googlePlaceId, lat: m.lat, lng: m.lng,
+    address: m.address || undefined, neighbourhood: m.neighbourhood || undefined, mapsUrl: m.mapsUrl || undefined,
+    city: g.city || undefined, cuisine: g.nextInLine.length ? suggestCuisineName(m.primaryType, m.types) || undefined : undefined,
+  });
   const entryCount = (g) => g.thrones.length + g.nextInLine.length;
 
   const auto = groups.filter((g) => g.status === "auto" && hasCoords(g.match));
@@ -223,14 +231,15 @@ export function PlaceMatchTool() {
     if (saving || auto.length === 0) return;
     setSaving(true); setErr(""); setMsg("");
     try {
-      let saved = 0;
+      let saved = 0, filled = 0;
       for (let i = 0; i < auto.length; i += 50) {
         const chunk = auto.slice(i, i + 50);
         const data = await adminPlaceMatch({ mode: "apply", updates: chunk.map((g) => toUpdate(g, g.match)) });
         saved += data.saved;
+        filled += data.cuisinesFilled || 0;
         chunk.forEach((g) => remove(g.key));
       }
-      setMsg(`Saved ${saved} entr${saved === 1 ? "y" : "ies"} across ${auto.length} place${auto.length === 1 ? "" : "s"}.`);
+      setMsg(`Saved ${saved} entr${saved === 1 ? "y" : "ies"} across ${auto.length} place${auto.length === 1 ? "" : "s"}${filled ? `, and filled in ${filled} cuisine${filled === 1 ? "" : "s"}` : ""}.`);
     } catch (e) {
       setErr(e.message || "Couldn't save those.");
     }
@@ -253,7 +262,7 @@ export function PlaceMatchTool() {
   return (
     <div className="mb-5">
       <p className="mb-2 text-xs" style={{ color: C.muted }}>
-        Finds the real Google place for saved crowns and Next in Line entries that don&apos;t have one yet. Scanning only looks - nothing is saved until you approve it, and names, addresses and reviews are never changed.
+        Finds the real Google place for saved crowns and Next in Line entries that don&apos;t have one yet. Scanning only looks - nothing is saved until you approve it. Approved places get their Google ID, map pin, and any blank address, neighbourhood, map link or (Next in Line) cuisine filled in. Anything already filled in, and every name, decree and note, is left exactly as it is. A place with no saved address is matched by name alone.
       </p>
       <button onClick={scan} disabled={phase === "scanning" || saving} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold" style={phase === "scanning" ? { background: C.cardEdge, color: C.muted } : { background: C.gold, color: C.onGold }}>
         {phase === "scanning" ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
@@ -284,6 +293,9 @@ export function PlaceMatchTool() {
                 <div key={g.key} className="mt-2 text-xs" style={{ color: C.muted }}>
                   <div><span style={{ color: C.cream, fontWeight: 600 }}>{g.name}</span>{g.address ? ` · ${g.address}` : ""}</div>
                   <div>→ {g.match.name}{g.match.address ? ` · ${g.match.address}` : ""}</div>
+                  {g.nextInLine.length > 0 && suggestCuisineName(g.match.primaryType, g.match.types) && (
+                    <div>Cuisine, if blank: {suggestCuisineName(g.match.primaryType, g.match.types)}</div>
+                  )}
                   {g.evidence && <div style={{ color: C.green }}>{g.evidence}</div>}
                 </div>
               ))}
