@@ -132,10 +132,12 @@ export async function GET(request) {
   }
 
   let rows;
+  let totalRowsSeen = 0;
   try {
     const allRows = parseCsv(text);
     const headerRow = allRows[0];
     const dataRows = allRows.slice(1).filter((r) => r.length > 1 || r[0] !== "");
+    totalRowsSeen = dataRows.length;
     if (!headerRow || dataRows.length === 0) {
       return NextResponse.json({ error: "No rows found in the DineSafe CSV" }, { status: 502 });
     }
@@ -186,5 +188,5 @@ export async function GET(request) {
     imported += chunk.length;
   }
 
-  return NextResponse.json({ imported, totalRowsSeen: dataRows.length });
+  return NextResponse.json({ imported, totalRowsSeen });
 }
