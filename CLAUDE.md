@@ -41,6 +41,16 @@ sign-off on the UI before building.
 - Raise the 23 uses of 10-11px text to at least 12px by default (the
   Larger text setting already enlarges them). Visible - show Steve a
   before/after first.
+- Show where a place already is, instead of "Add to my list": when viewing
+  someone's kingdom (a friend's pop-up, or a public kingdom) or a Privy
+  Council suggestion, a place that is already crowned in your Kingdom or on
+  your Next in Line should say so ("Crowned in your Kingdom" / "On your
+  list" / "Been there") rather than offering to add it. Restaurant pages
+  should show the same status up front (today they only say it after the
+  Add button is tapped). Reuse the existing already-saved checks
+  (addToPretenders in NomarchyApp.js; savedPlaceStatus in lib/data.js),
+  matching by Google ID first, then name. Visible - confirm the wording
+  with Steve before building.
 - Group Privy Council (deciding where to eat together).
 - A "Crowned on Nomarchy" window sticker / digital badge for restaurants
   with several crowns, built on the restaurant pages (app/r/[slug]).
